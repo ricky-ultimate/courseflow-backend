@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id          String    @id @default(cuid())
+    matricNO    String    @unique
+    email       String    @unique
+    password    String
+    name        String?
+    role        Role      @default(STUDENT)
+    isActive    Boolean   @default(true)
+    lastLoginAt DateTime?
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    complaints Complaint[]
+
+    @@map("users")
+}
+
+model Department {
+    id        String   @id @default(cuid())
+    name      String
+    code      String   @unique
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    courses Course[]
+
+    @@map("departments")
+}
+
+model Course {
+    id           String   @id @default(cuid())
+    code         String
+    name         String
+    level        Level
+    credits      Int      @default(2)
+    departmentId String
+    isActive     Boolean  @default(true)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+    schedules  Schedule[]
+
+    @@unique([departmentId, code, level])
+    @@map("courses")
+}
+
+model Schedule {
+    id        String    @id @default(cuid())
+    courseId  String
+    dayOfWeek DayOfWeek
+    startTime String // Format: "HH:MM"
+    endTime   String // Format: "HH:MM"
+    venue     String
+    type      ClassType @default(LECTURE)
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+    @@map("schedules")
+}
+
+model Complaint {
+    id         String          @id @default(cuid())
+    userId     String?
+    name       String
+    email      String
+    department String
+    subject    String
+    message    String
+    status     ComplaintStatus @default(PENDING)
+    resolvedBy String?
+    resolvedAt DateTime?
+    createdAt  DateTime        @default(now())
+    updatedAt  DateTime        @updatedAt
+
+    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@map("complaints")
+}
+
+enum Role {
+    STUDENT
+    LECTURER
+    ADMIN
+}
+
+enum Level {
+    LEVEL_100
+    LEVEL_200
+    LEVEL_300
+    LEVEL_400
+    LEVEL_500
+}
+
+enum DayOfWeek {
+    MONDAY
+    TUESDAY
+    WEDNESDAY
+    THURSDAY
+    FRIDAY
+    SATURDAY
+    SUNDAY
+}
+
+enum ComplaintStatus {
+    PENDING
+    IN_PROGRESS
+    RESOLVED
+    CLOSED
+}
+
+enum ClassType {
+    LECTURE
+    SEMINAR
+    LAB
+    TUTORIAL
+}
