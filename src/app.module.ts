@@ -7,6 +7,7 @@ import configuration from './config/configuration';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { UsersModule } from './users/users.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { DepartmentsModule } from './departments/departments.module';
     AuthModule,
     UsersModule,
     DepartmentsModule,
+    CoursesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
