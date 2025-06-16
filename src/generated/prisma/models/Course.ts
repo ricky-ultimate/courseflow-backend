@@ -39,7 +39,7 @@ export type CourseMinAggregateOutputType = {
   name: string | null
   level: $Enums.Level | null
   credits: number | null
-  departmentId: string | null
+  departmentCode: string | null
   isActive: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -51,7 +51,7 @@ export type CourseMaxAggregateOutputType = {
   name: string | null
   level: $Enums.Level | null
   credits: number | null
-  departmentId: string | null
+  departmentCode: string | null
   isActive: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -63,7 +63,7 @@ export type CourseCountAggregateOutputType = {
   name: number
   level: number
   credits: number
-  departmentId: number
+  departmentCode: number
   isActive: number
   createdAt: number
   updatedAt: number
@@ -85,7 +85,7 @@ export type CourseMinAggregateInputType = {
   name?: true
   level?: true
   credits?: true
-  departmentId?: true
+  departmentCode?: true
   isActive?: true
   createdAt?: true
   updatedAt?: true
@@ -97,7 +97,7 @@ export type CourseMaxAggregateInputType = {
   name?: true
   level?: true
   credits?: true
-  departmentId?: true
+  departmentCode?: true
   isActive?: true
   createdAt?: true
   updatedAt?: true
@@ -109,7 +109,7 @@ export type CourseCountAggregateInputType = {
   name?: true
   level?: true
   credits?: true
-  departmentId?: true
+  departmentCode?: true
   isActive?: true
   createdAt?: true
   updatedAt?: true
@@ -208,7 +208,7 @@ export type CourseGroupByOutputType = {
   name: string
   level: $Enums.Level
   credits: number
-  departmentId: string
+  departmentCode: string
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -243,7 +243,7 @@ export type CourseWhereInput = {
   name?: Prisma.StringFilter<"Course"> | string
   level?: Prisma.EnumLevelFilter<"Course"> | $Enums.Level
   credits?: Prisma.IntFilter<"Course"> | number
-  departmentId?: Prisma.StringFilter<"Course"> | string
+  departmentCode?: Prisma.StringFilter<"Course"> | string
   isActive?: Prisma.BoolFilter<"Course"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Course"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Course"> | Date | string
@@ -257,7 +257,7 @@ export type CourseOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   level?: Prisma.SortOrder
   credits?: Prisma.SortOrder
-  departmentId?: Prisma.SortOrder
+  departmentCode?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -267,21 +267,20 @@ export type CourseOrderByWithRelationInput = {
 
 export type CourseWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  departmentId_code_level?: Prisma.CourseDepartmentIdCodeLevelCompoundUniqueInput
+  code?: string
   AND?: Prisma.CourseWhereInput | Prisma.CourseWhereInput[]
   OR?: Prisma.CourseWhereInput[]
   NOT?: Prisma.CourseWhereInput | Prisma.CourseWhereInput[]
-  code?: Prisma.StringFilter<"Course"> | string
   name?: Prisma.StringFilter<"Course"> | string
   level?: Prisma.EnumLevelFilter<"Course"> | $Enums.Level
   credits?: Prisma.IntFilter<"Course"> | number
-  departmentId?: Prisma.StringFilter<"Course"> | string
+  departmentCode?: Prisma.StringFilter<"Course"> | string
   isActive?: Prisma.BoolFilter<"Course"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Course"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Course"> | Date | string
   department?: Prisma.XOR<Prisma.DepartmentScalarRelationFilter, Prisma.DepartmentWhereInput>
   schedules?: Prisma.ScheduleListRelationFilter
-}, "id" | "departmentId_code_level">
+}, "id" | "code">
 
 export type CourseOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -289,7 +288,7 @@ export type CourseOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   level?: Prisma.SortOrder
   credits?: Prisma.SortOrder
-  departmentId?: Prisma.SortOrder
+  departmentCode?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -309,7 +308,7 @@ export type CourseScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Course"> | string
   level?: Prisma.EnumLevelWithAggregatesFilter<"Course"> | $Enums.Level
   credits?: Prisma.IntWithAggregatesFilter<"Course"> | number
-  departmentId?: Prisma.StringWithAggregatesFilter<"Course"> | string
+  departmentCode?: Prisma.StringWithAggregatesFilter<"Course"> | string
   isActive?: Prisma.BoolWithAggregatesFilter<"Course"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Course"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Course"> | Date | string
@@ -334,7 +333,7 @@ export type CourseUncheckedCreateInput = {
   name: string
   level: $Enums.Level
   credits?: number
-  departmentId: string
+  departmentCode: string
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -360,7 +359,7 @@ export type CourseUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumLevelFieldUpdateOperationsInput | $Enums.Level
   credits?: Prisma.IntFieldUpdateOperationsInput | number
-  departmentId?: Prisma.StringFieldUpdateOperationsInput | string
+  departmentCode?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -373,7 +372,7 @@ export type CourseCreateManyInput = {
   name: string
   level: $Enums.Level
   credits?: number
-  departmentId: string
+  departmentCode: string
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -396,7 +395,7 @@ export type CourseUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumLevelFieldUpdateOperationsInput | $Enums.Level
   credits?: Prisma.IntFieldUpdateOperationsInput | number
-  departmentId?: Prisma.StringFieldUpdateOperationsInput | string
+  departmentCode?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -412,19 +411,13 @@ export type CourseOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type CourseDepartmentIdCodeLevelCompoundUniqueInput = {
-  departmentId: string
-  code: string
-  level: $Enums.Level
-}
-
 export type CourseCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   name?: Prisma.SortOrder
   level?: Prisma.SortOrder
   credits?: Prisma.SortOrder
-  departmentId?: Prisma.SortOrder
+  departmentCode?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -440,7 +433,7 @@ export type CourseMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   level?: Prisma.SortOrder
   credits?: Prisma.SortOrder
-  departmentId?: Prisma.SortOrder
+  departmentCode?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -452,7 +445,7 @@ export type CourseMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   level?: Prisma.SortOrder
   credits?: Prisma.SortOrder
-  departmentId?: Prisma.SortOrder
+  departmentCode?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -594,7 +587,7 @@ export type CourseScalarWhereInput = {
   name?: Prisma.StringFilter<"Course"> | string
   level?: Prisma.EnumLevelFilter<"Course"> | $Enums.Level
   credits?: Prisma.IntFilter<"Course"> | number
-  departmentId?: Prisma.StringFilter<"Course"> | string
+  departmentCode?: Prisma.StringFilter<"Course"> | string
   isActive?: Prisma.BoolFilter<"Course"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Course"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Course"> | Date | string
@@ -618,7 +611,7 @@ export type CourseUncheckedCreateWithoutSchedulesInput = {
   name: string
   level: $Enums.Level
   credits?: number
-  departmentId: string
+  departmentCode: string
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -658,7 +651,7 @@ export type CourseUncheckedUpdateWithoutSchedulesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   level?: Prisma.EnumLevelFieldUpdateOperationsInput | $Enums.Level
   credits?: Prisma.IntFieldUpdateOperationsInput | number
-  departmentId?: Prisma.StringFieldUpdateOperationsInput | string
+  departmentCode?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -747,7 +740,7 @@ export type CourseSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   name?: boolean
   level?: boolean
   credits?: boolean
-  departmentId?: boolean
+  departmentCode?: boolean
   isActive?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -762,7 +755,7 @@ export type CourseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   name?: boolean
   level?: boolean
   credits?: boolean
-  departmentId?: boolean
+  departmentCode?: boolean
   isActive?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -775,7 +768,7 @@ export type CourseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   name?: boolean
   level?: boolean
   credits?: boolean
-  departmentId?: boolean
+  departmentCode?: boolean
   isActive?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -788,13 +781,13 @@ export type CourseSelectScalar = {
   name?: boolean
   level?: boolean
   credits?: boolean
-  departmentId?: boolean
+  departmentCode?: boolean
   isActive?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type CourseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "code" | "name" | "level" | "credits" | "departmentId" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["course"]>
+export type CourseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "code" | "name" | "level" | "credits" | "departmentCode" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["course"]>
 export type CourseInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   department?: boolean | Prisma.DepartmentDefaultArgs<ExtArgs>
   schedules?: boolean | Prisma.Course$schedulesArgs<ExtArgs>
@@ -819,7 +812,7 @@ export type $CoursePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     name: string
     level: $Enums.Level
     credits: number
-    departmentId: string
+    departmentCode: string
     isActive: boolean
     createdAt: Date
     updatedAt: Date
@@ -1253,7 +1246,7 @@ export interface CourseFieldRefs {
   readonly name: Prisma.FieldRef<"Course", 'String'>
   readonly level: Prisma.FieldRef<"Course", 'Level'>
   readonly credits: Prisma.FieldRef<"Course", 'Int'>
-  readonly departmentId: Prisma.FieldRef<"Course", 'String'>
+  readonly departmentCode: Prisma.FieldRef<"Course", 'String'>
   readonly isActive: Prisma.FieldRef<"Course", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Course", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Course", 'DateTime'>

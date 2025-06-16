@@ -861,7 +861,7 @@ export const CourseScalarFieldEnum = {
   name: 'name',
   level: 'level',
   credits: 'credits',
-  departmentId: 'departmentId',
+  departmentCode: 'departmentCode',
   isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -872,7 +872,7 @@ export type CourseScalarFieldEnum = (typeof CourseScalarFieldEnum)[keyof typeof 
 
 export const ScheduleScalarFieldEnum = {
   id: 'id',
-  courseId: 'courseId',
+  courseCode: 'courseCode',
   dayOfWeek: 'dayOfWeek',
   startTime: 'startTime',
   endTime: 'endTime',
