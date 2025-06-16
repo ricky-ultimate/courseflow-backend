@@ -25,7 +25,7 @@ export type AggregateSchedule = {
 
 export type ScheduleMinAggregateOutputType = {
   id: string | null
-  courseId: string | null
+  courseCode: string | null
   dayOfWeek: $Enums.DayOfWeek | null
   startTime: string | null
   endTime: string | null
@@ -37,7 +37,7 @@ export type ScheduleMinAggregateOutputType = {
 
 export type ScheduleMaxAggregateOutputType = {
   id: string | null
-  courseId: string | null
+  courseCode: string | null
   dayOfWeek: $Enums.DayOfWeek | null
   startTime: string | null
   endTime: string | null
@@ -49,7 +49,7 @@ export type ScheduleMaxAggregateOutputType = {
 
 export type ScheduleCountAggregateOutputType = {
   id: number
-  courseId: number
+  courseCode: number
   dayOfWeek: number
   startTime: number
   endTime: number
@@ -63,7 +63,7 @@ export type ScheduleCountAggregateOutputType = {
 
 export type ScheduleMinAggregateInputType = {
   id?: true
-  courseId?: true
+  courseCode?: true
   dayOfWeek?: true
   startTime?: true
   endTime?: true
@@ -75,7 +75,7 @@ export type ScheduleMinAggregateInputType = {
 
 export type ScheduleMaxAggregateInputType = {
   id?: true
-  courseId?: true
+  courseCode?: true
   dayOfWeek?: true
   startTime?: true
   endTime?: true
@@ -87,7 +87,7 @@ export type ScheduleMaxAggregateInputType = {
 
 export type ScheduleCountAggregateInputType = {
   id?: true
-  courseId?: true
+  courseCode?: true
   dayOfWeek?: true
   startTime?: true
   endTime?: true
@@ -172,7 +172,7 @@ export type ScheduleGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 
 export type ScheduleGroupByOutputType = {
   id: string
-  courseId: string
+  courseCode: string
   dayOfWeek: $Enums.DayOfWeek
   startTime: string
   endTime: string
@@ -205,7 +205,7 @@ export type ScheduleWhereInput = {
   OR?: Prisma.ScheduleWhereInput[]
   NOT?: Prisma.ScheduleWhereInput | Prisma.ScheduleWhereInput[]
   id?: Prisma.StringFilter<"Schedule"> | string
-  courseId?: Prisma.StringFilter<"Schedule"> | string
+  courseCode?: Prisma.StringFilter<"Schedule"> | string
   dayOfWeek?: Prisma.EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
   startTime?: Prisma.StringFilter<"Schedule"> | string
   endTime?: Prisma.StringFilter<"Schedule"> | string
@@ -218,7 +218,7 @@ export type ScheduleWhereInput = {
 
 export type ScheduleOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  courseId?: Prisma.SortOrder
+  courseCode?: Prisma.SortOrder
   dayOfWeek?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
@@ -234,7 +234,7 @@ export type ScheduleWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ScheduleWhereInput | Prisma.ScheduleWhereInput[]
   OR?: Prisma.ScheduleWhereInput[]
   NOT?: Prisma.ScheduleWhereInput | Prisma.ScheduleWhereInput[]
-  courseId?: Prisma.StringFilter<"Schedule"> | string
+  courseCode?: Prisma.StringFilter<"Schedule"> | string
   dayOfWeek?: Prisma.EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
   startTime?: Prisma.StringFilter<"Schedule"> | string
   endTime?: Prisma.StringFilter<"Schedule"> | string
@@ -247,7 +247,7 @@ export type ScheduleWhereUniqueInput = Prisma.AtLeast<{
 
 export type ScheduleOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  courseId?: Prisma.SortOrder
+  courseCode?: Prisma.SortOrder
   dayOfWeek?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
@@ -265,7 +265,7 @@ export type ScheduleScalarWhereWithAggregatesInput = {
   OR?: Prisma.ScheduleScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ScheduleScalarWhereWithAggregatesInput | Prisma.ScheduleScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Schedule"> | string
-  courseId?: Prisma.StringWithAggregatesFilter<"Schedule"> | string
+  courseCode?: Prisma.StringWithAggregatesFilter<"Schedule"> | string
   dayOfWeek?: Prisma.EnumDayOfWeekWithAggregatesFilter<"Schedule"> | $Enums.DayOfWeek
   startTime?: Prisma.StringWithAggregatesFilter<"Schedule"> | string
   endTime?: Prisma.StringWithAggregatesFilter<"Schedule"> | string
@@ -289,7 +289,7 @@ export type ScheduleCreateInput = {
 
 export type ScheduleUncheckedCreateInput = {
   id?: string
-  courseId: string
+  courseCode: string
   dayOfWeek: $Enums.DayOfWeek
   startTime: string
   endTime: string
@@ -313,7 +313,7 @@ export type ScheduleUpdateInput = {
 
 export type ScheduleUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  courseId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseCode?: Prisma.StringFieldUpdateOperationsInput | string
   dayOfWeek?: Prisma.EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
   startTime?: Prisma.StringFieldUpdateOperationsInput | string
   endTime?: Prisma.StringFieldUpdateOperationsInput | string
@@ -325,7 +325,7 @@ export type ScheduleUncheckedUpdateInput = {
 
 export type ScheduleCreateManyInput = {
   id?: string
-  courseId: string
+  courseCode: string
   dayOfWeek: $Enums.DayOfWeek
   startTime: string
   endTime: string
@@ -348,7 +348,7 @@ export type ScheduleUpdateManyMutationInput = {
 
 export type ScheduleUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  courseId?: Prisma.StringFieldUpdateOperationsInput | string
+  courseCode?: Prisma.StringFieldUpdateOperationsInput | string
   dayOfWeek?: Prisma.EnumDayOfWeekFieldUpdateOperationsInput | $Enums.DayOfWeek
   startTime?: Prisma.StringFieldUpdateOperationsInput | string
   endTime?: Prisma.StringFieldUpdateOperationsInput | string
@@ -370,7 +370,7 @@ export type ScheduleOrderByRelationAggregateInput = {
 
 export type ScheduleCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  courseId?: Prisma.SortOrder
+  courseCode?: Prisma.SortOrder
   dayOfWeek?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
@@ -382,7 +382,7 @@ export type ScheduleCountOrderByAggregateInput = {
 
 export type ScheduleMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  courseId?: Prisma.SortOrder
+  courseCode?: Prisma.SortOrder
   dayOfWeek?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
@@ -394,7 +394,7 @@ export type ScheduleMaxOrderByAggregateInput = {
 
 export type ScheduleMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  courseId?: Prisma.SortOrder
+  courseCode?: Prisma.SortOrder
   dayOfWeek?: Prisma.SortOrder
   startTime?: Prisma.SortOrder
   endTime?: Prisma.SortOrder
@@ -507,7 +507,7 @@ export type ScheduleScalarWhereInput = {
   OR?: Prisma.ScheduleScalarWhereInput[]
   NOT?: Prisma.ScheduleScalarWhereInput | Prisma.ScheduleScalarWhereInput[]
   id?: Prisma.StringFilter<"Schedule"> | string
-  courseId?: Prisma.StringFilter<"Schedule"> | string
+  courseCode?: Prisma.StringFilter<"Schedule"> | string
   dayOfWeek?: Prisma.EnumDayOfWeekFilter<"Schedule"> | $Enums.DayOfWeek
   startTime?: Prisma.StringFilter<"Schedule"> | string
   endTime?: Prisma.StringFilter<"Schedule"> | string
@@ -565,7 +565,7 @@ export type ScheduleUncheckedUpdateManyWithoutCourseInput = {
 
 export type ScheduleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  courseId?: boolean
+  courseCode?: boolean
   dayOfWeek?: boolean
   startTime?: boolean
   endTime?: boolean
@@ -578,7 +578,7 @@ export type ScheduleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
 
 export type ScheduleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  courseId?: boolean
+  courseCode?: boolean
   dayOfWeek?: boolean
   startTime?: boolean
   endTime?: boolean
@@ -591,7 +591,7 @@ export type ScheduleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type ScheduleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  courseId?: boolean
+  courseCode?: boolean
   dayOfWeek?: boolean
   startTime?: boolean
   endTime?: boolean
@@ -604,7 +604,7 @@ export type ScheduleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
 
 export type ScheduleSelectScalar = {
   id?: boolean
-  courseId?: boolean
+  courseCode?: boolean
   dayOfWeek?: boolean
   startTime?: boolean
   endTime?: boolean
@@ -614,7 +614,7 @@ export type ScheduleSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ScheduleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "courseId" | "dayOfWeek" | "startTime" | "endTime" | "venue" | "type" | "createdAt" | "updatedAt", ExtArgs["result"]["schedule"]>
+export type ScheduleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "courseCode" | "dayOfWeek" | "startTime" | "endTime" | "venue" | "type" | "createdAt" | "updatedAt", ExtArgs["result"]["schedule"]>
 export type ScheduleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   course?: boolean | Prisma.CourseDefaultArgs<ExtArgs>
 }
@@ -632,7 +632,7 @@ export type $SchedulePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    courseId: string
+    courseCode: string
     dayOfWeek: $Enums.DayOfWeek
     startTime: string
     endTime: string
@@ -1065,7 +1065,7 @@ export interface Prisma__ScheduleClient<T, Null = never, ExtArgs extends runtime
  */
 export interface ScheduleFieldRefs {
   readonly id: Prisma.FieldRef<"Schedule", 'String'>
-  readonly courseId: Prisma.FieldRef<"Schedule", 'String'>
+  readonly courseCode: Prisma.FieldRef<"Schedule", 'String'>
   readonly dayOfWeek: Prisma.FieldRef<"Schedule", 'DayOfWeek'>
   readonly startTime: Prisma.FieldRef<"Schedule", 'String'>
   readonly endTime: Prisma.FieldRef<"Schedule", 'String'>
