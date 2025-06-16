@@ -12,6 +12,7 @@ import { PrismaModule } from './database/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { SchedulesModule } from './schedules/schedules.module';
+import { ComplaintsModule } from './complaints/complaints.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SchedulesModule } from './schedules/schedules.module';
     CoursesModule,
     PrismaModule,
     SchedulesModule,
+    ComplaintsModule,
   ],
   controllers: [AppController],
   providers: [
