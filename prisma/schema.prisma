@@ -45,34 +45,34 @@ model Department {
 }
 
 model Course {
-    id           String   @id @default(cuid())
-    code         String   @unique
-    name         String
-    level        Level
-    credits      Int      @default(2)
-    departmentId String
-    isActive     Boolean  @default(true)
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+    id             String   @id @default(cuid())
+    code           String   @unique
+    name           String
+    level          Level
+    credits        Int      @default(2)
+    departmentCode String
+    isActive       Boolean  @default(true)
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
 
-    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+    department Department @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
     schedules  Schedule[]
 
     @@map("courses")
 }
 
 model Schedule {
-    id        String    @id @default(cuid())
-    courseId  String
-    dayOfWeek DayOfWeek
-    startTime String // Format: "HH:MM"
-    endTime   String // Format: "HH:MM"
-    venue     String
-    type      ClassType @default(LECTURE)
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+    id         String    @id @default(cuid())
+    courseCode String
+    dayOfWeek  DayOfWeek
+    startTime  String // Format: "HH:MM"
+    endTime    String // Format: "HH:MM"
+    venue      String
+    type       ClassType @default(LECTURE)
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
 
-    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    course Course @relation(fields: [courseCode], references: [code], onDelete: Cascade)
 
     @@map("schedules")
 }
