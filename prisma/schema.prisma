@@ -46,7 +46,7 @@ model Department {
 
 model Course {
     id           String   @id @default(cuid())
-    code         String
+    code         String   @unique
     name         String
     level        Level
     credits      Int      @default(2)
@@ -58,7 +58,6 @@ model Course {
     department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
     schedules  Schedule[]
 
-    @@unique([departmentId, code, level])
     @@map("courses")
 }
 

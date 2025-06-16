@@ -267,11 +267,10 @@ export type CourseOrderByWithRelationInput = {
 
 export type CourseWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  departmentId_code_level?: Prisma.CourseDepartmentIdCodeLevelCompoundUniqueInput
+  code?: string
   AND?: Prisma.CourseWhereInput | Prisma.CourseWhereInput[]
   OR?: Prisma.CourseWhereInput[]
   NOT?: Prisma.CourseWhereInput | Prisma.CourseWhereInput[]
-  code?: Prisma.StringFilter<"Course"> | string
   name?: Prisma.StringFilter<"Course"> | string
   level?: Prisma.EnumLevelFilter<"Course"> | $Enums.Level
   credits?: Prisma.IntFilter<"Course"> | number
@@ -281,7 +280,7 @@ export type CourseWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Course"> | Date | string
   department?: Prisma.XOR<Prisma.DepartmentScalarRelationFilter, Prisma.DepartmentWhereInput>
   schedules?: Prisma.ScheduleListRelationFilter
-}, "id" | "departmentId_code_level">
+}, "id" | "code">
 
 export type CourseOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -410,12 +409,6 @@ export type CourseListRelationFilter = {
 
 export type CourseOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type CourseDepartmentIdCodeLevelCompoundUniqueInput = {
-  departmentId: string
-  code: string
-  level: $Enums.Level
 }
 
 export type CourseCountOrderByAggregateInput = {
