@@ -1,11 +1,25 @@
-import { Controller, Get, Param, Patch, Delete, Body } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Delete,
+  Body,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Course, Role, Level } from '../generated/prisma';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Courses')
 @ApiBearerAuth('JWT-auth')
@@ -40,6 +54,7 @@ export class CoursesController extends BaseController<
 
   // Override the base controller methods to use :code instead of :id
   @Get(':code')
+  @Public()
   @ApiOperation({ summary: 'Get course by code' })
   @ApiParam({ name: 'code', description: 'Course code' })
   findOne(@Param('code') code: string) {
@@ -58,5 +73,12 @@ export class CoursesController extends BaseController<
   @ApiParam({ name: 'code', description: 'Course code' })
   remove(@Param('code') code: string) {
     return this.coursesService.remove(code);
+  }
+
+  @Get()
+  @Public()
+  @ApiOperation({ summary: 'Get all courses' })
+  findAll(@Query() query?: any) {
+    return this.coursesService.findAll(query);
   }
 }
