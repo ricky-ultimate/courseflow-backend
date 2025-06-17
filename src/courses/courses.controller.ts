@@ -4,22 +4,25 @@ import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { BaseController } from '../common/controllers/base.controller';
+import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Course, Role, Level } from '../generated/prisma';
 
 @ApiTags('Courses')
 @Controller('courses')
+@CrudRoles({
+  entity: 'course',
+  create: [Role.ADMIN, Role.LECTURER],
+  read: [],
+  update: [Role.ADMIN, Role.LECTURER],
+  delete: [Role.ADMIN],
+})
 export class CoursesController extends BaseController<
   Course,
   CreateCourseDto,
   UpdateCourseDto
 > {
   constructor(private readonly coursesService: CoursesService) {
-    super(coursesService, {
-      entity: 'course',
-      createRoles: [Role.ADMIN, Role.LECTURER],
-      updateRoles: [Role.ADMIN, Role.LECTURER],
-      deleteRoles: [Role.ADMIN],
-    });
+    super(coursesService);
   }
 
   @Get('department/:departmentCode')
