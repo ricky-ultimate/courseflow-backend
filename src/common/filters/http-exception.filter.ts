@@ -7,10 +7,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Catch()
-export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -27,6 +28,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'string'
           ? exceptionResponse
           : (exceptionResponse as any).message || exception.message;
+    } else if (exception instanceof PrismaClientKnownRequestError) {
+      // Handle Prisma errors
+      status = HttpStatus.BAD_REQUEST;
+      message = this.handlePrismaError(exception);
     }
 
     const errorResponse = {
@@ -35,14 +40,27 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      message,
+      message: Array.isArray(message) ? message : [message],
     };
 
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
+      `${request.method} ${request.url} - ${status} - ${JSON.stringify(message)}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
 
     response.status(status).json(errorResponse);
+  }
+
+  private handlePrismaError(exception: PrismaClientKnownRequestError): string {
+    switch (exception.code) {
+      case 'P2002':
+        return 'A record with this information already exists';
+      case 'P2025':
+        return 'Record not found';
+      case 'P2003':
+        return 'Foreign key constraint failed';
+      default:
+        return 'Database operation failed';
+    }
   }
 }
