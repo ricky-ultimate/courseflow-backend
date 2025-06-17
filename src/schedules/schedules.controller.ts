@@ -4,22 +4,25 @@ import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { BaseController } from '../common/controllers/base.controller';
+import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Schedule, Role, Level } from '../generated/prisma';
 
 @ApiTags('Schedules')
 @Controller('schedules')
+@CrudRoles({
+  entity: 'schedule',
+  create: [Role.ADMIN, Role.LECTURER],
+  read: [],
+  update: [Role.ADMIN, Role.LECTURER],
+  delete: [Role.ADMIN],
+})
 export class SchedulesController extends BaseController<
   Schedule,
   CreateScheduleDto,
   UpdateScheduleDto
 > {
   constructor(private readonly schedulesService: SchedulesService) {
-    super(schedulesService, {
-      entity: 'schedule',
-      createRoles: [Role.ADMIN, Role.LECTURER],
-      updateRoles: [Role.ADMIN, Role.LECTURER],
-      deleteRoles: [Role.ADMIN],
-    });
+    super(schedulesService);
   }
 
   @Get('course/:courseCode')
