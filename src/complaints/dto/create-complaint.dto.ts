@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional } from 'class-validator';
 
 export class CreateComplaintDto {
   @ApiProperty()
@@ -25,4 +25,9 @@ export class CreateComplaintDto {
   @IsString()
   @IsNotEmpty()
   message: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  userId?: string;
 }
