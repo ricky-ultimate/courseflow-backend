@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Patch, Delete, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -8,6 +8,7 @@ import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Course, Role, Level } from '../generated/prisma';
 
 @ApiTags('Courses')
+@ApiBearerAuth('JWT-auth')
 @Controller('courses')
 @CrudRoles({
   entity: 'course',

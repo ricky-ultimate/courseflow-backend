@@ -8,7 +8,7 @@ import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Role, User } from '../generated/prisma';
 
 @ApiTags('Users')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('users')
 @CrudRoles({
   entity: 'user',

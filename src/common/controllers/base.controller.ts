@@ -27,7 +27,7 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
 
   @Post()
   @UseGuards(RolesGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new entity' })
   @ApiResponse({
     status: 201,

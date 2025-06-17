@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -8,6 +8,7 @@ import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Schedule, Role, Level } from '../generated/prisma';
 
 @ApiTags('Schedules')
+@ApiBearerAuth('JWT-auth')
 @Controller('schedules')
 @CrudRoles({
   entity: 'schedule',
