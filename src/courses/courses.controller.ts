@@ -21,7 +21,6 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Course, Role, Level } from '../generated/prisma';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Courses')
 @ApiBearerAuth('JWT-auth')
@@ -54,9 +53,7 @@ export class CoursesController extends BaseController<
     return this.coursesService.findByLevel(level);
   }
 
-  // Override the base controller methods to use :code instead of :id
   @Get(':code')
-  @Public()
   @ApiOperation({ summary: 'Get course by code' })
   @ApiParam({ name: 'code', description: 'Course code' })
   findOne(@Param('code') code: string) {
@@ -78,7 +75,6 @@ export class CoursesController extends BaseController<
   }
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all courses' })
   findAll(@Query() query?: any) {
     return this.coursesService.findAll(query);
