@@ -6,9 +6,9 @@ import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Schedule, Role, Level } from '../generated/prisma';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Schedules')
-@ApiBearerAuth('JWT-auth')
 @Controller('schedules')
 @CrudRoles({
   entity: 'schedule',
@@ -27,18 +27,21 @@ export class SchedulesController extends BaseController<
   }
 
   @Get('course/:courseCode')
+  @Public()
   @ApiOperation({ summary: 'Get schedules by course' })
   findByCourse(@Param('courseCode') courseCode: string) {
     return this.schedulesService.findByCourse(courseCode);
   }
 
   @Get('department/:departmentCode')
+  @Public()
   @ApiOperation({ summary: 'Get schedules by department' })
   findByDepartment(@Param('departmentCode') departmentCode: string) {
     return this.schedulesService.findByDepartment(departmentCode);
   }
 
   @Get('level/:level')
+  @Public()
   @ApiOperation({ summary: 'Get schedules by level' })
   findByLevel(@Param('level') level: Level) {
     return this.schedulesService.findByLevel(level);

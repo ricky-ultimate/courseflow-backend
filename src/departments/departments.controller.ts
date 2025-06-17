@@ -15,6 +15,7 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Department, Role } from '../generated/prisma';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Departments')
 @ApiBearerAuth('JWT-auth')
@@ -43,12 +44,14 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all departments' })
   findAll(@Query() query?: any) {
     return this.departmentsService.findAll(query);
   }
 
   @Get(':code')
+  @Public()
   @ApiOperation({ summary: 'Get department by code' })
   @ApiParam({ name: 'code', description: 'Department code' })
   findOne(@Param('code') code: string) {
