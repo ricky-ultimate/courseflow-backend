@@ -1,68 +1,40 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { BaseService } from '../common/services/base.service';
+import { Course, Level } from '../generated/prisma';
 
 @Injectable()
-export class CoursesService {
-  constructor(private prisma: PrismaService) {}
-
-  async create(dto: CreateCourseDto) {
-    return this.prisma.course.create({
-      data: dto,
+export class CoursesService extends BaseService<
+  Course,
+  CreateCourseDto,
+  UpdateCourseDto
+> {
+  constructor(prisma: PrismaService) {
+    super(prisma, {
+      modelName: 'course',
+      identifierField: 'code',
+      uniqueFields: ['code'],
+      softDelete: true,
+      includeRelations: { department: true },
+      defaultOrderBy: { code: 'asc' },
     });
   }
 
-  async findAll() {
-    return this.prisma.course.findMany({
-      where: { isActive: true },
-      include: { department: true },
-      orderBy: [{ level: 'asc' }, { code: 'asc' }],
-    });
-  }
-
-  async findOne(code: string) {
-    const course = await this.prisma.course.findUnique({
-      where: { code: code, isActive: true },
-      include: { department: true },
-    });
-
-    if (!course) {
-      throw new NotFoundException('Course not found');
-    }
-
-    return course;
-  }
-
-  async findByDepartment(departmentCode: string) {
+  async findByDepartment(departmentCode: string): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: { departmentCode, isActive: true },
+      include: { department: true },
       orderBy: [{ level: 'asc' }, { code: 'asc' }],
     });
   }
 
-  async findByLevel(level: string) {
+  async findByLevel(level: Level): Promise<Course[]> {
     return this.prisma.course.findMany({
-      where: { level: level as any, isActive: true },
+      where: { level, isActive: true },
+      include: { department: true },
       orderBy: { code: 'asc' },
-    });
-  }
-
-  async update(code: string, dto: UpdateCourseDto) {
-    await this.findOne(code);
-
-    return this.prisma.course.update({
-      where: { code },
-      data: dto,
-    });
-  }
-
-  async remove(code: string) {
-    await this.findOne(code);
-
-    return this.prisma.course.update({
-      where: { code },
-      data: { isActive: false },
     });
   }
 }

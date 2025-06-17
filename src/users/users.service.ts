@@ -1,93 +1,59 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { BaseService } from '../common/services/base.service';
+import { User } from '../generated/prisma';
 import * as argon2 from 'argon2';
 
 @Injectable()
-export class UsersService {
-  constructor(private prisma: PrismaService) {}
-
-  async create(dto: CreateUserDto) {
-    const hashedPassword = await argon2.hash(dto.password);
-
-    return this.prisma.user.create({
-      data: {
-        ...dto,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        matricNO: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+export class UsersService extends BaseService<
+  User,
+  CreateUserDto,
+  UpdateUserDto
+> {
+  constructor(prisma: PrismaService) {
+    super(prisma, {
+      modelName: 'user',
+      identifierField: 'matricNO',
+      uniqueFields: ['matricNO', 'email'],
+      softDelete: true,
+      defaultOrderBy: { createdAt: 'desc' },
     });
   }
 
-  async findAll() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        matricNO: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  protected async beforeCreate(dto: CreateUserDto): Promise<any> {
+    return {
+      ...dto,
+      password: await argon2.hash(dto.password),
+    };
+  }
+
+  async findAll(options?: any) {
+    const result = await super.findAll(options);
+    return this.excludePasswords(result);
   }
 
   async findOne(matricNO: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { matricNO },
-      select: {
-        id: true,
-        matricNO: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
+    const user = await super.findOne(matricNO);
+    return this.excludePassword(user);
+  }
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+  private excludePassword(user: any) {
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  private excludePasswords(users: any) {
+    if (Array.isArray(users)) {
+      return users.map((user) => this.excludePassword(user));
     }
-
-    return user;
-  }
-
-  async update(matricNO: string, dto: UpdateUserDto) {
-    await this.findOne(matricNO); // Check if user exists
-
-    return this.prisma.user.update({
-      where: { matricNO },
-      data: dto,
-      select: {
-        id: true,
-        matricNO: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-  }
-
-  async remove(matricNO: string) {
-    await this.findOne(matricNO); // Check if user exists
-
-    return this.prisma.user.update({
-      where: { matricNO },
-      data: { isActive: false },
-    });
+    if (users.data) {
+      return {
+        ...users,
+        data: users.data.map((user: any) => this.excludePassword(user)),
+      };
+    }
+    return users;
   }
 }
