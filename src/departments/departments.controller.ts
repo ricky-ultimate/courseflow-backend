@@ -8,16 +8,16 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Department, Role } from '../generated/prisma';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Departments')
+@ApiBearerAuth('JWT-auth')
 @Controller('departments')
 @CrudRoles({
   entity: 'department',
@@ -43,14 +43,12 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all departments' })
   findAll(@Query() query?: any) {
     return this.departmentsService.findAll(query);
   }
 
   @Get(':code')
-  @Public()
   @ApiOperation({ summary: 'Get department by code' })
   @ApiParam({ name: 'code', description: 'Department code' })
   findOne(@Param('code') code: string) {
