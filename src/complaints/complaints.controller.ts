@@ -7,13 +7,14 @@ import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Complaint, Role } from '../generated/prisma';
 import { AuthenticatedRequest } from '../common/types/auth.types';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('Complaints')
 @ApiBearerAuth()
 @Controller('complaints')
 @CrudRoles({
   entity: 'complaint',
-  create: [],
+  create: [Role.STUDENT, Role.ADMIN],
   read: [Role.ADMIN],
   update: [Role.ADMIN],
   delete: [Role.ADMIN],
@@ -28,6 +29,7 @@ export class ComplaintsController extends BaseController<
   }
 
   @Get('my-complaints')
+  @Roles(Role.STUDENT, Role.ADMIN)
   @ApiOperation({ summary: 'Get my complaints' })
   findUserComplaints(@Req() req: AuthenticatedRequest) {
     return this.complaintsService.findUserComplaints(req.user.id);
