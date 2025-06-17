@@ -6,12 +6,14 @@ import {
   Delete,
   Body,
   Query,
+  Post,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -80,5 +82,12 @@ export class CoursesController extends BaseController<
   @ApiOperation({ summary: 'Get all courses' })
   findAll(@Query() query?: any) {
     return this.coursesService.findAll(query);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new course' })
+  @ApiBody({ type: CreateCourseDto })
+  create(@Body() createDto: CreateCourseDto) {
+    return this.coursesService.create(createDto);
   }
 }
