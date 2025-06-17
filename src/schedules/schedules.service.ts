@@ -1,75 +1,46 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { BaseService } from '../common/services/base.service';
+import { Schedule, Level } from '../generated/prisma';
 
 @Injectable()
-export class SchedulesService {
-  constructor(private prisma: PrismaService) {}
-
-  async create(dto: CreateScheduleDto) {
-    return this.prisma.schedule.create({
-      data: dto,
+export class SchedulesService extends BaseService<
+  Schedule,
+  CreateScheduleDto,
+  UpdateScheduleDto
+> {
+  constructor(prisma: PrismaService) {
+    super(prisma, {
+      modelName: 'schedule',
+      identifierField: 'id',
+      includeRelations: { course: { include: { department: true } } },
+      defaultOrderBy: { startTime: 'asc' },
     });
   }
 
-  async findAll() {
-    return this.prisma.schedule.findMany({
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-      include: { course: true },
-    });
-  }
-
-  async findByCourse(courseCode: string) {
+  async findByCourse(courseCode: string): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { courseCode },
+      include: { course: true },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
   }
 
-  async findByDepartment(departmentCode: string) {
+  async findByDepartment(departmentCode: string): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { course: { departmentCode } },
-      include: { course: true },
+      include: { course: { include: { department: true } } },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
   }
 
-  async findByLevel(level: string) {
+  async findByLevel(level: Level): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
-      where: { course: { level: level as any } },
-      include: { course: true },
+      where: { course: { level } },
+      include: { course: { include: { department: true } } },
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findOne(id: string) {
-    const schedule = await this.prisma.schedule.findUnique({
-      where: { id },
-      include: { course: true },
-    });
-
-    if (!schedule) {
-      throw new NotFoundException('Schedule not found');
-    }
-
-    return schedule;
-  }
-
-  async update(id: string, dto: UpdateScheduleDto) {
-    await this.findOne(id);
-
-    return this.prisma.schedule.update({
-      where: { id },
-      data: dto,
-    });
-  }
-
-  async remove(id: string) {
-    await this.findOne(id);
-
-    return this.prisma.schedule.delete({
-      where: { id },
     });
   }
 }
