@@ -46,13 +46,17 @@ export class ComplaintsService extends BaseService<
     });
   }
 
-  protected async beforeUpdate(dto: UpdateComplaintDto, id: string) {
-    const data: any = { ...dto };
+  protected async beforeUpdate(
+    dto: UpdateComplaintDto,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _id: string,
+  ) {
+    const data: Record<string, any> = { ...dto };
 
-    if (dto.status === 'RESOLVED' && !dto.resolvedBy) {
+    if (dto.status === 'RESOLVED' && !data.resolvedBy) {
       data.resolvedAt = new Date();
     }
 
-    return data;
+    return Promise.resolve(data);
   }
 }

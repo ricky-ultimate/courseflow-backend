@@ -15,6 +15,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -22,6 +23,7 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Course, Role, Level } from '../generated/prisma';
+import { PaginationOptions } from '../common/interfaces/base-service.interface';
 
 @ApiTags('Courses')
 @ApiBearerAuth('JWT-auth')
@@ -82,7 +84,11 @@ export class CoursesController extends BaseController<
 
   @Get()
   @ApiOperation({ summary: 'Get all courses' })
-  findAll(@Query() query?: any) {
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
+  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
+  findAll(@Query() query?: PaginationOptions) {
     return this.coursesService.findAll(query);
   }
 
