@@ -3,13 +3,10 @@ import {
   IsString,
   IsNotEmpty,
   IsEmail,
-  IsEnum,
-  IsOptional,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ComplaintStatus } from '../../generated/prisma';
 
 export class CreateComplaintDto {
   @ApiProperty({ example: 'John Doe' })
@@ -47,9 +44,4 @@ export class CreateComplaintDto {
   @MinLength(10, { message: 'Message must be at least 10 characters' })
   @MaxLength(1000, { message: 'Message cannot exceed 1000 characters' })
   message: string;
-
-  @ApiProperty({ enum: ComplaintStatus, default: ComplaintStatus.PENDING })
-  @IsEnum(ComplaintStatus, { message: 'Invalid complaint status' })
-  @IsOptional()
-  status?: ComplaintStatus = ComplaintStatus.PENDING;
 }

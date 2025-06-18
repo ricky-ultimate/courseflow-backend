@@ -1,17 +1,28 @@
-import { Controller, Get, Req, Query, Body, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  Query,
+  Body,
+  Post,
+  Patch,
+  Param,
+  ParseEnumPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
   ApiQuery,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { ComplaintsService } from './complaints.service';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
 import { UpdateComplaintDto } from './dto/update-complaint.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
-import { Complaint, Role } from '../generated/prisma';
+import { Complaint, ComplaintStatus, Role } from '../generated/prisma';
 import { AuthenticatedRequest } from '../common/types/auth.types';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PaginationOptions } from '../common/interfaces/base-service.interface';
@@ -77,5 +88,29 @@ export class ComplaintsController extends BaseController<
   @ApiBody({ type: CreateComplaintDto })
   create(@Body() createDto: CreateComplaintDto) {
     return this.complaintsService.create(createDto);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({
+    summary: 'Update complaint status (Admin only)',
+    description:
+      'Update the status of a complaint. Available statuses: PENDING, IN_PROGRESS, RESOLVED, CLOSED',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Complaint ID',
+    example: 'clxyz123abc456def789',
+  })
+  @ApiQuery({
+    name: 'status',
+    enum: ComplaintStatus,
+    description: 'New status for the complaint',
+    example: 'IN_PROGRESS'
+  })
+  updateStatus(
+    @Param('id') id: string,
+    @Query('status', new ParseEnumPipe(ComplaintStatus)) status: ComplaintStatus,
+  ) {
+    return this.complaintsService.update(id, { status });
   }
 }
