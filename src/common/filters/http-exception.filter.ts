@@ -38,7 +38,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorCode =
           responseObj.errorCode || this.getErrorCodeFromStatus(status);
       } else {
-        message = exceptionResponse as string;
+        message = exceptionResponse;
         errorCode = this.getErrorCodeFromStatus(status);
       }
     } else if (exception instanceof PrismaClientKnownRequestError) {

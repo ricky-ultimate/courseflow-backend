@@ -11,4 +11,5 @@ export interface CrudRolesConfig {
   delete?: Role[];
 }
 
-export const CrudRoles = (config: CrudRolesConfig) => SetMetadata(CRUD_ROLES_KEY, config);
+export const CrudRoles = (config: CrudRolesConfig) =>
+  SetMetadata(CRUD_ROLES_KEY, config);
