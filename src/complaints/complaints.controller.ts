@@ -54,12 +54,20 @@ export class ComplaintsController extends BaseController<
 
   @Get('pending')
   @ApiOperation({ summary: 'Get pending complaints (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
+  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
   findPending() {
     return this.complaintsService.findPending();
   }
 
   @Get('resolved')
   @ApiOperation({ summary: 'Get resolved complaints (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
+  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
   findResolved() {
     return this.complaintsService.findResolved();
   }
