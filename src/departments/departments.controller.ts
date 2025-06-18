@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -21,6 +22,7 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Department, Role } from '../generated/prisma';
+import { PaginationOptions } from '../common/interfaces/base-service.interface';
 
 @ApiTags('Departments')
 @ApiBearerAuth('JWT-auth')
@@ -50,7 +52,11 @@ export class DepartmentsController extends BaseController<
 
   @Get()
   @ApiOperation({ summary: 'Get all departments' })
-  findAll(@Query() query?: any) {
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
+  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
+  findAll(@Query() query?: PaginationOptions) {
     return this.departmentsService.findAll(query);
   }
 

@@ -17,12 +17,16 @@ export class CreateComplaintDto {
   @IsNotEmpty({ message: 'Name is required' })
   @MinLength(2, { message: 'Name must be at least 2 characters' })
   @MaxLength(100, { message: 'Name cannot exceed 100 characters' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   name: string;
 
   @ApiProperty({ example: 'john@student.edu' })
   @IsEmail({}, { message: 'Please provide a valid email address' })
-  @Transform(({ value }) => value?.toLowerCase().trim())
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toLowerCase().trim() : value,
+  )
   email: string;
 
   @ApiProperty({ example: 'Computer Science' })

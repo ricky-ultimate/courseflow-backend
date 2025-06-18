@@ -7,6 +7,13 @@ import {
   CrudRolesConfig,
 } from '../decorators/crud-roles.decorator';
 
+interface RequestWithMethodAndUser {
+  method: string;
+  user?: {
+    role: Role;
+  };
+}
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -38,7 +45,9 @@ export class RolesGuard implements CanActivate {
     context: ExecutionContext,
     crudRoles: CrudRolesConfig,
   ): Role[] | null {
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<RequestWithMethodAndUser>();
     const httpMethod = request.method;
 
     switch (httpMethod) {
@@ -60,7 +69,10 @@ export class RolesGuard implements CanActivate {
     context: ExecutionContext,
     requiredRoles: Role[],
   ): boolean {
-    const { user } = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<RequestWithMethodAndUser>();
+    const { user } = request;
     return requiredRoles.some((role) => user?.role === role);
   }
 }
