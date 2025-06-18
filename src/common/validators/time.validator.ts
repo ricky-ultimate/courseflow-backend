@@ -12,7 +12,7 @@ export function IsTimeFormat(validationOptions?: ValidationOptions) {
       propertyName: propertyName,
       options: validationOptions,
       validator: {
-        validate(value: any) {
+        validate(value: unknown) {
           const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
           return typeof value === 'string' && timeRegex.test(value);
         },
@@ -36,9 +36,9 @@ export function IsEndTimeAfterStartTime(
       constraints: [startTimeProperty],
       options: validationOptions,
       validator: {
-        validate(value: any, args: ValidationArguments) {
+        validate(value: unknown, args: ValidationArguments) {
           const [startTimePropertyName] = args.constraints as string[];
-          const validationObject = args.object as Record<string, any>;
+          const validationObject = args.object as Record<string, unknown>;
           const startTime = validationObject[startTimePropertyName];
 
           if (!startTime || !value) return true;
