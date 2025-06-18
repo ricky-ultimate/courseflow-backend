@@ -1,5 +1,18 @@
-import { Controller, Get, Req } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Req,
+  Query,
+  Body,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiBody,
+} from '@nestjs/swagger';
 import { ComplaintsService } from './complaints.service';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
 import { UpdateComplaintDto } from './dto/update-complaint.dto';
@@ -8,9 +21,10 @@ import { CrudRoles } from '../common/decorators/crud-roles.decorator';
 import { Complaint, Role } from '../generated/prisma';
 import { AuthenticatedRequest } from '../common/types/auth.types';
 import { Roles } from '../common/decorators/roles.decorator';
+import { PaginationOptions } from '../common/interfaces/base-service.interface';
 
 @ApiTags('Complaints')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('complaints')
 @CrudRoles({
   entity: 'complaint',
@@ -26,6 +40,16 @@ export class ComplaintsController extends BaseController<
 > {
   constructor(private readonly complaintsService: ComplaintsService) {
     super(complaintsService);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all complaints (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'orderBy', required: false, type: String })
+  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
+  async findAll(@Query() query: PaginationOptions) {
+    return this.complaintsService.findAll(query);
   }
 
   @Get('my-complaints')
@@ -45,5 +69,12 @@ export class ComplaintsController extends BaseController<
   @ApiOperation({ summary: 'Get resolved complaints (Admin only)' })
   findResolved() {
     return this.complaintsService.findResolved();
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new complaint' })
+  @ApiBody({ type: CreateComplaintDto })
+  create(@Body() createDto: CreateComplaintDto) {
+    return this.complaintsService.create(createDto);
   }
 }

@@ -17,7 +17,6 @@ import {
 import { BaseService } from '../services/base.service';
 import { RolesGuard } from '../guards/roles.guard';
 import { PaginationOptions } from '../interfaces/base-service.interface';
-import { Public } from '../decorators/public.decorator';
 
 export abstract class BaseController<T, CreateDto, UpdateDto> {
   constructor(
@@ -37,7 +36,6 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
   }
 
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get all entities' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -48,7 +46,6 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
   }
 
   @Get(':id')
-  @Public()
   @ApiOperation({ summary: 'Get entity by ID' })
   async findOne(@Param('id') id: string) {
     return this.service.findOne(id);

@@ -1,5 +1,5 @@
-import { Controller } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,5 +24,12 @@ export class UsersController extends BaseController<
 > {
   constructor(private readonly usersService: UsersService) {
     super(usersService);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({ type: CreateUserDto })
+  create(@Body() createDto: CreateUserDto) {
+    return this.usersService.create(createDto);
   }
 }
