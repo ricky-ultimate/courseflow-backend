@@ -13,13 +13,30 @@ import {
 } from '@prisma/client/runtime/library';
 import { ConfigService } from '@nestjs/config';
 
+interface HttpExceptionResponse {
+  message?: string | string[];
+  error?: string;
+  errorCode?: string;
+}
+
+interface ErrorResponse {
+  success: boolean;
+  statusCode: number;
+  errorCode: string;
+  timestamp: string;
+  path: string;
+  method: string;
+  message: string[];
+  stack?: string;
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
   constructor(private readonly configService: ConfigService) {}
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -33,12 +50,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+        const responseObj = exceptionResponse as HttpExceptionResponse;
         message = responseObj.message || responseObj.error || exception.message;
         errorCode =
           responseObj.errorCode || this.getErrorCodeFromStatus(status);
       } else {
-        message = exceptionResponse;
+        message = String(exceptionResponse);
         errorCode = this.getErrorCodeFromStatus(status);
       }
     } else if (exception instanceof PrismaClientKnownRequestError) {
@@ -55,7 +72,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const isDevelopment =
       this.configService.get<string>('app.nodeEnv') === 'development';
 
-    const errorResponse = {
+    const errorResponse: ErrorResponse = {
       success: false,
       statusCode: status,
       errorCode,
@@ -82,7 +99,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     code: string;
   } {
     switch (exception.code) {
-      case 'P2002':
+      case 'P2002': {
         const field = exception.meta?.target as string[] | undefined;
         return {
           status: HttpStatus.CONFLICT,
@@ -91,6 +108,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
             : 'A record with this information already exists',
           code: 'RECORD_EXISTS',
         };
+      }
       case 'P2025':
         return {
           status: HttpStatus.NOT_FOUND,
@@ -113,19 +131,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
   }
 
   private getErrorCodeFromStatus(status: number): string {
-    switch (status) {
-      case HttpStatus.BAD_REQUEST:
-        return 'BAD_REQUEST';
-      case HttpStatus.UNAUTHORIZED:
-        return 'UNAUTHORIZED';
-      case HttpStatus.FORBIDDEN:
-        return 'FORBIDDEN';
-      case HttpStatus.NOT_FOUND:
-        return 'NOT_FOUND';
-      case HttpStatus.CONFLICT:
-        return 'CONFLICT';
-      default:
-        return 'INTERNAL_SERVER_ERROR';
-    }
+    const statusCodes = {
+      [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
+      [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
+      [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+      [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+      [HttpStatus.CONFLICT]: 'CONFLICT',
+    } as const;
+
+    return (
+      statusCodes[status as keyof typeof statusCodes] || 'INTERNAL_SERVER_ERROR'
+    );
   }
 }
