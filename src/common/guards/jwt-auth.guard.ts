@@ -6,6 +6,11 @@ import {
   CRUD_ROLES_KEY,
   CrudRolesConfig,
 } from '../../common/decorators/crud-roles.decorator';
+import { Role } from '../../generated/prisma';
+
+interface RequestWithMethod {
+  method: string;
+}
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -27,11 +32,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       CRUD_ROLES_KEY,
       context.getClass(),
     );
+
     if (crudRoles) {
-      const request = context.switchToHttp().getRequest();
+      const request = context.switchToHttp().getRequest<RequestWithMethod>();
       const httpMethod = request.method;
 
-      let requiredRoles: any[] | undefined;
+      let requiredRoles: Role[] | undefined;
       switch (httpMethod) {
         case 'POST':
           requiredRoles = crudRoles.create;
