@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   Post,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -49,10 +50,15 @@ export class CoursesController extends BaseController<
 
   @Get('level/:level')
   @ApiOperation({ summary: 'Get courses by level' })
-  findByLevel(@Param('level') level: Level) {
+  @ApiParam({
+    name: 'level',
+    enum: Level,
+    description: 'Academic level',
+    example: 'LEVEL_100',
+  })
+  findByLevel(@Param('level', new ParseEnumPipe(Level)) level: Level) {
     return this.coursesService.findByLevel(level);
   }
-
   @Get(':code')
   @ApiOperation({ summary: 'Get course by code' })
   @ApiParam({ name: 'code', description: 'Course code' })
