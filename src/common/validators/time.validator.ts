@@ -5,7 +5,7 @@ import {
 } from 'class-validator';
 
 export function IsTimeFormat(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isTimeFormat',
       target: object.constructor,
@@ -28,7 +28,7 @@ export function IsEndTimeAfterStartTime(
   startTimeProperty: string,
   validationOptions?: ValidationOptions,
 ) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'isEndTimeAfterStartTime',
       target: object.constructor,
