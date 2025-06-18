@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import configuration from './config/configuration';
+import { appConfig, databaseConfig, validationSchema } from './config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { UsersModule } from './users/users.module';
 import { DepartmentsModule } from './departments/departments.module';
@@ -19,14 +19,19 @@ import { RolesGuard } from './common/guards/roles.guard';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
+      load: [appConfig, databaseConfig],
+      validationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: true,
+      },
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => [
         {
-          ttl: configService.get<number>('throttle.ttl')!,
-          limit: configService.get<number>('throttle.limit')!,
+          ttl: configService.get<number>('app.security.rateLimitTtl')!,
+          limit: configService.get<number>('app.security.rateLimitMax')!,
         },
       ],
       inject: [ConfigService],

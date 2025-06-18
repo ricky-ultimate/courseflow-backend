@@ -11,10 +11,13 @@ import {
   PrismaClientKnownRequestError,
   PrismaClientValidationError,
 } from '@prisma/client/runtime/library';
+import { ConfigService } from '@nestjs/config';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  constructor(private readonly configService: ConfigService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -49,6 +52,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorCode = 'VALIDATION_ERROR';
     }
 
+    const isDevelopment =
+      this.configService.get<string>('app.nodeEnv') === 'development';
+
     const errorResponse = {
       success: false,
       statusCode: status,
@@ -57,7 +63,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       message: Array.isArray(message) ? message : [message],
-      ...(process.env.NODE_ENV === 'development' && {
+      ...(isDevelopment && {
         stack: exception instanceof Error ? exception.stack : undefined,
       }),
     };
