@@ -9,21 +9,18 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
-  // Set global API prefix
   const apiPrefix = configService.get<string>('app.apiPrefix');
   if (apiPrefix) {
     app.setGlobalPrefix(apiPrefix);
-    console.log(`API prefix set to: /${apiPrefix}`);
+    //console.log(`API prefix set to: /${apiPrefix}`);
   }
 
-  // Enable CORS
   const corsOrigin = configService.get<string>('app.security.corsOrigin');
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -32,8 +29,9 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger setup (only if enabled)
-  const enableSwagger = configService.get<boolean>('app.features.enableSwagger');
+  const enableSwagger = configService.get<boolean>(
+    'app.features.enableSwagger',
+  );
   if (enableSwagger) {
     const config = new DocumentBuilder()
       .setTitle('CourseFlow API')
@@ -53,18 +51,7 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    // Swagger will be available at /api/docs (with prefix)
     SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
-    console.log(`Swagger documentation available at: http://localhost:${configService.get('app.port')}/${apiPrefix}/docs`);
-  }
-
-  // Debug: Check if JWT secret is loaded
-  const jwtSecret = configService.get<string>('app.jwt.secret');
-  console.log('JWT Secret loaded:', jwtSecret ? 'Yes' : 'No');
-
-  if (!jwtSecret) {
-    console.error('JWT_SECRET is not set in environment variables!');
-    process.exit(1);
   }
 
   const port = configService.get<number>('app.port') || 3000;
@@ -72,7 +59,12 @@ async function bootstrap() {
 
   console.log(`Application is running on: http://localhost:${port}`);
   if (apiPrefix) {
-    console.log(`API endpoints available at: http://localhost:${port}/${apiPrefix}`);
+    console.log(
+      `API endpoints available at: http://localhost:${port}/${apiPrefix}`,
+    );
+    console.log(
+      `Swagger documentation available at: http://localhost:${configService.get('app.port')}/${apiPrefix}/docs`,
+    );
   }
 }
 bootstrap();

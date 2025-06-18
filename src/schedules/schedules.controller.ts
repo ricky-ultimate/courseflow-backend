@@ -1,5 +1,18 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  ParseEnumPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -40,10 +53,15 @@ export class SchedulesController extends BaseController<
 
   @Get('level/:level')
   @ApiOperation({ summary: 'Get schedules by level' })
-  findByLevel(@Param('level') level: Level) {
+  @ApiParam({
+    name: 'level',
+    enum: Level,
+    description: 'Academic level',
+    example: 'LEVEL_100',
+  })
+  findByLevel(@Param('level', new ParseEnumPipe(Level)) level: Level) {
     return this.schedulesService.findByLevel(level);
   }
-
   @Post()
   @ApiOperation({ summary: 'Create a new schedule' })
   @ApiBody({ type: CreateScheduleDto })
