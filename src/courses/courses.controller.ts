@@ -8,7 +8,12 @@ import {
   Query,
   Post,
   ParseEnumPipe,
+  UploadedFile,
+  UseInterceptors,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -16,6 +21,8 @@ import {
   ApiParam,
   ApiBody,
   ApiQuery,
+  ApiConsumes,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -97,5 +104,84 @@ export class CoursesController extends BaseController<
   @ApiBody({ type: CreateCourseDto })
   create(@Body() createDto: CreateCourseDto) {
     return this.coursesService.create(createDto);
+  }
+
+  @Post('bulk/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Bulk create courses from CSV',
+    description:
+      'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'CSV file with courses data',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Bulk operation completed',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        created: { type: 'array', items: { type: 'object' } },
+        errors: { type: 'array', items: { type: 'object' } },
+        summary: {
+          type: 'object',
+          properties: {
+            totalRows: { type: 'number' },
+            successCount: { type: 'number' },
+            errorCount: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+
+    if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
+      throw new Error('File must be a CSV');
+    }
+
+    return this.coursesService.bulkCreateFromCsv(file.buffer);
+  }
+
+  @Get('bulk/template')
+  @ApiOperation({
+    summary: 'Download CSV template for bulk course creation',
+    description:
+      'Download a CSV template file with the required headers and sample data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CSV template file',
+    headers: {
+      'Content-Type': { description: 'text/csv' },
+      'Content-Disposition': {
+        description: 'attachment; filename=courses-template.csv',
+      },
+    },
+  })
+  downloadCsvTemplate(@Res() res: Response) {
+    const template = this.coursesService.generateCsvTemplate();
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=courses-template.csv',
+    );
+    res.send(template);
   }
 }
