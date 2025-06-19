@@ -25,7 +25,6 @@ export class CsvService {
         stream
           .pipe(csv())
           .on('headers', (headers: string[]) => {
-            // Validate required headers
             const missingHeaders = requiredHeaders.filter(
               (header) => !headers.includes(header),
             );
@@ -71,14 +70,12 @@ export class CsvService {
 
     for (let i = 0; i < results.length; i++) {
       const rowData = results[i];
-      const rowNumber = i + 2; // +2 because CSV rows start at 2 (after header)
+      const rowNumber = i + 2;
 
-      // Transform and validate each row
       const dto = plainToClass(dtoClass, rowData);
       const validationErrors = await validate(dto as object);
 
       if (validationErrors.length > 0) {
-        // Convert validation errors to our format
         for (const error of validationErrors) {
           if (error.constraints) {
             for (const constraint of Object.values(error.constraints)) {
@@ -114,7 +111,6 @@ export class CsvService {
         if (value === undefined || value === null) {
           return '';
         }
-        // Handle primitive types safely
         if (
           typeof value === 'string' ||
           typeof value === 'number' ||
@@ -122,7 +118,6 @@ export class CsvService {
         ) {
           return String(value);
         }
-        // For objects, return empty string to avoid [object Object]
         return '';
       });
       csv += values.join(',') + '\n';
