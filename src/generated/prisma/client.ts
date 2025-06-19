@@ -64,6 +64,11 @@ export type Schedule = Prisma.ScheduleModel
  * 
  */
 export type Complaint = Prisma.ComplaintModel
+/**
+ * Model VerificationCode
+ * 
+ */
+export type VerificationCode = Prisma.VerificationCodeModel
 
 export type Role = $Enums.Role
 export const Role = $Enums.Role
