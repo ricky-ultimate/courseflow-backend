@@ -35,7 +35,6 @@ export class DepartmentsService extends BaseService<
   ): Promise<BulkOperationResult<Department>> {
     const requiredHeaders = ['code', 'name'];
 
-    // Parse and validate CSV
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       DepartmentCsvRowDto,
@@ -46,15 +45,13 @@ export class DepartmentsService extends BaseService<
     const allErrors: CsvValidationError[] = [...errors];
 
     if (data.length > 0) {
-      // Use transaction for atomicity
       try {
         await this.prisma.$transaction(async (tx) => {
           for (let i = 0; i < data.length; i++) {
             const departmentData = data[i];
-            const rowNumber = i + 2; // CSV row number
+            const rowNumber = i + 2;
 
             try {
-              // Check if department already exists
               const existing = await tx.department.findUnique({
                 where: { code: departmentData.code },
               });
@@ -69,7 +66,6 @@ export class DepartmentsService extends BaseService<
                 continue;
               }
 
-              // Create department
               const department = await tx.department.create({
                 data: {
                   code: departmentData.code,
@@ -88,14 +84,12 @@ export class DepartmentsService extends BaseService<
             }
           }
 
-          // If there are any errors, rollback the transaction
           if (allErrors.length > 0) {
             throw new Error('Validation errors found');
           }
         });
       } catch {
-        // Transaction was rolled back due to errors
-        created.length = 0; // Clear created array since transaction was rolled back
+        created.length = 0;
       }
     }
 
