@@ -15,18 +15,21 @@ datasource db {
 }
 
 model User {
-    id          String    @id @default(cuid())
-    matricNO    String    @unique
-    email       String    @unique
-    password    String
-    name        String?
-    role        Role      @default(STUDENT)
-    isActive    Boolean   @default(true)
-    lastLoginAt DateTime?
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
+    id                 String    @id @default(cuid())
+    matricNO           String    @unique
+    email              String    @unique
+    password           String
+    name               String?
+    role               Role      @default(STUDENT)
+    isActive           Boolean   @default(true)
+    lastLoginAt        DateTime?
+    resetToken         String?   @unique
+    resetTokenExpiry   DateTime?
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime  @updatedAt
 
-    complaints Complaint[]
+    complaints        Complaint[]
+    verificationCodes VerificationCode[]
 
     @@map("users")
 }
@@ -94,6 +97,24 @@ model Complaint {
     user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
     @@map("complaints")
+}
+
+model VerificationCode {
+    id          String   @id @default(cuid())
+    code        String   @unique
+    role        Role
+    description String?
+    isActive    Boolean  @default(true)
+    usageCount  Int      @default(0)
+    maxUsage    Int?     // null means unlimited usage
+    expiresAt   DateTime?
+    createdBy   String
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+    @@map("verification_codes")
 }
 
 enum Role {
