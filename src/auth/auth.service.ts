@@ -171,7 +171,6 @@ export class AuthService {
       };
     }
 
-    // Generate a secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
@@ -228,7 +227,6 @@ export class AuthService {
   }
 
   async createVerificationCode(dto: CreateVerificationCodeDto, createdBy: string) {
-    // Check if code already exists
     const existingCode = await this.prisma.verificationCode.findUnique({
       where: { code: dto.code },
     });
