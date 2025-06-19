@@ -7,7 +7,12 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -15,6 +20,8 @@ import {
   ApiParam,
   ApiTags,
   ApiQuery,
+  ApiConsumes,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -80,5 +87,84 @@ export class DepartmentsController extends BaseController<
   @ApiParam({ name: 'code', description: 'Department code' })
   remove(@Param('code') code: string) {
     return this.departmentsService.remove(code);
+  }
+
+  @Post('bulk/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Bulk create departments from CSV',
+    description:
+      'Upload a CSV file to create multiple departments at once. CSV must have columns: code, name',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'CSV file with departments data',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Bulk operation completed',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        created: { type: 'array', items: { type: 'object' } },
+        errors: { type: 'array', items: { type: 'object' } },
+        summary: {
+          type: 'object',
+          properties: {
+            totalRows: { type: 'number' },
+            successCount: { type: 'number' },
+            errorCount: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+
+    if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
+      throw new Error('File must be a CSV');
+    }
+
+    return this.departmentsService.bulkCreateFromCsv(file.buffer);
+  }
+
+  @Get('bulk/template')
+  @ApiOperation({
+    summary: 'Download CSV template for bulk department creation',
+    description:
+      'Download a CSV template file with the required headers and sample data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CSV template file',
+    headers: {
+      'Content-Type': { description: 'text/csv' },
+      'Content-Disposition': {
+        description: 'attachment; filename=departments-template.csv',
+      },
+    },
+  })
+  downloadCsvTemplate(@Res() res: Response) {
+    const template = this.departmentsService.generateCsvTemplate();
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=departments-template.csv',
+    );
+    res.send(template);
   }
 }
