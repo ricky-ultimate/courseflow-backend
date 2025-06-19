@@ -50,7 +50,9 @@ export class RegisterDto {
     description: 'Verification code required for ADMIN or LECTURER roles',
   })
   @IsString({ message: 'Verification code must be a string' })
-  @ValidateIf((o) => o.role === Role.ADMIN || o.role === Role.LECTURER)
+  @ValidateIf(
+    (o: RegisterDto) => o.role === Role.ADMIN || o.role === Role.LECTURER,
+  )
   @IsNotEmpty({
     message: 'Verification code is required for ADMIN or LECTURER roles',
   })
