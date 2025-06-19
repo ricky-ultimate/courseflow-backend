@@ -58,7 +58,7 @@ export class CoursesService extends BaseService<
       'departmentCode',
     ];
 
-    // Parse and validate CSV
+
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       CourseCsvRowDto,
@@ -69,15 +69,13 @@ export class CoursesService extends BaseService<
     const allErrors: CsvValidationError[] = [...errors];
 
     if (data.length > 0) {
-      // Use transaction for atomicity
       try {
         await this.prisma.$transaction(async (tx) => {
           for (let i = 0; i < data.length; i++) {
             const courseData = data[i];
-            const rowNumber = i + 2; // CSV row number
+            const rowNumber = i + 2;
 
             try {
-              // Check if course already exists
               const existingCourse = await tx.course.findUnique({
                 where: { code: courseData.code },
               });
@@ -92,7 +90,6 @@ export class CoursesService extends BaseService<
                 continue;
               }
 
-              // Check if department exists
               const department = await tx.department.findUnique({
                 where: { code: courseData.departmentCode },
               });
@@ -107,7 +104,6 @@ export class CoursesService extends BaseService<
                 continue;
               }
 
-              // Create course
               const course = await tx.course.create({
                 data: {
                   code: courseData.code,
@@ -130,14 +126,12 @@ export class CoursesService extends BaseService<
             }
           }
 
-          // If there are any errors, rollback the transaction
           if (allErrors.length > 0) {
             throw new Error('Validation errors found');
           }
         });
       } catch {
-        // Transaction was rolled back due to errors
-        created.length = 0; // Clear created array since transaction was rolled back
+        created.length = 0;
       }
     }
 
