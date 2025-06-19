@@ -105,11 +105,12 @@ export class ComplaintsController extends BaseController<
     name: 'status',
     enum: ComplaintStatus,
     description: 'New status for the complaint',
-    example: 'IN_PROGRESS'
+    example: 'IN_PROGRESS',
   })
   updateStatus(
     @Param('id') id: string,
-    @Query('status', new ParseEnumPipe(ComplaintStatus)) status: ComplaintStatus,
+    @Query('status', new ParseEnumPipe(ComplaintStatus))
+    status: ComplaintStatus,
   ) {
     return this.complaintsService.update(id, { status });
   }

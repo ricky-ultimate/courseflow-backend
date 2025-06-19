@@ -14,7 +14,7 @@ import { Role } from '../../generated/prisma';
 export class CreateVerificationCodeDto {
   @ApiProperty({
     example: 'ADMIN-2025-ABC123',
-    description: 'Unique verification code'
+    description: 'Unique verification code',
   })
   @IsString({ message: 'Code must be a string' })
   @IsNotEmpty({ message: 'Code is required' })
@@ -24,7 +24,7 @@ export class CreateVerificationCodeDto {
   @ApiProperty({
     enum: Role,
     example: Role.ADMIN,
-    description: 'Role that this verification code grants'
+    description: 'Role that this verification code grants',
   })
   @IsEnum(Role, { message: 'Role must be STUDENT, LECTURER, or ADMIN' })
   role: Role;
@@ -32,7 +32,7 @@ export class CreateVerificationCodeDto {
   @ApiProperty({
     required: false,
     example: 'Admin access code for 2025 semester',
-    description: 'Optional description for the verification code'
+    description: 'Optional description for the verification code',
   })
   @IsString({ message: 'Description must be a string' })
   @IsOptional()
@@ -42,7 +42,8 @@ export class CreateVerificationCodeDto {
   @ApiProperty({
     required: false,
     example: 10,
-    description: 'Maximum number of times this code can be used (null for unlimited)'
+    description:
+      'Maximum number of times this code can be used (null for unlimited)',
   })
   @IsInt({ message: 'Max usage must be an integer' })
   @Min(1, { message: 'Max usage must be at least 1' })
@@ -52,9 +53,13 @@ export class CreateVerificationCodeDto {
   @ApiProperty({
     required: false,
     example: '2025-12-31T23:59:59.000Z',
-    description: 'Expiration date for the verification code (null for no expiration)'
+    description:
+      'Expiration date for the verification code (null for no expiration)',
   })
-  @IsDateString({}, { message: 'Expiration date must be a valid ISO date string' })
+  @IsDateString(
+    {},
+    { message: 'Expiration date must be a valid ISO date string' },
+  )
   @IsOptional()
   expiresAt?: string;
 }

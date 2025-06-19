@@ -68,7 +68,10 @@ export class AuthService {
         );
       }
 
-      if (verificationCode.expiresAt && verificationCode.expiresAt < new Date()) {
+      if (
+        verificationCode.expiresAt &&
+        verificationCode.expiresAt < new Date()
+      ) {
         throw new BadRequestException('Verification code has expired');
       }
 
@@ -167,7 +170,8 @@ export class AuthService {
     if (!user) {
       // Don't reveal if email exists or not for security
       return {
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       };
     }
 
@@ -188,7 +192,8 @@ export class AuthService {
     console.log(`Password reset token for ${user.email}: ${resetToken}`);
 
     return {
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
       // Remove this in production - only for development
       ...(process.env.NODE_ENV === 'development' && { resetToken }),
     };
@@ -226,7 +231,10 @@ export class AuthService {
     };
   }
 
-  async createVerificationCode(dto: CreateVerificationCodeDto, createdBy: string) {
+  async createVerificationCode(
+    dto: CreateVerificationCodeDto,
+    createdBy: string,
+  ) {
     const existingCode = await this.prisma.verificationCode.findUnique({
       where: { code: dto.code },
     });
