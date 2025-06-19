@@ -64,7 +64,6 @@ export class SchedulesService extends BaseService<
       'venue',
     ];
 
-    // Parse and validate CSV
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       ScheduleCsvRowDto,
@@ -75,15 +74,13 @@ export class SchedulesService extends BaseService<
     const allErrors: CsvValidationError[] = [...errors];
 
     if (data.length > 0) {
-      // Use transaction for atomicity
       try {
         await this.prisma.$transaction(async (tx) => {
           for (let i = 0; i < data.length; i++) {
             const scheduleData = data[i];
-            const rowNumber = i + 2; // CSV row number
+            const rowNumber = i + 2;
 
             try {
-              // Check if course exists
               const course = await tx.course.findUnique({
                 where: { code: scheduleData.courseCode },
               });
@@ -98,7 +95,6 @@ export class SchedulesService extends BaseService<
                 continue;
               }
 
-              // Validate time range
               if (
                 !this.csvService.validateTimeRange(
                   scheduleData.startTime,
@@ -114,7 +110,6 @@ export class SchedulesService extends BaseService<
                 continue;
               }
 
-              // Create schedule
               const schedule = await tx.schedule.create({
                 data: {
                   courseCode: scheduleData.courseCode,
@@ -122,7 +117,7 @@ export class SchedulesService extends BaseService<
                   startTime: scheduleData.startTime,
                   endTime: scheduleData.endTime,
                   venue: scheduleData.venue,
-                  type: scheduleData.type || 'LECTURE', // Default to LECTURE if not specified
+                  type: scheduleData.type || 'LECTURE',
                 },
                 include: {
                   course: {
@@ -142,14 +137,12 @@ export class SchedulesService extends BaseService<
             }
           }
 
-          // If there are any errors, rollback the transaction
           if (allErrors.length > 0) {
             throw new Error('Validation errors found');
           }
         });
       } catch {
-        // Transaction was rolled back due to errors
-        created.length = 0; // Clear created array since transaction was rolled back
+        created.length = 0;
       }
     }
 
