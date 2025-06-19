@@ -7,7 +7,7 @@ import {
   Param,
   Patch,
   Delete,
-  Req
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiBearerAuth,
-  ApiParam
+  ApiParam,
 } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -56,7 +56,7 @@ export class AuthController {
   @Post('forgot-password')
   @ApiOperation({
     summary: 'Request password reset',
-    description: 'Send a password reset token to the user\'s email address'
+    description: "Send a password reset token to the user's email address",
   })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
@@ -67,10 +67,11 @@ export class AuthController {
       properties: {
         message: {
           type: 'string',
-          example: 'If an account with that email exists, a password reset link has been sent.'
-        }
-      }
-    }
+          example:
+            'If an account with that email exists, a password reset link has been sent.',
+        },
+      },
+    },
   })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
@@ -80,7 +81,7 @@ export class AuthController {
   @Post('reset-password')
   @ApiOperation({
     summary: 'Reset password',
-    description: 'Reset user password using the token received via email'
+    description: 'Reset user password using the token received via email',
   })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
@@ -91,14 +92,14 @@ export class AuthController {
       properties: {
         message: {
           type: 'string',
-          example: 'Password has been reset successfully'
-        }
-      }
-    }
+          example: 'Password has been reset successfully',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid or expired reset token'
+    description: 'Invalid or expired reset token',
   })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
@@ -109,20 +110,21 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create verification code (Admin only)',
-    description: 'Create a new verification code for ADMIN or LECTURER role assignment'
+    description:
+      'Create a new verification code for ADMIN or LECTURER role assignment',
   })
   @ApiBody({ type: CreateVerificationCodeDto })
   @ApiResponse({
     status: 201,
-    description: 'Verification code created successfully'
+    description: 'Verification code created successfully',
   })
   @ApiResponse({
     status: 409,
-    description: 'Verification code already exists'
+    description: 'Verification code already exists',
   })
   async createVerificationCode(
     @Body() dto: CreateVerificationCodeDto,
-    @Req() req: AuthenticatedRequest
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.authService.createVerificationCode(dto, req.user.id);
   }
@@ -132,11 +134,11 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get all verification codes (Admin only)',
-    description: 'Retrieve all verification codes with usage statistics'
+    description: 'Retrieve all verification codes with usage statistics',
   })
   @ApiResponse({
     status: 200,
-    description: 'Verification codes retrieved successfully'
+    description: 'Verification codes retrieved successfully',
   })
   async getVerificationCodes() {
     return this.authService.getVerificationCodes();
@@ -147,16 +149,16 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get verification code by ID (Admin only)',
-    description: 'Retrieve a specific verification code by its ID'
+    description: 'Retrieve a specific verification code by its ID',
   })
   @ApiParam({ name: 'id', description: 'Verification code ID' })
   @ApiResponse({
     status: 200,
-    description: 'Verification code retrieved successfully'
+    description: 'Verification code retrieved successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Verification code not found'
+    description: 'Verification code not found',
   })
   async getVerificationCode(@Param('id') id: string) {
     return this.authService.getVerificationCode(id);
@@ -167,25 +169,25 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update verification code (Admin only)',
-    description: 'Update an existing verification code'
+    description: 'Update an existing verification code',
   })
   @ApiParam({ name: 'id', description: 'Verification code ID' })
   @ApiBody({ type: UpdateVerificationCodeDto })
   @ApiResponse({
     status: 200,
-    description: 'Verification code updated successfully'
+    description: 'Verification code updated successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Verification code not found'
+    description: 'Verification code not found',
   })
   @ApiResponse({
     status: 409,
-    description: 'Verification code already exists'
+    description: 'Verification code already exists',
   })
   async updateVerificationCode(
     @Param('id') id: string,
-    @Body() dto: UpdateVerificationCodeDto
+    @Body() dto: UpdateVerificationCodeDto,
   ) {
     return this.authService.updateVerificationCode(id, dto);
   }
@@ -195,16 +197,16 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Delete verification code (Admin only)',
-    description: 'Delete a verification code'
+    description: 'Delete a verification code',
   })
   @ApiParam({ name: 'id', description: 'Verification code ID' })
   @ApiResponse({
     status: 200,
-    description: 'Verification code deleted successfully'
+    description: 'Verification code deleted successfully',
   })
   @ApiResponse({
     status: 404,
-    description: 'Verification code not found'
+    description: 'Verification code not found',
   })
   async deleteVerificationCode(@Param('id') id: string) {
     return this.authService.deleteVerificationCode(id);
