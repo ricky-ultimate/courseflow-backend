@@ -13,16 +13,20 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import { ApiTags } from '@nestjs/swagger';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-  ApiQuery,
-  ApiConsumes,
-  ApiResponse,
-} from '@nestjs/swagger';
+  ApiGetDepartments,
+  ApiGetDepartmentByCode,
+  ApiCreateDepartment,
+  ApiUpdateDepartment,
+  ApiDeleteDepartment,
+  ApiSearchDepartments,
+  ApiGetDepartmentsWithCourses,
+  ApiGetDepartmentsWithoutCourses,
+  ApiGetDepartmentStatistics,
+  ApiBulkCreateDepartments,
+  ApiDownloadDepartmentTemplate,
+} from './decorators/department-api.decorator';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
@@ -32,7 +36,6 @@ import { Department, Role } from '../generated/prisma';
 import { PaginationOptions } from '../common/interfaces/base-service.interface';
 
 @ApiTags('Departments')
-@ApiBearerAuth('JWT-auth')
 @Controller('departments')
 @CrudRoles({
   entity: 'department',
@@ -68,8 +71,7 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get(':code')
-  @ApiOperation({ summary: 'Get department by code' })
-  @ApiParam({ name: 'code', description: 'Department code' })
+  @ApiGetDepartmentByCode()
   findOne(@Param('code') code: string) {
     return this.departmentsService.findOne(code);
   }
