@@ -208,7 +208,6 @@ export class DepartmentRepository {
     });
   }
 
-
   async updateWithCascade(
     code: string,
     data: Partial<{ name: string; code: string }>,

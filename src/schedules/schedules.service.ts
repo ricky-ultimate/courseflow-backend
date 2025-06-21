@@ -5,6 +5,7 @@ import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { BaseService } from '../common/services/base.service';
 import { CsvService } from '../common/services/csv.service';
 import { ScheduleRepository } from './repositories/schedule.repository';
+import { CourseRepository } from '../courses/repositories/course.repository';
 import {
   ScheduleCsvRowDto,
   BulkOperationResult,
@@ -22,6 +23,7 @@ export class SchedulesService extends BaseService<
     prisma: PrismaService,
     private readonly csvService: CsvService,
     private readonly scheduleRepository: ScheduleRepository,
+    private readonly courseRepository: CourseRepository,
   ) {
     super(prisma, {
       modelName: 'schedule',
@@ -94,11 +96,11 @@ export class SchedulesService extends BaseService<
         continue;
       }
 
-      const course = await this.prisma.course.findUnique({
-        where: { code: scheduleData.courseCode },
-      });
+      const courseExists = await this.courseRepository.existsByCode(
+        scheduleData.courseCode,
+      );
 
-      if (!course) {
+      if (!courseExists) {
         allErrors.push({
           row: rowNumber,
           field: 'courseCode',
