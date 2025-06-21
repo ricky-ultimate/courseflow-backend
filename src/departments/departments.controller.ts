@@ -167,4 +167,69 @@ export class DepartmentsController extends BaseController<
     );
     res.send(template);
   }
+
+  @Get('statistics')
+  @ApiOperation({
+    summary: 'Get department statistics',
+    description:
+      'Get comprehensive statistics about departments including course counts',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Department statistics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalDepartments: { type: 'number' },
+        departmentsWithCourses: { type: 'number' },
+        departmentsWithoutCourses: { type: 'number' },
+        averageCoursesPerDepartment: { type: 'number' },
+      },
+    },
+  })
+  getStatistics() {
+    return this.departmentsService.getDepartmentStatistics();
+  }
+
+  @Get('search/:searchTerm')
+  @ApiOperation({ summary: 'Search departments by name' })
+  @ApiParam({
+    name: 'searchTerm',
+    description: 'Search term for department name',
+    example: 'computer',
+  })
+  searchByName(@Param('searchTerm') searchTerm: string) {
+    return this.departmentsService.searchByName(searchTerm);
+  }
+
+  @Get('with-courses')
+  @ApiOperation({ summary: 'Get departments with their courses' })
+  findWithCourses() {
+    return this.departmentsService.findWithCourses();
+  }
+
+  @Get('without-courses')
+  @ApiOperation({ summary: 'Get departments without courses' })
+  findWithoutCourses() {
+    return this.departmentsService.findWithoutCourses();
+  }
+
+  @Get('with-course-count')
+  @ApiOperation({ summary: 'Get departments with course counts' })
+  findWithCourseCount() {
+    return this.departmentsService.findWithCourseCount();
+  }
+
+  @Get(':code/full-details')
+  @ApiOperation({
+    summary: 'Get department with full details including courses and schedules',
+  })
+  @ApiParam({
+    name: 'code',
+    description: 'Department code',
+    example: 'CS',
+  })
+  findWithFullDetails(@Param('code') code: string) {
+    return this.departmentsService.findWithFullDetails(code);
+  }
 }
