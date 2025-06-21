@@ -9,10 +9,10 @@ The Authentication module handles user registration, login, password management,
 #### POST /auth/register
 Register a new user account.
 
-**Request Body:**
+**For Students:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "student@example.com",
   "password": "securePassword123",
   "firstName": "John",
   "lastName": "Doe",
@@ -20,14 +20,37 @@ Register a new user account.
 }
 ```
 
+**For Admin/Lecturer (requires verification code):**
+```json
+{
+  "email": "admin@example.com",
+  "password": "securePassword123",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "role": "ADMIN",
+  "verificationCode": "123456"
+}
+```
+
+**Note:** Admin and Lecturer registrations require a valid verification code to differentiate from student accounts.
+
 #### POST /auth/login
 Authenticate user and receive JWT token.
 
-**Request Body:**
+**For Students:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "student@example.com",
   "password": "securePassword123"
+}
+```
+
+**For Admin/Lecturer (requires verification code):**
+```json
+{
+  "email": "admin@example.com",
+  "password": "securePassword123",
+  "verificationCode": "123456"
 }
 ```
 
@@ -86,10 +109,33 @@ Delete verification code (Admin only).
 
 ## Authentication Flow
 
-1. **Registration**: User registers with email, password, and basic information
-2. **Login**: User authenticates with email/password, receives JWT token
+### Student Authentication
+1. **Registration**: Students register with email, password, and basic information (no verification code required)
+2. **Login**: Students authenticate with email/password only
 3. **Authorization**: JWT token must be included in Authorization header for protected endpoints
-4. **Password Reset**: Users can request password reset via email verification
+
+### Admin/Lecturer Authentication
+1. **Registration**: Admin/Lecturer accounts require a valid verification code during registration
+2. **Login**: Admin/Lecturer accounts must provide verification code along with email/password
+3. **Authorization**: Same JWT token system as students, but with elevated permissions
+
+### Password Reset Flow
+1. **Request Reset**: Users can request password reset via email
+2. **Verification**: Reset requires verification code
+3. **New Password**: Set new password with valid verification code
+
+## Verification Code System
+
+Verification codes are used to:
+- **Differentiate user roles** during registration and login
+- **Secure admin/lecturer access** to prevent unauthorized role escalation
+- **Password reset operations** for all user types
+
+**Code Properties:**
+- 6-digit numeric codes
+- Time-limited expiration
+- Single-use or limited-use depending on type
+- Generated and managed by administrators
 
 ## Security Features
 
@@ -101,8 +147,17 @@ Delete verification code (Admin only).
 
 ## Error Responses
 
-- `400 Bad Request` - Invalid input data
-- `401 Unauthorized` - Invalid credentials or missing token
-- `403 Forbidden` - Insufficient permissions
+- `400 Bad Request` - Invalid input data or malformed verification code
+- `401 Unauthorized` - Invalid credentials, missing token, or invalid verification code
+- `403 Forbidden` - Insufficient permissions or verification code required for role
 - `409 Conflict` - Email already exists (registration)
+- `422 Unprocessable Entity` - Verification code expired or already used
 - `429 Too Many Requests` - Rate limit exceeded
+
+## Verification Code Errors
+
+- **Missing Code**: Admin/Lecturer registration/login without verification code
+- **Invalid Code**: Verification code doesn't exist or doesn't match
+- **Expired Code**: Verification code has passed its expiration time
+- **Used Code**: Verification code has already been consumed (for single-use codes)
+- **Wrong Role**: Verification code not valid for the requested role
