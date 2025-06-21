@@ -6,9 +6,6 @@ import { Course, Level } from '../../generated/prisma';
 export class CourseRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Find courses by department code
-   */
   async findByDepartment(departmentCode: string): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: {
@@ -20,9 +17,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Find courses by academic level
-   */
   async findByLevel(level: Level): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: {
@@ -34,9 +28,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Find courses by credit range
-   */
   async findByCreditRange(
     minCredits: number,
     maxCredits: number,
@@ -54,9 +45,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Search courses by name (case-insensitive)
-   */
   async searchByName(searchTerm: string): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: {
@@ -71,9 +59,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Find courses by department and level
-   */
   async findByDepartmentAndLevel(
     departmentCode: string,
     level: Level,
@@ -89,9 +74,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Check if course code exists
-   */
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.course.count({
       where: {
@@ -102,9 +84,6 @@ export class CourseRepository {
     return count > 0;
   }
 
-  /**
-   * Get course statistics
-   */
   async getCourseStats(): Promise<{
     totalCourses: number;
     coursesByLevel: Record<Level, number>;
@@ -115,7 +94,6 @@ export class CourseRepository {
       where: { isActive: true },
     });
 
-    // Get courses by level
     const coursesByLevel = {} as Record<Level, number>;
     for (const level of Object.values(Level)) {
       coursesByLevel[level] = await this.prisma.course.count({
@@ -123,7 +101,6 @@ export class CourseRepository {
       });
     }
 
-    // Get courses by department
     const departments = await this.prisma.department.findMany({
       where: { isActive: true },
       select: { code: true },
@@ -136,7 +113,6 @@ export class CourseRepository {
       });
     }
 
-    // Calculate average credits
     const creditSum = await this.prisma.course.aggregate({
       where: { isActive: true },
       _avg: { credits: true },
@@ -150,9 +126,6 @@ export class CourseRepository {
     };
   }
 
-  /**
-   * Find courses with their schedules
-   */
   async findWithSchedules(where?: Record<string, unknown>): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: {
@@ -169,9 +142,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Find courses without schedules
-   */
   async findWithoutSchedules(): Promise<Course[]> {
     return this.prisma.course.findMany({
       where: {
@@ -185,9 +155,6 @@ export class CourseRepository {
     });
   }
 
-  /**
-   * Bulk create courses with department validation
-   */
   async bulkCreateWithValidation(
     courses: Array<{
       code: string;
@@ -207,7 +174,6 @@ export class CourseRepository {
       const courseData = courses[i];
 
       try {
-        // Check if course code already exists
         const existingCourse = await this.existsByCode(courseData.code);
         if (existingCourse) {
           errors.push({
@@ -217,7 +183,6 @@ export class CourseRepository {
           continue;
         }
 
-        // Check if department exists
         const department = await this.prisma.department.findUnique({
           where: { code: courseData.departmentCode },
         });
@@ -246,9 +211,6 @@ export class CourseRepository {
     return { created, errors };
   }
 
-  /**
-   * Find courses by multiple criteria
-   */
   async findByCriteria(criteria: {
     departmentCode?: string;
     level?: Level;

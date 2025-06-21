@@ -6,9 +6,6 @@ import { Department } from '../../generated/prisma';
 export class DepartmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Search departments by name (case-insensitive)
-   */
   async searchByName(searchTerm: string): Promise<Department[]> {
     return this.prisma.department.findMany({
       where: {
@@ -22,9 +19,6 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Check if department code exists
-   */
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.department.count({
       where: {
@@ -35,9 +29,6 @@ export class DepartmentRepository {
     return count > 0;
   }
 
-  /**
-   * Find departments with their courses
-   */
   async findWithCourses(): Promise<Department[]> {
     return this.prisma.department.findMany({
       where: { isActive: true },
@@ -51,9 +42,6 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Find departments with course count
-   */
   async findWithCourseCount(): Promise<
     Array<Department & { _count: { courses: number } }>
   > {
@@ -72,9 +60,6 @@ export class DepartmentRepository {
     })) as unknown as Array<Department & { _count: { courses: number } }>;
   }
 
-  /**
-   * Find departments without courses
-   */
   async findWithoutCourses(): Promise<Department[]> {
     return this.prisma.department.findMany({
       where: {
@@ -89,9 +74,6 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Get department statistics
-   */
   async getDepartmentStats(): Promise<{
     totalDepartments: number;
     departmentsWithCourses: number;
@@ -115,7 +97,6 @@ export class DepartmentRepository {
 
     const departmentsWithoutCourses = totalDepartments - departmentsWithCourses;
 
-    // Calculate average courses per department - simplified approach
     const allCourses = await this.prisma.course.count({
       where: { isActive: true },
     });
@@ -131,9 +112,6 @@ export class DepartmentRepository {
     };
   }
 
-  /**
-   * Bulk create departments with validation
-   */
   async bulkCreateWithValidation(
     departments: Array<{
       code: string;
@@ -150,7 +128,6 @@ export class DepartmentRepository {
       const departmentData = departments[i];
 
       try {
-        // Check if department code already exists
         const existingDepartment = await this.existsByCode(departmentData.code);
         if (existingDepartment) {
           errors.push({
@@ -175,9 +152,6 @@ export class DepartmentRepository {
     return { created, errors };
   }
 
-  /**
-   * Find departments by search criteria
-   */
   async findByCriteria(criteria: {
     searchTerm?: string;
     hasCoursesOnly?: boolean;
@@ -217,9 +191,6 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Get department with full details (courses and schedules)
-   */
   async findWithFullDetails(code: string): Promise<Department | null> {
     return this.prisma.department.findUnique({
       where: { code },
@@ -237,17 +208,12 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Update department and handle cascading effects
-   */
+
   async updateWithCascade(
     code: string,
     data: Partial<{ name: string; code: string }>,
   ): Promise<Department> {
-    // If code is being changed, we need to handle the cascade
     if (data.code && data.code !== code) {
-      // This would require updating all related courses
-      // For now, we'll prevent code changes or handle it in the service layer
       throw new Error('Department code changes require special handling');
     }
 
@@ -257,15 +223,11 @@ export class DepartmentRepository {
     });
   }
 
-  /**
-   * Soft delete department with validation
-   */
   async safeDelete(code: string): Promise<{
     success: boolean;
     message: string;
     department?: Department;
   }> {
-    // Check if department has active courses
     const coursesCount = await this.prisma.course.count({
       where: {
         departmentCode: code,
