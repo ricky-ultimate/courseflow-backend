@@ -1,10 +1,9 @@
 # 🚀 CourseFlow Backend Deployment Guide
 
-## Free Deployment Options for Students
+## Free Deployment Options
 
 ### 🛤️ Option 1: Railway (Recommended)
 
-Railway offers $5/month free credit which is perfect for student projects.
 
 #### Step 1: Setup Railway Account
 1. Go to [railway.app](https://railway.app)
@@ -139,13 +138,6 @@ Once deployed, your Swagger docs will be available at:
 - **Render**: Dashboard → Service → Logs
 - **Vercel**: Dashboard → Functions → View Logs
 
-## 🎓 Student Tips
-
-1. **Use GitHub Student Pack**: Get free credits for various platforms
-2. **Monitor Usage**: Keep an eye on free tier limits
-3. **Optimize**: Use health checks to prevent sleeping (Render)
-4. **Backup**: Export your database regularly
-5. **Documentation**: Keep your API docs updated
 
 ## 🚀 Going Live Checklist
 
@@ -157,5 +149,3 @@ Once deployed, your Swagger docs will be available at:
 - [ ] JWT authentication working
 - [ ] Rate limiting active
 - [ ] Error handling tested
-
-Your CourseFlow API is now ready for production! 🎉
