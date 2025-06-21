@@ -13,6 +13,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { SchedulesModule } from './schedules/schedules.module';
 import { ComplaintsModule } from './complaints/complaints.module';
+import { HealthModule } from './health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
@@ -43,6 +44,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     PrismaModule,
     SchedulesModule,
     ComplaintsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
