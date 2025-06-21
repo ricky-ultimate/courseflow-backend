@@ -10,12 +10,11 @@ export const validationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('24h'),
-  JWT_REFRESH_SECRET: Joi.string().min(32).required(),
-  JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
-  BCRYPT_SALT_ROUNDS: Joi.number().min(10).max(15).default(12),
   CORS_ORIGIN: Joi.string().default('*'),
-  LOG_LEVEL: Joi.string()
-    .valid('error', 'warn', 'info', 'debug')
-    .default('info'),
+  RATE_LIMIT_TTL: Joi.number().default(60),
+  RATE_LIMIT_MAX: Joi.number().default(100),
+
+  API_PREFIX: Joi.string().default('api'),
+  ENABLE_SWAGGER: Joi.string().valid('true', 'false').default('true'),
 });
