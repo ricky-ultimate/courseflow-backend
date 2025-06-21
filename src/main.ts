@@ -58,8 +58,7 @@ async function bootstrap() {
     configService.get<number>('app.port') || process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
-  const environment =
-    configService.get<string>('app.environment') || 'development';
+  const environment = configService.get<string>('app.nodeEnv') || 'development';
   console.log(`Application is running on port ${port} in ${environment} mode`);
 
   if (apiPrefix) {
