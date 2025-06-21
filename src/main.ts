@@ -54,18 +54,23 @@ async function bootstrap() {
     SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
   }
 
-  const port = configService.get<number>('app.port') || 3000;
-  await app.listen(port);
+  const port =
+    configService.get<number>('app.port') || process.env.PORT || 3000;
+  await app.listen(port, '0.0.0.0');
 
-  console.log(`Application is running on: http://localhost:${port}`);
+  const environment =
+    configService.get<string>('app.environment') || 'development';
+  console.log(`Application is running on port ${port} in ${environment} mode`);
+
   if (apiPrefix) {
-    console.log(
-      `API endpoints available at: http://localhost:${port}/${apiPrefix}`,
-    );
-    console.log(
-      `Swagger documentation available at: http://localhost:${configService.get('app.port')}/${apiPrefix}/docs`,
-    );
+    console.log(`API endpoints available at: /${apiPrefix}`);
+    if (enableSwagger) {
+      console.log(`Swagger documentation available at: /${apiPrefix}/docs`);
+    }
   }
+
+  console.log(`Health check available at: /${apiPrefix}/health`);
+  console.log(`Simple health check available at: /${apiPrefix}/health/simple`);
 }
 bootstrap().catch((error) => {
   console.error('Failed to start application:', error);
