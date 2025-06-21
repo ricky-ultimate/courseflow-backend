@@ -34,19 +34,11 @@ export class CoursesService extends BaseService<
   }
 
   async findByDepartment(departmentCode: string): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: { departmentCode, isActive: true },
-      include: { department: true },
-      orderBy: [{ level: 'asc' }, { code: 'asc' }],
-    });
+    return this.courseRepository.findByDepartment(departmentCode);
   }
 
   async findByLevel(level: Level): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: { level, isActive: true },
-      include: { department: true },
-      orderBy: { code: 'asc' },
-    });
+    return this.courseRepository.findByLevel(level);
   }
 
   async bulkCreateFromCsv(
@@ -72,7 +64,6 @@ export class CoursesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    // Use repository bulk creation with validation
     const { created, errors: repositoryErrors } =
       await this.courseRepository.bulkCreateWithValidation(
         data.map((courseData) => ({
@@ -84,9 +75,8 @@ export class CoursesService extends BaseService<
         })),
       );
 
-    // Convert repository errors to CSV validation errors
     for (const repoError of repositoryErrors) {
-      const rowNumber = repoError.index + 2; // +2 for CSV header
+      const rowNumber = repoError.index + 2;
       allErrors.push({
         row: rowNumber,
         field: 'general',
@@ -115,7 +105,6 @@ export class CoursesService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  // Additional repository-based methods
   async findByCreditRange(
     minCredits: number,
     maxCredits: number,
