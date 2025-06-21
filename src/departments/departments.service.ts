@@ -4,6 +4,7 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { BaseService } from '../common/services/base.service';
 import { CsvService } from '../common/services/csv.service';
+import { DepartmentRepository } from './repositories/department.repository';
 import {
   DepartmentCsvRowDto,
   BulkOperationResult,
@@ -20,6 +21,7 @@ export class DepartmentsService extends BaseService<
   constructor(
     prisma: PrismaService,
     private readonly csvService: CsvService,
+    private readonly departmentRepository: DepartmentRepository,
   ) {
     super(prisma, {
       modelName: 'department',
@@ -41,56 +43,28 @@ export class DepartmentsService extends BaseService<
       requiredHeaders,
     );
 
-    const created: Department[] = [];
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length > 0) {
-      try {
-        await this.prisma.$transaction(async (tx) => {
-          for (let i = 0; i < data.length; i++) {
-            const departmentData = data[i];
-            const rowNumber = i + 2;
+    if (data.length === 0) {
+      return this.csvService.createBulkResult([], allErrors, errors.length);
+    }
 
-            try {
-              const existing = await tx.department.findUnique({
-                where: { code: departmentData.code },
-              });
+    const { created, errors: repositoryErrors } =
+      await this.departmentRepository.bulkCreateWithValidation(
+        data.map((departmentData) => ({
+          code: departmentData.code,
+          name: departmentData.name,
+        })),
+      );
 
-              if (existing) {
-                allErrors.push({
-                  row: rowNumber,
-                  field: 'code',
-                  value: departmentData.code,
-                  message: `Department with code '${departmentData.code}' already exists`,
-                });
-                continue;
-              }
-
-              const department = await tx.department.create({
-                data: {
-                  code: departmentData.code,
-                  name: departmentData.name,
-                },
-              });
-
-              created.push(department);
-            } catch (error) {
-              allErrors.push({
-                row: rowNumber,
-                field: 'general',
-                value: departmentData,
-                message: `Failed to create department: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              });
-            }
-          }
-
-          if (allErrors.length > 0) {
-            throw new Error('Validation errors found');
-          }
-        });
-      } catch {
-        created.length = 0;
-      }
+    for (const repoError of repositoryErrors) {
+      const rowNumber = repoError.index + 2;
+      allErrors.push({
+        row: rowNumber,
+        field: 'general',
+        value: data[repoError.index],
+        message: repoError.error,
+      });
     }
 
     return this.csvService.createBulkResult(
@@ -108,5 +82,56 @@ export class DepartmentsService extends BaseService<
     };
 
     return this.csvService.generateCsvTemplate(headers, sampleData);
+  }
+
+  async searchByName(searchTerm: string): Promise<Department[]> {
+    return this.departmentRepository.searchByName(searchTerm);
+  }
+
+  async findWithCourses(): Promise<Department[]> {
+    return this.departmentRepository.findWithCourses();
+  }
+
+  async findWithCourseCount(): Promise<
+    Array<Department & { _count: { courses: number } }>
+  > {
+    return this.departmentRepository.findWithCourseCount();
+  }
+
+  async findWithoutCourses(): Promise<Department[]> {
+    return this.departmentRepository.findWithoutCourses();
+  }
+
+  async getDepartmentStatistics(): Promise<{
+    totalDepartments: number;
+    departmentsWithCourses: number;
+    departmentsWithoutCourses: number;
+    averageCoursesPerDepartment: number;
+  }> {
+    return this.departmentRepository.getDepartmentStats();
+  }
+
+  async findByCriteria(criteria: {
+    searchTerm?: string;
+    hasCoursesOnly?: boolean;
+    withoutCoursesOnly?: boolean;
+  }): Promise<Department[]> {
+    return this.departmentRepository.findByCriteria(criteria);
+  }
+
+  async findWithFullDetails(code: string): Promise<Department | null> {
+    return this.departmentRepository.findWithFullDetails(code);
+  }
+
+  async safeDelete(code: string): Promise<{
+    success: boolean;
+    message: string;
+    department?: Department;
+  }> {
+    return this.departmentRepository.safeDelete(code);
+  }
+
+  async existsByCode(code: string): Promise<boolean> {
+    return this.departmentRepository.existsByCode(code);
   }
 }

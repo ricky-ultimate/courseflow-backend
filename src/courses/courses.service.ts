@@ -4,6 +4,7 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { BaseService } from '../common/services/base.service';
 import { CsvService } from '../common/services/csv.service';
+import { CourseRepository } from './repositories/course.repository';
 import {
   CourseCsvRowDto,
   BulkOperationResult,
@@ -20,6 +21,7 @@ export class CoursesService extends BaseService<
   constructor(
     prisma: PrismaService,
     private readonly csvService: CsvService,
+    private readonly courseRepository: CourseRepository,
   ) {
     super(prisma, {
       modelName: 'course',
@@ -32,19 +34,11 @@ export class CoursesService extends BaseService<
   }
 
   async findByDepartment(departmentCode: string): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: { departmentCode, isActive: true },
-      include: { department: true },
-      orderBy: [{ level: 'asc' }, { code: 'asc' }],
-    });
+    return this.courseRepository.findByDepartment(departmentCode);
   }
 
   async findByLevel(level: Level): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: { level, isActive: true },
-      include: { department: true },
-      orderBy: { code: 'asc' },
-    });
+    return this.courseRepository.findByLevel(level);
   }
 
   async bulkCreateFromCsv(
@@ -58,81 +52,37 @@ export class CoursesService extends BaseService<
       'departmentCode',
     ];
 
-
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       CourseCsvRowDto,
       requiredHeaders,
     );
 
-    const created: Course[] = [];
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length > 0) {
-      try {
-        await this.prisma.$transaction(async (tx) => {
-          for (let i = 0; i < data.length; i++) {
-            const courseData = data[i];
-            const rowNumber = i + 2;
+    if (data.length === 0) {
+      return this.csvService.createBulkResult([], allErrors, errors.length);
+    }
 
-            try {
-              const existingCourse = await tx.course.findUnique({
-                where: { code: courseData.code },
-              });
+    const { created, errors: repositoryErrors } =
+      await this.courseRepository.bulkCreateWithValidation(
+        data.map((courseData) => ({
+          code: courseData.code,
+          name: courseData.name,
+          level: courseData.level,
+          credits: courseData.credits,
+          departmentCode: courseData.departmentCode,
+        })),
+      );
 
-              if (existingCourse) {
-                allErrors.push({
-                  row: rowNumber,
-                  field: 'code',
-                  value: courseData.code,
-                  message: `Course with code '${courseData.code}' already exists`,
-                });
-                continue;
-              }
-
-              const department = await tx.department.findUnique({
-                where: { code: courseData.departmentCode },
-              });
-
-              if (!department) {
-                allErrors.push({
-                  row: rowNumber,
-                  field: 'departmentCode',
-                  value: courseData.departmentCode,
-                  message: `Department with code '${courseData.departmentCode}' does not exist`,
-                });
-                continue;
-              }
-
-              const course = await tx.course.create({
-                data: {
-                  code: courseData.code,
-                  name: courseData.name,
-                  level: courseData.level,
-                  credits: courseData.credits,
-                  departmentCode: courseData.departmentCode,
-                },
-                include: { department: true },
-              });
-
-              created.push(course);
-            } catch (error) {
-              allErrors.push({
-                row: rowNumber,
-                field: 'general',
-                value: courseData,
-                message: `Failed to create course: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              });
-            }
-          }
-
-          if (allErrors.length > 0) {
-            throw new Error('Validation errors found');
-          }
-        });
-      } catch {
-        created.length = 0;
-      }
+    for (const repoError of repositoryErrors) {
+      const rowNumber = repoError.index + 2;
+      allErrors.push({
+        row: rowNumber,
+        field: 'general',
+        value: data[repoError.index],
+        message: repoError.error,
+      });
     }
 
     return this.csvService.createBulkResult(
@@ -153,5 +103,57 @@ export class CoursesService extends BaseService<
     };
 
     return this.csvService.generateCsvTemplate(headers, sampleData);
+  }
+
+  async findByCreditRange(
+    minCredits: number,
+    maxCredits: number,
+  ): Promise<Course[]> {
+    return this.courseRepository.findByCreditRange(minCredits, maxCredits);
+  }
+
+  async searchByName(searchTerm: string): Promise<Course[]> {
+    return this.courseRepository.searchByName(searchTerm);
+  }
+
+  async findByDepartmentAndLevel(
+    departmentCode: string,
+    level: Level,
+  ): Promise<Course[]> {
+    return this.courseRepository.findByDepartmentAndLevel(
+      departmentCode,
+      level,
+    );
+  }
+
+  async findWithSchedules(where?: Record<string, any>): Promise<Course[]> {
+    return this.courseRepository.findWithSchedules(where);
+  }
+
+  async findWithoutSchedules(): Promise<Course[]> {
+    return this.courseRepository.findWithoutSchedules();
+  }
+
+  async getCourseStatistics(): Promise<{
+    totalCourses: number;
+    coursesByLevel: Record<string, number>;
+    coursesByDepartment: Record<string, number>;
+    averageCredits: number;
+  }> {
+    return this.courseRepository.getCourseStats();
+  }
+
+  async findByCriteria(criteria: {
+    departmentCode?: string;
+    level?: any;
+    minCredits?: number;
+    maxCredits?: number;
+    searchTerm?: string;
+  }): Promise<Course[]> {
+    return this.courseRepository.findByCriteria(criteria);
+  }
+
+  async existsByCode(code: string): Promise<boolean> {
+    return this.courseRepository.existsByCode(code);
   }
 }

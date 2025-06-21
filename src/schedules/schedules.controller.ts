@@ -25,7 +25,13 @@ import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { BaseController } from '../common/controllers/base.controller';
 import { CrudRoles } from '../common/decorators/crud-roles.decorator';
-import { Schedule, Role, Level } from '../generated/prisma';
+import {
+  Schedule,
+  Role,
+  Level,
+  DayOfWeek,
+  ClassType,
+} from '../generated/prisma';
 
 @ApiTags('Schedules')
 @ApiBearerAuth('JWT-auth')
@@ -153,5 +159,66 @@ export class SchedulesController extends BaseController<
       'attachment; filename=schedules-template.csv',
     );
     res.send(template);
+  }
+
+  @Get('statistics')
+  @ApiOperation({
+    summary: 'Get schedule statistics',
+    description:
+      'Get comprehensive statistics about schedules including counts by day and type',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Schedule statistics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalSchedules: { type: 'number' },
+        schedulesByDay: { type: 'object' },
+        schedulesByType: { type: 'object' },
+      },
+    },
+  })
+  getStatistics() {
+    return this.schedulesService.getScheduleStatistics();
+  }
+
+  @Get('day/:dayOfWeek')
+  @ApiOperation({ summary: 'Get schedules by day of week' })
+  @ApiParam({
+    name: 'dayOfWeek',
+    enum: DayOfWeek,
+    description: 'Day of the week',
+    example: 'MONDAY',
+  })
+  findByDayOfWeek(
+    @Param('dayOfWeek', new ParseEnumPipe(DayOfWeek)) dayOfWeek: DayOfWeek,
+  ) {
+    return this.schedulesService.findByDayOfWeek(dayOfWeek);
+  }
+
+  @Get('venue/:venue')
+  @ApiOperation({ summary: 'Get schedules by venue' })
+  @ApiParam({
+    name: 'venue',
+    description: 'Venue name or partial name',
+    example: 'Room 101',
+  })
+  findByVenue(@Param('venue') venue: string) {
+    return this.schedulesService.findByVenue(venue);
+  }
+
+  @Get('type/:type')
+  @ApiOperation({ summary: 'Get schedules by class type' })
+  @ApiParam({
+    name: 'type',
+    enum: ClassType,
+    description: 'Class type',
+    example: 'LECTURE',
+  })
+  findByClassType(
+    @Param('type', new ParseEnumPipe(ClassType)) type: ClassType,
+  ) {
+    return this.schedulesService.findByClassType(type);
   }
 }
