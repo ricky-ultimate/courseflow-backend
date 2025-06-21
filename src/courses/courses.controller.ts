@@ -184,4 +184,66 @@ export class CoursesController extends BaseController<
     );
     res.send(template);
   }
+
+  @Get('statistics')
+  @ApiOperation({
+    summary: 'Get course statistics',
+    description:
+      'Get comprehensive statistics about courses including counts by level and department',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course statistics',
+    schema: {
+      type: 'object',
+      properties: {
+        totalCourses: { type: 'number' },
+        coursesByLevel: { type: 'object' },
+        coursesByDepartment: { type: 'object' },
+        averageCredits: { type: 'number' },
+      },
+    },
+  })
+  getStatistics() {
+    return this.coursesService.getCourseStatistics();
+  }
+
+  @Get('search/:searchTerm')
+  @ApiOperation({ summary: 'Search courses by name' })
+  @ApiParam({
+    name: 'searchTerm',
+    description: 'Search term for course name',
+    example: 'programming',
+  })
+  searchByName(@Param('searchTerm') searchTerm: string) {
+    return this.coursesService.searchByName(searchTerm);
+  }
+
+  @Get('credits/:minCredits/:maxCredits')
+  @ApiOperation({ summary: 'Find courses by credit range' })
+  @ApiParam({
+    name: 'minCredits',
+    description: 'Minimum credits',
+    example: '3',
+  })
+  @ApiParam({
+    name: 'maxCredits',
+    description: 'Maximum credits',
+    example: '6',
+  })
+  findByCreditRange(
+    @Param('minCredits') minCredits: string,
+    @Param('maxCredits') maxCredits: string,
+  ) {
+    return this.coursesService.findByCreditRange(
+      parseInt(minCredits),
+      parseInt(maxCredits),
+    );
+  }
+
+  @Get('without-schedules')
+  @ApiOperation({ summary: 'Get courses without schedules' })
+  findWithoutSchedules() {
+    return this.coursesService.findWithoutSchedules();
+  }
 }
