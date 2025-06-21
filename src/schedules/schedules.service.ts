@@ -54,7 +54,6 @@ export class SchedulesService extends BaseService<
       'venue',
     ];
 
-    // Parse and validate CSV structure
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       ScheduleCsvRowDto,
@@ -67,7 +66,6 @@ export class SchedulesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    // Additional CSV-specific validations
     const validatedSchedules: Array<{
       courseCode: string;
       dayOfWeek: any;
@@ -81,7 +79,6 @@ export class SchedulesService extends BaseService<
       const scheduleData = data[i];
       const rowNumber = i + 2;
 
-      // Validate time range
       if (
         !this.csvService.validateTimeRange(
           scheduleData.startTime,
@@ -97,7 +94,6 @@ export class SchedulesService extends BaseService<
         continue;
       }
 
-      // Check if course exists
       const course = await this.prisma.course.findUnique({
         where: { code: scheduleData.courseCode },
       });
@@ -122,7 +118,6 @@ export class SchedulesService extends BaseService<
       });
     }
 
-    // If there are validation errors, return early
     if (allErrors.length > 0) {
       return this.csvService.createBulkResult(
         [],
@@ -131,15 +126,13 @@ export class SchedulesService extends BaseService<
       );
     }
 
-    // Use repository bulk creation with conflict validation
     const { created, conflicts } =
       await this.scheduleRepository.bulkCreateWithValidation(
         validatedSchedules,
       );
 
-    // Convert conflicts to CSV validation errors
     for (const conflict of conflicts) {
-      const rowNumber = conflict.index + 2; // +2 for CSV header
+      const rowNumber = conflict.index + 2;
       allErrors.push({
         row: rowNumber,
         field: 'general',
@@ -176,7 +169,6 @@ export class SchedulesService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  // Additional repository-based methods
   async findByDayOfWeek(dayOfWeek: DayOfWeek): Promise<Schedule[]> {
     return this.scheduleRepository.findByDayOfWeek(dayOfWeek);
   }

@@ -60,7 +60,6 @@ export class CoursesService extends BaseService<
       'departmentCode',
     ];
 
-    // Parse and validate CSV structure
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       CourseCsvRowDto,
