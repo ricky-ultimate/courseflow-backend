@@ -4,13 +4,13 @@ The Departments module manages academic departments within the university system
 
 ## Endpoints
 
-### GET /departments
+### GET /api/v1/departments
 Get all departments with pagination support.
 
-### GET /departments/:code
+### GET /api/v1/departments/:code
 Get a specific department by its code (e.g., 'CS', 'MATH').
 
-### POST /departments
+### POST /api/v1/departments
 Create a new department.
 
 **Request Body:**
@@ -21,28 +21,28 @@ Create a new department.
 }
 ```
 
-### PATCH /departments/:code
+### PATCH /api/v1/departments/:code
 Update department information.
 
-### DELETE /departments/:code
+### DELETE /api/v1/departments/:code
 Delete a department (only if no active courses exist).
 
-### GET /departments/search/:searchTerm
+### GET /api/v1/departments/search/:searchTerm
 Search departments by name or code.
 
-### GET /departments/with-courses
+### GET /api/v1/departments/with-courses
 Get departments that have active courses.
 
-### GET /departments/without-courses
+### GET /api/v1/departments/without-courses
 Get departments that have no active courses.
 
-### GET /departments/with-course-count
+### GET /api/v1/departments/with-course-count
 Get departments with their course counts.
 
-### GET /departments/:code/full-details
+### GET /api/v1/departments/:code/full-details
 Get department with complete details including courses and schedules.
 
-### GET /departments/statistics
+### GET /api/v1/departments/statistics
 Get department statistics and analytics.
 
 **Response:**
@@ -57,7 +57,7 @@ Get department statistics and analytics.
 
 ## Bulk Operations
 
-### POST /departments/bulk/upload
+### POST /api/v1/departments/bulk/upload
 Upload CSV file to create multiple departments.
 
 **CSV Format:**
@@ -68,7 +68,7 @@ MATH,Mathematics
 PHYS,Physics
 ```
 
-### GET /departments/bulk/template
+### GET /api/v1/departments/bulk/template
 Download CSV template for bulk department creation.
 
 ## Department Structure

@@ -97,8 +97,8 @@ npm run test:cov
 
 Once the application is running, comprehensive API documentation is available via Swagger UI:
 
-- **Local Development**: `http://localhost:3000/api/docs`
-- **Production**: `https://your-domain.com/api/docs`
+- **Local Development**: `http://localhost:3000/api/v1/docs`
+- **Production**: `https://your-domain.com/api/v1/docs`
 
 The documentation includes:
 - Interactive endpoint testing
@@ -110,11 +110,11 @@ The documentation includes:
 
 The application includes comprehensive health check endpoints:
 
-- `GET /health` - Full system health check
-- `GET /health/simple` - Basic application status
-- `GET /health/database` - Database connectivity check
-- `GET /health/readiness` - Kubernetes readiness probe
-- `GET /health/liveness` - Kubernetes liveness probe
+- `GET /api/v1/health` - Full system health check
+- `GET /api/v1/health/simple` - Basic application status
+- `GET /api/v1/health/database` - Database connectivity check
+- `GET /api/v1/health/readiness` - Kubernetes readiness probe
+- `GET /api/v1/health/liveness` - Kubernetes liveness probe
 
 ## Deployment
 

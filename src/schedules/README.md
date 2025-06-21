@@ -4,13 +4,13 @@ The Schedules module manages class schedules, timetables, and venue assignments 
 
 ## Endpoints
 
-### GET /schedules
+### GET /api/v1/schedules
 Get all schedules with course and department information.
 
-### GET /schedules/:id
+### GET /api/v1/schedules/:id
 Get a specific schedule by ID.
 
-### POST /schedules
+### POST /api/v1/schedules
 Create a new schedule with conflict detection.
 
 **Request Body:**
@@ -25,35 +25,35 @@ Create a new schedule with conflict detection.
 }
 ```
 
-### PATCH /schedules/:id
+### PATCH /api/v1/schedules/:id
 Update an existing schedule.
 
-### DELETE /schedules/:id
+### DELETE /api/v1/schedules/:id
 Delete a schedule.
 
-### GET /schedules/course/:courseCode
+### GET /api/v1/schedules/course/:courseCode
 Get all schedules for a specific course.
 
-### GET /schedules/department/:departmentCode
+### GET /api/v1/schedules/department/:departmentCode
 Get schedules for all courses in a department.
 
-### GET /schedules/level/:level
+### GET /api/v1/schedules/level/:level
 Get schedules for courses at a specific academic level.
 
-### GET /schedules/day/:dayOfWeek
+### GET /api/v1/schedules/day/:dayOfWeek
 Get all schedules for a specific day of the week.
 
 **Day Options:** MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
 
-### GET /schedules/venue/:venue
+### GET /api/v1/schedules/venue/:venue
 Get schedules for a specific venue (supports partial matching).
 
-### GET /schedules/type/:type
+### GET /api/v1/schedules/type/:type
 Get schedules by class type.
 
 **Type Options:** LECTURE, SEMINAR, LAB, TUTORIAL
 
-### GET /schedules/statistics
+### GET /api/v1/schedules/statistics
 Get comprehensive schedule statistics.
 
 **Response:**
@@ -80,7 +80,7 @@ Get comprehensive schedule statistics.
 
 ## Bulk Operations
 
-### POST /schedules/bulk/upload
+### POST /api/v1/schedules/bulk/upload
 Upload CSV file to create multiple schedules.
 
 **CSV Format:**
@@ -91,7 +91,7 @@ CS101,WEDNESDAY,10:00,11:30,Lab 201,LAB
 MATH101,TUESDAY,14:00,15:30,Room 205,LECTURE
 ```
 
-### GET /schedules/bulk/template
+### GET /api/v1/schedules/bulk/template
 Download CSV template for bulk schedule creation.
 
 ## Schedule Structure

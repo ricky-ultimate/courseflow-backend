@@ -4,13 +4,13 @@ The Complaints module handles administrative complaints, feedback, and issue res
 
 ## Endpoints
 
-### GET /complaints
+### GET /api/v1/complaints
 Get all complaints with pagination and filtering options.
 
-### GET /complaints/:id
+### GET /api/v1/complaints/:id
 Get a specific complaint by ID.
 
-### POST /complaints
+### POST /api/v1/complaints
 Create a new complaint.
 
 **Request Body:**
@@ -22,24 +22,24 @@ Create a new complaint.
 }
 ```
 
-### PATCH /complaints/:id
+### PATCH /api/v1/complaints/:id
 Update complaint information (Admin/Lecturer only).
 
-### DELETE /complaints/:id
+### DELETE /api/v1/complaints/:id
 Delete a complaint (Admin only).
 
-### GET /complaints/user/:userId
+### GET /api/v1/complaints/user/:userId
 Get complaints submitted by a specific user.
 
-### GET /complaints/status/:status
+### GET /api/v1/complaints/status/:status
 Get complaints by status.
 
 **Status Options:** PENDING, IN_PROGRESS, RESOLVED, CLOSED
 
-### GET /complaints/category/:category
+### GET /api/v1/complaints/category/:category
 Get complaints by category.
 
-### GET /complaints/statistics
+### GET /api/v1/complaints/statistics
 Get complaint statistics and analytics (Admin only).
 
 **Response:**
