@@ -6,7 +6,7 @@ The Health module provides comprehensive health monitoring and status checking f
 
 All health check endpoints are publicly accessible (no authentication required) to support monitoring systems and deployment platforms.
 
-### GET /health
+### GET /api/v1/health
 Comprehensive system health check including database connectivity and memory usage.
 
 **Response:**
@@ -21,7 +21,7 @@ Comprehensive system health check including database connectivity and memory usa
       "limit": 157286400
     },
     "memory_rss": {
-      "status": "up", 
+      "status": "up",
       "used": 67890123,
       "limit": 157286400
     }
@@ -35,7 +35,7 @@ Comprehensive system health check including database connectivity and memory usa
 }
 ```
 
-### GET /health/simple
+### GET /api/v1/health/simple
 Basic application status check for quick monitoring.
 
 **Response:**
@@ -49,7 +49,7 @@ Basic application status check for quick monitoring.
 }
 ```
 
-### GET /health/database
+### GET /api/v1/health/database
 Detailed database connectivity check with table counts and response time.
 
 **Response:**
@@ -69,7 +69,7 @@ Detailed database connectivity check with table counts and response time.
 }
 ```
 
-### GET /health/readiness
+### GET /api/v1/health/readiness
 Kubernetes readiness probe to determine if the application is ready to serve traffic.
 
 **Response:**
@@ -83,7 +83,7 @@ Kubernetes readiness probe to determine if the application is ready to serve tra
 }
 ```
 
-### GET /health/liveness
+### GET /api/v1/health/liveness
 Kubernetes liveness probe to determine if the application is alive and functioning.
 
 **Response:**

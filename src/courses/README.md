@@ -4,13 +4,13 @@ The Courses module manages academic courses, their relationships with department
 
 ## Endpoints
 
-### GET /courses
+### GET /api/v1/courses
 Get all courses with pagination and filtering options.
 
-### GET /courses/:code
+### GET /api/v1/courses/:code
 Get a specific course by its code (e.g., 'CS101').
 
-### POST /courses
+### POST /api/v1/courses
 Create a new course.
 
 **Request Body:**
@@ -24,28 +24,28 @@ Create a new course.
 }
 ```
 
-### PATCH /courses/:code
+### PATCH /api/v1/courses/:code
 Update course information.
 
-### DELETE /courses/:code
+### DELETE /api/v1/courses/:code
 Delete a course (soft delete).
 
-### GET /courses/department/:departmentCode
+### GET /api/v1/courses/department/:departmentCode
 Get all courses for a specific department.
 
-### GET /courses/level/:level
+### GET /api/v1/courses/level/:level
 Get courses by academic level (LEVEL_100, LEVEL_200, LEVEL_300, LEVEL_400).
 
-### GET /courses/search/:searchTerm
+### GET /api/v1/courses/search/:searchTerm
 Search courses by name or code.
 
-### GET /courses/credits/:minCredits/:maxCredits
+### GET /api/v1/courses/credits/:minCredits/:maxCredits
 Find courses within a specific credit range.
 
-### GET /courses/without-schedules
+### GET /api/v1/courses/without-schedules
 Get courses that don't have any scheduled classes.
 
-### GET /courses/statistics
+### GET /api/v1/courses/statistics
 Get course statistics and analytics.
 
 **Response:**
@@ -69,7 +69,7 @@ Get course statistics and analytics.
 
 ## Bulk Operations
 
-### POST /courses/bulk/upload
+### POST /api/v1/courses/bulk/upload
 Upload CSV file to create multiple courses.
 
 **CSV Format:**
@@ -80,13 +80,13 @@ CS201,Data Structures,LEVEL_200,4,CS
 MATH101,Calculus I,LEVEL_100,3,MATH
 ```
 
-### GET /courses/bulk/template
+### GET /api/v1/courses/bulk/template
 Download CSV template for bulk course creation.
 
 ## Course Levels
 
 - **LEVEL_100**: First year courses
-- **LEVEL_200**: Second year courses  
+- **LEVEL_200**: Second year courses
 - **LEVEL_300**: Third year courses
 - **LEVEL_400**: Fourth year courses
 

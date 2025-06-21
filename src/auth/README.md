@@ -6,7 +6,7 @@ The Authentication module handles user registration, login, password management,
 
 ### Public Endpoints (No Authentication Required)
 
-#### POST /auth/register
+#### POST /api/v1/auth/register
 Register a new user account.
 
 **For Students:**
@@ -34,7 +34,7 @@ Register a new user account.
 
 **Note:** Admin and Lecturer registrations require a valid verification code to differentiate from student accounts.
 
-#### POST /auth/login
+#### POST /api/v1/auth/login
 Authenticate user and receive JWT token.
 
 **For Students:**
@@ -68,7 +68,7 @@ Authenticate user and receive JWT token.
 }
 ```
 
-#### POST /auth/forgot-password
+#### POST /api/v1/auth/forgot-password
 Request password reset for user account.
 
 **Request Body:**
@@ -78,7 +78,7 @@ Request password reset for user account.
 }
 ```
 
-#### POST /auth/reset-password
+#### POST /api/v1/auth/reset-password
 Reset password using verification code.
 
 **Request Body:**
@@ -92,19 +92,19 @@ Reset password using verification code.
 
 ### Protected Endpoints (Authentication Required)
 
-#### GET /auth/verification-codes
+#### GET /api/v1/auth/verification-codes
 Get all verification codes (Admin only).
 
-#### POST /auth/verification-codes
+#### POST /api/v1/auth/verification-codes
 Create a new verification code (Admin only).
 
-#### GET /auth/verification-codes/:id
+#### GET /api/v1/auth/verification-codes/:id
 Get specific verification code (Admin only).
 
-#### PATCH /auth/verification-codes/:id
+#### PATCH /api/v1/auth/verification-codes/:id
 Update verification code (Admin only).
 
-#### DELETE /auth/verification-codes/:id
+#### DELETE /api/v1/auth/verification-codes/:id
 Delete verification code (Admin only).
 
 ## Authentication Flow

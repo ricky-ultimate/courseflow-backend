@@ -4,7 +4,7 @@ The Users module manages user accounts, profiles, and administrative user operat
 
 ## Endpoints
 
-### GET /users
+### GET /api/v1/users
 Get all users with pagination and filtering options.
 
 **Query Parameters:**
@@ -13,10 +13,10 @@ Get all users with pagination and filtering options.
 - `orderBy` (optional): Field to order by
 - `orderDirection` (optional): 'asc' or 'desc'
 
-### GET /users/:id
+### GET /api/v1/users/:id
 Get a specific user by ID.
 
-### POST /users
+### POST /api/v1/users
 Create a new user (Admin only).
 
 **Request Body:**
@@ -30,7 +30,7 @@ Create a new user (Admin only).
 }
 ```
 
-### PATCH /users/:id
+### PATCH /api/v1/users/:id
 Update user information.
 
 **Request Body:**
@@ -42,22 +42,22 @@ Update user information.
 }
 ```
 
-### DELETE /users/:id
+### DELETE /api/v1/users/:id
 Soft delete a user account (Admin only).
 
-### GET /users/profile
+### GET /api/v1/users/profile
 Get current user's profile information.
 
-### PATCH /users/profile
+### PATCH /api/v1/users/profile
 Update current user's profile.
 
-### GET /users/role/:role
+### GET /api/v1/users/role/:role
 Get users by specific role (STUDENT, LECTURER, ADMIN).
 
-### GET /users/search/:searchTerm
+### GET /api/v1/users/search/:searchTerm
 Search users by name or email.
 
-### GET /users/statistics
+### GET /api/v1/users/statistics
 Get user statistics and analytics (Admin only).
 
 **Response:**
