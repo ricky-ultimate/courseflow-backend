@@ -37,22 +37,15 @@ Register a new user account.
 #### POST /api/v1/auth/login
 Authenticate user and receive JWT token.
 
-**For Students:**
+**For All Users (Students, Lecturers, Admins):**
 ```json
 {
-  "email": "student@example.com",
+  "email": "user@example.com",
   "password": "securePassword123"
 }
 ```
 
-**For Admin/Lecturer (requires verification code):**
-```json
-{
-  "email": "admin@example.com",
-  "password": "securePassword123",
-  "verificationCode": "123456"
-}
-```
+**Note:** No verification code needed for login. Once registered with the appropriate role, users simply login with email and password.
 
 **Response:**
 ```json
@@ -115,9 +108,9 @@ Delete verification code (Admin only).
 3. **Authorization**: JWT token must be included in Authorization header for protected endpoints
 
 ### Admin/Lecturer Authentication
-1. **Registration**: Admin/Lecturer accounts require a valid verification code during registration
-2. **Login**: Admin/Lecturer accounts must provide verification code along with email/password
-3. **Authorization**: Same JWT token system as students, but with elevated permissions
+1. **Registration**: Admin/Lecturer accounts require a valid verification code during registration to verify their role
+2. **Login**: Once registered, Admin/Lecturer accounts login with email/password only (same as students)
+3. **Authorization**: Same JWT token system as students, but with elevated permissions based on stored role
 
 ### Password Reset Flow
 1. **Request Reset**: Users can request password reset via email
@@ -127,8 +120,8 @@ Delete verification code (Admin only).
 ## Verification Code System
 
 Verification codes are used to:
-- **Differentiate user roles** during registration and login
-- **Secure admin/lecturer access** to prevent unauthorized role escalation
+- **Secure role assignment** during registration only
+- **Prevent unauthorized role escalation** to admin/lecturer positions
 - **Password reset operations** for all user types
 
 **Code Properties:**
@@ -136,6 +129,8 @@ Verification codes are used to:
 - Time-limited expiration
 - Single-use or limited-use depending on type
 - Generated and managed by administrators
+
+**Important:** Verification codes are only required during registration for admin/lecturer roles. Once registered, all users login with just email and password.
 
 ## Security Features
 
@@ -154,10 +149,12 @@ Verification codes are used to:
 - `422 Unprocessable Entity` - Verification code expired or already used
 - `429 Too Many Requests` - Rate limit exceeded
 
-## Verification Code Errors
+## Verification Code Errors (Registration Only)
 
-- **Missing Code**: Admin/Lecturer registration/login without verification code
+- **Missing Code**: Admin/Lecturer registration without verification code
 - **Invalid Code**: Verification code doesn't exist or doesn't match
 - **Expired Code**: Verification code has passed its expiration time
 - **Used Code**: Verification code has already been consumed (for single-use codes)
 - **Wrong Role**: Verification code not valid for the requested role
+
+**Note:** These errors only apply to registration. Login does not use verification codes.
