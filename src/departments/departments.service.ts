@@ -37,7 +37,6 @@ export class DepartmentsService extends BaseService<
   ): Promise<BulkOperationResult<Department>> {
     const requiredHeaders = ['code', 'name'];
 
-    // Parse and validate CSV structure
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       DepartmentCsvRowDto,
@@ -50,7 +49,6 @@ export class DepartmentsService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    // Use repository bulk creation with validation
     const { created, errors: repositoryErrors } =
       await this.departmentRepository.bulkCreateWithValidation(
         data.map((departmentData) => ({
@@ -59,9 +57,8 @@ export class DepartmentsService extends BaseService<
         })),
       );
 
-    // Convert repository errors to CSV validation errors
     for (const repoError of repositoryErrors) {
-      const rowNumber = repoError.index + 2; // +2 for CSV header
+      const rowNumber = repoError.index + 2;
       allErrors.push({
         row: rowNumber,
         field: 'general',
@@ -87,7 +84,6 @@ export class DepartmentsService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  // Additional repository-based methods
   async searchByName(searchTerm: string): Promise<Department[]> {
     return this.departmentRepository.searchByName(searchTerm);
   }
