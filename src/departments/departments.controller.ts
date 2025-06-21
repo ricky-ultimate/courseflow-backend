@@ -54,18 +54,13 @@ export class DepartmentsController extends BaseController<
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new department' })
-  @ApiBody({ type: CreateDepartmentDto })
+  @ApiCreateDepartment()
   create(@Body() createDto: CreateDepartmentDto) {
     return this.departmentsService.create(createDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all departments' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'orderBy', required: false, type: String })
-  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
+  @ApiGetDepartments()
   findAll(@Query() query?: PaginationOptions) {
     return this.departmentsService.findAll(query);
   }
@@ -77,60 +72,20 @@ export class DepartmentsController extends BaseController<
   }
 
   @Patch(':code')
-  @ApiOperation({ summary: 'Update department by code' })
-  @ApiParam({ name: 'code', description: 'Department code' })
-  @ApiBody({ type: UpdateDepartmentDto })
+  @ApiUpdateDepartment()
   update(@Param('code') code: string, @Body() updateDto: UpdateDepartmentDto) {
     return this.departmentsService.update(code, updateDto);
   }
 
   @Delete(':code')
-  @ApiOperation({ summary: 'Delete department by code' })
-  @ApiParam({ name: 'code', description: 'Department code' })
+  @ApiDeleteDepartment()
   remove(@Param('code') code: string) {
     return this.departmentsService.remove(code);
   }
 
   @Post('bulk/upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({
-    summary: 'Bulk create departments from CSV',
-    description:
-      'Upload a CSV file to create multiple departments at once. CSV must have columns: code, name',
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'CSV file with departments data',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Bulk operation completed',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        created: { type: 'array', items: { type: 'object' } },
-        errors: { type: 'array', items: { type: 'object' } },
-        summary: {
-          type: 'object',
-          properties: {
-            totalRows: { type: 'number' },
-            successCount: { type: 'number' },
-            errorCount: { type: 'number' },
-          },
-        },
-      },
-    },
-  })
+  @ApiBulkCreateDepartments()
   async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new Error('No file uploaded');
@@ -144,21 +99,7 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get('bulk/template')
-  @ApiOperation({
-    summary: 'Download CSV template for bulk department creation',
-    description:
-      'Download a CSV template file with the required headers and sample data',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'CSV template file',
-    headers: {
-      'Content-Type': { description: 'text/csv' },
-      'Content-Disposition': {
-        description: 'attachment; filename=departments-template.csv',
-      },
-    },
-  })
+  @ApiDownloadDepartmentTemplate()
   downloadCsvTemplate(@Res() res: Response) {
     const template = this.departmentsService.generateCsvTemplate();
 
@@ -171,66 +112,37 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get('statistics')
-  @ApiOperation({
-    summary: 'Get department statistics',
-    description:
-      'Get comprehensive statistics about departments including course counts',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Department statistics',
-    schema: {
-      type: 'object',
-      properties: {
-        totalDepartments: { type: 'number' },
-        departmentsWithCourses: { type: 'number' },
-        departmentsWithoutCourses: { type: 'number' },
-        averageCoursesPerDepartment: { type: 'number' },
-      },
-    },
-  })
+  @ApiGetDepartmentStatistics()
   getStatistics() {
     return this.departmentsService.getDepartmentStatistics();
   }
 
   @Get('search/:searchTerm')
-  @ApiOperation({ summary: 'Search departments by name' })
-  @ApiParam({
-    name: 'searchTerm',
-    description: 'Search term for department name',
-    example: 'computer',
-  })
+  @ApiSearchDepartments()
   searchByName(@Param('searchTerm') searchTerm: string) {
     return this.departmentsService.searchByName(searchTerm);
   }
 
   @Get('with-courses')
-  @ApiOperation({ summary: 'Get departments with their courses' })
+  @ApiGetDepartmentsWithCourses()
   findWithCourses() {
     return this.departmentsService.findWithCourses();
   }
 
   @Get('without-courses')
-  @ApiOperation({ summary: 'Get departments without courses' })
+  @ApiGetDepartmentsWithoutCourses()
   findWithoutCourses() {
     return this.departmentsService.findWithoutCourses();
   }
 
   @Get('with-course-count')
-  @ApiOperation({ summary: 'Get departments with course counts' })
+  @ApiGetDepartmentsWithCourses() // Reusing this decorator as it's similar
   findWithCourseCount() {
     return this.departmentsService.findWithCourseCount();
   }
 
   @Get(':code/full-details')
-  @ApiOperation({
-    summary: 'Get department with full details including courses and schedules',
-  })
-  @ApiParam({
-    name: 'code',
-    description: 'Department code',
-    example: 'CS',
-  })
+  @ApiGetDepartmentByCode() // Reusing this decorator as it's similar
   findWithFullDetails(@Param('code') code: string) {
     return this.departmentsService.findWithFullDetails(code);
   }
