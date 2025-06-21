@@ -28,9 +28,11 @@ JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-random
 JWT_EXPIRES_IN=7d
 NODE_ENV=production
 PORT=3000
-RATE_LIMIT_TTL=60000
+API_PREFIX=api
+RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 CORS_ORIGIN=*
+ENABLE_SWAGGER=true
 ```
 
 #### Step 5: Run Database Migration
