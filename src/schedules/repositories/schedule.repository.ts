@@ -6,9 +6,6 @@ import { Schedule, Level, DayOfWeek, ClassType } from '../../generated/prisma';
 export class ScheduleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Find schedules by course code
-   */
   async findByCourse(courseCode: string): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { courseCode },
@@ -17,9 +14,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules by department code
-   */
   async findByDepartment(departmentCode: string): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { course: { departmentCode } },
@@ -28,9 +22,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules by academic level
-   */
   async findByLevel(level: Level): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { course: { level } },
@@ -39,9 +30,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Check for schedule conflicts
-   */
   async findScheduleConflict(
     courseCode: string,
     dayOfWeek: DayOfWeek,
@@ -71,7 +59,6 @@ export class ScheduleRepository {
       ],
     };
 
-    // Exclude specific schedule ID if provided (useful for updates)
     if (excludeId) {
       whereClause.id = { not: excludeId };
     }
@@ -81,9 +68,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules by day of week
-   */
   async findByDayOfWeek(dayOfWeek: DayOfWeek): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { dayOfWeek },
@@ -92,9 +76,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules by venue
-   */
   async findByVenue(venue: string): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { venue: { contains: venue, mode: 'insensitive' } },
@@ -103,9 +84,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules by class type
-   */
   async findByClassType(type: ClassType): Promise<Schedule[]> {
     return this.prisma.schedule.findMany({
       where: { type },
@@ -114,9 +92,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Find schedules within a time range
-   */
   async findByTimeRange(
     startTime: string,
     endTime: string,
@@ -153,9 +128,6 @@ export class ScheduleRepository {
     });
   }
 
-  /**
-   * Get schedule statistics
-   */
   async getScheduleStats(): Promise<{
     totalSchedules: number;
     schedulesByDay: Record<DayOfWeek, number>;
@@ -163,7 +135,6 @@ export class ScheduleRepository {
   }> {
     const totalSchedules = await this.prisma.schedule.count();
 
-    // Get schedules by day
     const schedulesByDay = {} as Record<DayOfWeek, number>;
     for (const day of Object.values(DayOfWeek)) {
       schedulesByDay[day] = await this.prisma.schedule.count({
@@ -171,7 +142,6 @@ export class ScheduleRepository {
       });
     }
 
-    // Get schedules by type
     const schedulesByType = {} as Record<ClassType, number>;
     for (const type of Object.values(ClassType)) {
       schedulesByType[type] = await this.prisma.schedule.count({
@@ -186,9 +156,6 @@ export class ScheduleRepository {
     };
   }
 
-  /**
-   * Bulk create schedules with conflict checking
-   */
   async bulkCreateWithValidation(
     schedules: Array<{
       courseCode: string;
@@ -208,7 +175,6 @@ export class ScheduleRepository {
     for (let i = 0; i < schedules.length; i++) {
       const scheduleData = schedules[i];
 
-      // Check for conflicts
       const conflict = await this.findScheduleConflict(
         scheduleData.courseCode,
         scheduleData.dayOfWeek,
