@@ -89,13 +89,15 @@ datasource db {
 
 ## 🏥 Health Checks
 
-Your app includes comprehensive health checks:
+Your app includes comprehensive health checks (all publicly accessible, no authentication required):
 
-- **Basic**: `GET /health/simple`
-- **Full**: `GET /health`
-- **Database**: `GET /health/database`
-- **Kubernetes Ready**: `GET /health/readiness`
-- **Kubernetes Live**: `GET /health/liveness`
+- **Basic**: `GET /health/simple` - Quick status check
+- **Full**: `GET /health` - Complete system health with database and memory
+- **Database**: `GET /health/database` - Database connectivity and table counts
+- **Kubernetes Ready**: `GET /health/readiness` - Readiness probe for K8s
+- **Kubernetes Live**: `GET /health/liveness` - Liveness probe for K8s
+
+These endpoints are marked with `@Public()` decorator to bypass authentication guards.
 
 ## 📚 API Documentation
 

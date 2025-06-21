@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, HttpException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../database/prisma.service';
+import { Public } from '../common/decorators/public.decorator';
 import {
   ApiHealthCheck,
   ApiSimpleHealthCheck,
@@ -15,6 +16,7 @@ export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
+  @Public()
   @ApiHealthCheck()
   async check() {
     try {
@@ -68,6 +70,7 @@ export class HealthController {
   }
 
   @Get('simple')
+  @Public()
   @ApiSimpleHealthCheck()
   simpleCheck() {
     return {
@@ -80,6 +83,7 @@ export class HealthController {
   }
 
   @Get('database')
+  @Public()
   @ApiDatabaseHealthCheck()
   async databaseCheck() {
     try {
@@ -120,6 +124,7 @@ export class HealthController {
   }
 
   @Get('readiness')
+  @Public()
   @ApiReadinessCheck()
   async readinessCheck() {
     try {
@@ -138,6 +143,7 @@ export class HealthController {
   }
 
   @Get('liveness')
+  @Public()
   @ApiLivenessCheck()
   livenessCheck() {
     return {
