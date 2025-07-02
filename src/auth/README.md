@@ -12,10 +12,10 @@ Register a new user account.
 **For Students:**
 ```json
 {
+  "matricNO": "CS/2023/001",
   "email": "student@example.com",
   "password": "securePassword123",
-  "firstName": "John",
-  "lastName": "Doe",
+  "name": "John Doe",
   "role": "STUDENT"
 }
 ```
@@ -23,12 +23,12 @@ Register a new user account.
 **For Admin/Lecturer (requires verification code):**
 ```json
 {
-  "email": "admin@example.com",
+  "matricNO": "LEC/2024/001",
+  "email": "lecturer@example.com",
   "password": "securePassword123",
-  "firstName": "Jane",
-  "lastName": "Smith",
-  "role": "ADMIN",
-  "verificationCode": "123456"
+  "name": "Dr. Jane Smith",
+  "role": "LECTURER",
+  "verificationCode": "LECTURER-2025-ABC123"
 }
 ```
 
@@ -50,13 +50,17 @@ Authenticate user and receive JWT token.
 **Response:**
 ```json
 {
-  "access_token": "jwt-token-here",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
-    "role": "STUDENT"
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user_id",
+      "matricNO": "CS/2023/001",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "role": "STUDENT"
+    },
+    "access_token": "jwt-token-here",
+    "token_type": "Bearer"
   }
 }
 ```
@@ -72,18 +76,43 @@ Request password reset for user account.
 ```
 
 #### POST /api/v1/auth/reset-password
-Reset password using verification code.
+Reset password using token.
 
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
-  "code": "123456",
-  "newPassword": "newSecurePassword123"
+  "token": "reset_token",
+  "password": "newSecurePassword123"
 }
 ```
 
 ### Protected Endpoints (Authentication Required)
+
+#### GET /api/v1/auth/me
+Get current authenticated user information.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_id",
+    "matricNO": "CS/2023/001",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "STUDENT",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  },
+  "message": "User retrieved successfully",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
 
 #### GET /api/v1/auth/verification-codes
 Get all verification codes (Admin only).
@@ -103,31 +132,32 @@ Delete verification code (Admin only).
 ## Authentication Flow
 
 ### Student Authentication
-1. **Registration**: Students register with email, password, and basic information (no verification code required)
+1. **Registration**: Students register with matricNO, email, password, and basic information (no verification code required)
 2. **Login**: Students authenticate with email/password only
 3. **Authorization**: JWT token must be included in Authorization header for protected endpoints
+4. **Token Validation**: Use `/auth/me` endpoint to validate tokens and get current user info
 
 ### Admin/Lecturer Authentication
 1. **Registration**: Admin/Lecturer accounts require a valid verification code during registration to verify their role
 2. **Login**: Once registered, Admin/Lecturer accounts login with email/password only (same as students)
 3. **Authorization**: Same JWT token system as students, but with elevated permissions based on stored role
+4. **Token Validation**: Use `/auth/me` endpoint to validate tokens and get current user info
 
 ### Password Reset Flow
 1. **Request Reset**: Users can request password reset via email
-2. **Verification**: Reset requires verification code
-3. **New Password**: Set new password with valid verification code
+2. **Reset Token**: Reset requires the token received via email
+3. **New Password**: Set new password with valid reset token
 
 ## Verification Code System
 
 Verification codes are used to:
 - **Secure role assignment** during registration only
 - **Prevent unauthorized role escalation** to admin/lecturer positions
-- **Password reset operations** for all user types
 
 **Code Properties:**
-- 6-digit numeric codes
-- Time-limited expiration
-- Single-use or limited-use depending on type
+- Alphanumeric codes (e.g., ADMIN-2025-ABC123)
+- Time-limited expiration (optional)
+- Single-use or limited-use depending on configuration
 - Generated and managed by administrators
 
 **Important:** Verification codes are only required during registration for admin/lecturer roles. Once registered, all users login with just email and password.
@@ -139,6 +169,8 @@ Verification codes are used to:
 - Rate limiting on authentication endpoints
 - Input validation and sanitization
 - Role-based access control
+- Token validation endpoint for frontend apps
+- Comprehensive API documentation with decorators
 
 ## Error Responses
 
@@ -158,3 +190,25 @@ Verification codes are used to:
 - **Wrong Role**: Verification code not valid for the requested role
 
 **Note:** These errors only apply to registration. Login does not use verification codes.
+
+## API Documentation
+
+The Authentication module uses comprehensive API decorators that encapsulate all Swagger documentation:
+
+### Decorator Structure
+- **`@ApiRegister()`** - Complete registration endpoint documentation
+- **`@ApiLogin()`** - Login endpoint with request/response schemas
+- **`@ApiForgotPassword()`** - Password reset request documentation  
+- **`@ApiResetPassword()`** - Password reset completion documentation
+- **`@ApiGetMe()`** - Current user information endpoint
+- **`@ApiCreateVerificationCode()`** - Admin verification code creation
+- **`@ApiGetVerificationCodes()`** - List all verification codes (Admin)
+- **`@ApiGetVerificationCode()`** - Get specific verification code (Admin)
+- **`@ApiUpdateVerificationCode()`** - Update verification code (Admin)
+- **`@ApiDeleteVerificationCode()`** - Delete verification code (Admin)
+
+### Benefits
+- **Clean Controllers**: No boilerplate Swagger code in controller methods
+- **Consistent Documentation**: Standardized error responses and schemas
+- **Maintainable**: Changes to API docs happen in one place
+- **Type Safety**: Full TypeScript integration with enums and types
