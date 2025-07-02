@@ -346,6 +346,32 @@ export class AuthService {
     });
   }
 
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, isActive: true },
+      select: {
+        id: true,
+        matricNO: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    return {
+      success: true,
+      data: user,
+      message: 'User retrieved successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
 
