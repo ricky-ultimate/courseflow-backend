@@ -12,7 +12,7 @@ export class CourseRepository {
         isActive: true,
         departmentCode,
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: [{ level: 'asc' }, { code: 'asc' }],
     });
   }
@@ -23,7 +23,7 @@ export class CourseRepository {
         isActive: true,
         level,
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: [{ departmentCode: 'asc' }, { code: 'asc' }],
     });
   }
@@ -40,7 +40,7 @@ export class CourseRepository {
           lte: maxCredits,
         },
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: [{ credits: 'asc' }, { code: 'asc' }],
     });
   }
@@ -54,7 +54,7 @@ export class CourseRepository {
           mode: 'insensitive',
         },
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -69,7 +69,7 @@ export class CourseRepository {
         departmentCode,
         level,
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: { code: 'asc' },
     });
   }
@@ -134,6 +134,7 @@ export class CourseRepository {
       },
       include: {
         department: true,
+        lecturer: true,
         schedules: {
           orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
         },
@@ -150,7 +151,7 @@ export class CourseRepository {
           none: {},
         },
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: { code: 'asc' },
     });
   }
@@ -162,6 +163,7 @@ export class CourseRepository {
       level: Level;
       credits: number;
       departmentCode: string;
+      lecturerId: string;
     }>,
   ): Promise<{
     created: Course[];
@@ -195,9 +197,21 @@ export class CourseRepository {
           continue;
         }
 
+        const lecturer = await this.prisma.lecturer.findUnique({
+          where: { id: courseData.lecturerId },
+        });
+
+        if (!lecturer) {
+          errors.push({
+            index: i,
+            error: `Lecturer with ID '${courseData.lecturerId}' does not exist`,
+          });
+          continue;
+        }
+
         const newCourse = await this.prisma.course.create({
           data: courseData,
-          include: { department: true },
+          include: { department: true, lecturer: true },
         });
         created.push(newCourse);
       } catch (error) {
@@ -245,6 +259,11 @@ export class CourseRepository {
       where.OR = [
         { name: { contains: criteria.searchTerm, mode: 'insensitive' } },
         { code: { contains: criteria.searchTerm, mode: 'insensitive' } },
+        {
+          lecturer: {
+            name: { contains: criteria.searchTerm, mode: 'insensitive' },
+          },
+        },
       ];
     }
 
@@ -253,7 +272,7 @@ export class CourseRepository {
         isActive: true,
         ...where,
       },
-      include: { department: true },
+      include: { department: true, lecturer: true },
       orderBy: [{ departmentCode: 'asc' }, { level: 'asc' }, { code: 'asc' }],
     });
   }
