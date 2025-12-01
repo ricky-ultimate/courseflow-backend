@@ -9,6 +9,7 @@
  */
 export type * from './models/User'
 export type * from './models/Department'
+export type * from './models/Lecturer'
 export type * from './models/Course'
 export type * from './models/Schedule'
 export type * from './models/Complaint'

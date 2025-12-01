@@ -396,6 +396,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   Department: 'Department',
+  Lecturer: 'Lecturer',
   Course: 'Course',
   Schedule: 'Schedule',
   Complaint: 'Complaint',
@@ -415,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "department" | "course" | "schedule" | "complaint" | "verificationCode"
+    modelProps: "user" | "department" | "lecturer" | "course" | "schedule" | "complaint" | "verificationCode"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -564,6 +565,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.DepartmentCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.DepartmentCountAggregateOutputType> | number
+        }
+      }
+    }
+    Lecturer: {
+      payload: Prisma.$LecturerPayload<ExtArgs>
+      fields: Prisma.LecturerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LecturerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LecturerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        findFirst: {
+          args: Prisma.LecturerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LecturerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        findMany: {
+          args: Prisma.LecturerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>[]
+        }
+        create: {
+          args: Prisma.LecturerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        createMany: {
+          args: Prisma.LecturerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LecturerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>[]
+        }
+        delete: {
+          args: Prisma.LecturerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        update: {
+          args: Prisma.LecturerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        deleteMany: {
+          args: Prisma.LecturerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LecturerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LecturerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>[]
+        }
+        upsert: {
+          args: Prisma.LecturerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LecturerPayload>
+        }
+        aggregate: {
+          args: Prisma.LecturerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLecturer>
+        }
+        groupBy: {
+          args: Prisma.LecturerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LecturerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LecturerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LecturerCountAggregateOutputType> | number
         }
       }
     }
@@ -932,6 +1007,20 @@ export const DepartmentScalarFieldEnum = {
 export type DepartmentScalarFieldEnum = (typeof DepartmentScalarFieldEnum)[keyof typeof DepartmentScalarFieldEnum]
 
 
+export const LecturerScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  phone: 'phone',
+  departmentCode: 'departmentCode',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LecturerScalarFieldEnum = (typeof LecturerScalarFieldEnum)[keyof typeof LecturerScalarFieldEnum]
+
+
 export const CourseScalarFieldEnum = {
   id: 'id',
   code: 'code',
@@ -939,6 +1028,7 @@ export const CourseScalarFieldEnum = {
   level: 'level',
   credits: 'credits',
   departmentCode: 'departmentCode',
+  lecturerId: 'lecturerId',
   isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -1236,6 +1326,7 @@ export interface PrismaClientOptions {
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   department?: Prisma.DepartmentOmit
+  lecturer?: Prisma.LecturerOmit
   course?: Prisma.CourseOmit
   schedule?: Prisma.ScheduleOmit
   complaint?: Prisma.ComplaintOmit
