@@ -50,6 +50,11 @@ export type User = Prisma.UserModel
  */
 export type Department = Prisma.DepartmentModel
 /**
+ * Model Lecturer
+ * 
+ */
+export type Lecturer = Prisma.LecturerModel
+/**
  * Model Course
  * 
  */
