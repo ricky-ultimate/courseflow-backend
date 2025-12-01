@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService } from '../../modules/database/prisma.service';
 import {
   BaseServiceInterface,
   PaginationOptions,
