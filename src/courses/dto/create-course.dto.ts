@@ -17,7 +17,10 @@ export class CreateCourseDto {
   @IsEnum(Level)
   level: Level;
 
-  @ApiProperty({ example: 3, description: 'Number of credits for the course (1-6)' })
+  @ApiProperty({
+    example: 3,
+    description: 'Number of credits for the course (1-6)',
+  })
   @IsInt({ message: 'Credits must be an integer' })
   @Min(1, { message: 'Credits must be at least 1' })
   @Max(6, { message: 'Credits cannot exceed 6' })
@@ -27,4 +30,12 @@ export class CreateCourseDto {
   @IsString({ message: 'Department code must be a string' })
   @IsNotEmpty({ message: 'Department code is required' })
   departmentCode: string;
+
+  @ApiProperty({
+    example: 'lecturer-uuid-123',
+    description: 'ID of the lecturer taking the course',
+  })
+  @IsString({ message: 'Lecturer ID must be a string' })
+  @IsNotEmpty({ message: 'Lecturer ID is required' })
+  lecturerId: string;
 }
