@@ -15,18 +15,18 @@ datasource db {
 }
 
 model User {
-    id                 String    @id @default(cuid())
-    matricNO           String    @unique
-    email              String    @unique
-    password           String
-    name               String?
-    role               Role      @default(STUDENT)
-    isActive           Boolean   @default(true)
-    lastLoginAt        DateTime?
-    resetToken         String?   @unique
-    resetTokenExpiry   DateTime?
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime  @updatedAt
+    id               String    @id @default(cuid())
+    matricNO         String    @unique
+    email            String    @unique
+    password         String
+    name             String?
+    role             Role      @default(STUDENT)
+    isActive         Boolean   @default(true)
+    lastLoginAt      DateTime?
+    resetToken       String?   @unique
+    resetTokenExpiry DateTime?
+    createdAt        DateTime  @default(now())
+    updatedAt        DateTime  @updatedAt
 
     complaints        Complaint[]
     verificationCodes VerificationCode[]
@@ -42,9 +42,26 @@ model Department {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    courses Course[]
+    courses   Course[]
+    lecturers Lecturer[]
 
     @@map("departments")
+}
+
+model Lecturer {
+    id             String   @id @default(cuid())
+    name           String
+    email          String   @unique
+    phone          String?
+    departmentCode String
+    isActive       Boolean  @default(true)
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    department Department @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
+    courses    Course[]
+
+    @@map("lecturers")
 }
 
 model Course {
@@ -54,11 +71,13 @@ model Course {
     level          Level
     credits        Int      @default(2)
     departmentCode String
+    lecturerId     String? // Optional initially, but recommended
     isActive       Boolean  @default(true)
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 
     department Department @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
+    lecturer   Lecturer?  @relation(fields: [lecturerId], references: [id], onDelete: SetNull)
     schedules  Schedule[]
 
     @@map("courses")
@@ -100,17 +119,17 @@ model Complaint {
 }
 
 model VerificationCode {
-    id          String   @id @default(cuid())
-    code        String   @unique
+    id          String    @id @default(cuid())
+    code        String    @unique
     role        Role
     description String?
-    isActive    Boolean  @default(true)
-    usageCount  Int      @default(0)
-    maxUsage    Int?     // null means unlimited usage
+    isActive    Boolean   @default(true)
+    usageCount  Int       @default(0)
+    maxUsage    Int? // null means unlimited usage
     expiresAt   DateTime?
     createdBy   String
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
 
     creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 

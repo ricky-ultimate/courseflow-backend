@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -28,7 +31,7 @@ export class CoursesService extends BaseService<
       identifierField: 'code',
       uniqueFields: ['code'],
       softDelete: true,
-      includeRelations: { department: true },
+      includeRelations: { department: true, lecturer: true },
       defaultOrderBy: { code: 'asc' },
     });
   }
@@ -41,6 +44,34 @@ export class CoursesService extends BaseService<
     return this.courseRepository.findByLevel(level);
   }
 
+  protected async beforeCreate(
+    dto: CreateCourseDto,
+  ): Promise<Record<string, any>> {
+    // Validate Department
+    const department = await this.prisma.department.findUnique({
+      where: { code: dto.departmentCode },
+    });
+
+    if (!department) {
+      throw new NotFoundException(
+        `Department with code '${dto.departmentCode}' not found`,
+      );
+    }
+
+    // Validate Lecturer
+    const lecturer = await this.prisma.lecturer.findUnique({
+      where: { id: dto.lecturerId },
+    });
+
+    if (!lecturer) {
+      throw new NotFoundException(
+        `Lecturer with ID '${dto.lecturerId}' not found`,
+      );
+    }
+
+    return dto as Record<string, any>;
+  }
+
   async bulkCreateFromCsv(
     buffer: Buffer,
   ): Promise<BulkOperationResult<Course>> {
@@ -50,6 +81,7 @@ export class CoursesService extends BaseService<
       'level',
       'credits',
       'departmentCode',
+      'lecturerEmail',
     ];
 
     const { data, errors } = await this.csvService.parseCsvFile(
@@ -64,23 +96,70 @@ export class CoursesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    const { created, errors: repositoryErrors } =
-      await this.courseRepository.bulkCreateWithValidation(
-        data.map((courseData) => ({
-          code: courseData.code,
-          name: courseData.name,
-          level: courseData.level,
-          credits: courseData.credits,
-          departmentCode: courseData.departmentCode,
-        })),
+    const lecturerEmails = [
+      ...new Set(data.map((row) => row.lecturerEmail.toLowerCase())),
+    ];
+    const lecturers = await this.prisma.lecturer.findMany({
+      where: {
+        email: { in: lecturerEmails, mode: 'insensitive' },
+      },
+      select: { email: true, id: true },
+    });
+
+    const emailToIdMap = new Map<string, string>();
+    lecturers.forEach((l) => emailToIdMap.set(l.email.toLowerCase(), l.id));
+
+    const rowsForRepo: Array<{
+      code: string;
+      name: string;
+      level: Level;
+      credits: number;
+      departmentCode: string;
+      lecturerId: string;
+    }> = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const lecturerId = emailToIdMap.get(row.lecturerEmail.toLowerCase());
+
+      if (!lecturerId) {
+        allErrors.push({
+          row: i + 2,
+          field: 'lecturerEmail',
+          value: row.lecturerEmail,
+          message: `Lecturer with email '${row.lecturerEmail}' not found. Please create the lecturer first.`,
+        });
+      } else {
+        rowsForRepo.push({
+          code: row.code,
+          name: row.name,
+          level: row.level,
+          credits: row.credits,
+          departmentCode: row.departmentCode,
+          lecturerId: lecturerId,
+        });
+      }
+    }
+
+    if (rowsForRepo.length === 0) {
+      return this.csvService.createBulkResult(
+        [],
+        allErrors,
+        data.length + errors.length,
       );
+    }
+
+    const { created, errors: repositoryErrors } =
+      await this.courseRepository.bulkCreateWithValidation(rowsForRepo);
 
     for (const repoError of repositoryErrors) {
-      const rowNumber = repoError.index + 2;
+      const originalRow = data.find(
+        (d) => d.code === rowsForRepo[repoError.index].code,
+      );
       allErrors.push({
-        row: rowNumber,
+        row: 0,
         field: 'general',
-        value: data[repoError.index],
+        value: originalRow ? originalRow.code : 'Unknown',
         message: repoError.error,
       });
     }
@@ -93,13 +172,21 @@ export class CoursesService extends BaseService<
   }
 
   generateCsvTemplate(): string {
-    const headers = ['code', 'name', 'level', 'credits', 'departmentCode'];
+    const headers = [
+      'code',
+      'name',
+      'level',
+      'credits',
+      'departmentCode',
+      'lecturerEmail',
+    ];
     const sampleData = {
       code: 'CS101',
       name: 'Introduction to Programming',
       level: 'LEVEL_100',
       credits: '3',
       departmentCode: 'CS',
+      lecturerEmail: 'lecturer@university.edu',
     };
 
     return this.csvService.generateCsvTemplate(headers, sampleData);
