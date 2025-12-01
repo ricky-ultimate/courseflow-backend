@@ -1,21 +1,21 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { appConfig, databaseConfig, validationSchema } from './config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { UsersModule } from './users/users.module';
-import { DepartmentsModule } from './departments/departments.module';
-import { CoursesModule } from './courses/courses.module';
-import { PrismaModule } from './database/prisma.module';
+import { UsersModule } from './modules/users/users.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
+import { CoursesModule } from './modules/courses/courses.module';
+import { PrismaModule } from './modules/database/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
-import { SchedulesModule } from './schedules/schedules.module';
-import { ComplaintsModule } from './complaints/complaints.module';
-import { HealthModule } from './health/health.module';
+import { SchedulesModule } from './modules/schedules/schedules.module';
+import { ComplaintsModule } from './modules/complaints/complaints.module';
+import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
-import { LecturersModule } from './lecturers/lecturers.module';
+import { LecturersModule } from './modules/lecturers/lecturers.module';
 
 @Module({
   imports: [
