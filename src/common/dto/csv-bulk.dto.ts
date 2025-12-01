@@ -90,6 +90,14 @@ export class CourseCsvRowDto {
     message: 'Department code must be 2-4 uppercase letters',
   })
   departmentCode: string;
+
+  @ApiProperty({
+    example: 'lecturer@university.edu',
+    description: 'Email of the lecturer taking the course',
+  })
+  @IsString({ message: 'Lecturer email must be a string' })
+  @IsNotEmpty({ message: 'Lecturer email is required' })
+  lecturerEmail: string;
 }
 
 // Schedule CSV row DTO
