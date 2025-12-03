@@ -35,6 +35,26 @@ export class ScheduleRepository {
     });
   }
 
+  async findByDepartmentAndLevel(
+    departmentCode: string,
+    level: Level,
+  ): Promise<Schedule[]> {
+    return this.prisma.schedule.findMany({
+      where: {
+        course: {
+          departmentCode: departmentCode,
+          level: level,
+        },
+      },
+      include: {
+        course: {
+          include: { department: true },
+        },
+      },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+    });
+  }
+
   async findScheduleConflict(
     courseCode: string,
     dayOfWeek: DayOfWeek,
