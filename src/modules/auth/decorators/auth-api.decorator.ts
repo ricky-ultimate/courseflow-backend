@@ -78,19 +78,41 @@ export const ApiRegister = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Register a new user',
-      description: 'Register a new user account. ADMIN and LECTURER roles require verification code.',
+      description:
+        'Register a new user account. ADMIN and LECTURER roles require verification code.',
     }),
     ApiBody({
       schema: {
         type: 'object',
         required: ['matricNO', 'email', 'password'],
         properties: {
-          matricNO: { type: 'string', example: 'CS/2023/001', description: 'Student matric number or staff ID' },
-          email: { type: 'string', format: 'email', example: 'user@example.com' },
+          matricNO: {
+            type: 'string',
+            example: 'CS/2023/001',
+            description: 'Student matric number or staff ID',
+          },
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com',
+          },
           password: { type: 'string', minLength: 6, example: 'password123' },
-          name: { type: 'string', example: 'John Doe', description: 'Optional full name' },
-          role: { type: 'string', enum: Object.values(Role), default: 'STUDENT', example: 'STUDENT' },
-          verificationCode: { type: 'string', example: 'ADMIN-2025-ABC123', description: 'Required for ADMIN/LECTURER roles' },
+          name: {
+            type: 'string',
+            example: 'John Doe',
+            description: 'Optional full name',
+          },
+          role: {
+            type: 'string',
+            enum: Object.values(Role),
+            default: 'STUDENT',
+            example: 'STUDENT',
+          },
+          verificationCode: {
+            type: 'string',
+            example: 'ADMIN-2025-ABC123',
+            description: 'Required for ADMIN/LECTURER roles',
+          },
         },
       },
     }),
@@ -138,7 +160,11 @@ export const ApiLogin = () =>
         type: 'object',
         required: ['email', 'password'],
         properties: {
-          email: { type: 'string', format: 'email', example: 'user@example.com' },
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com',
+          },
           password: { type: 'string', example: 'password123' },
         },
       },
@@ -180,14 +206,18 @@ export const ApiForgotPassword = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Request password reset',
-      description: 'Send a password reset token to the user\'s email address',
+      description: "Send a password reset token to the user's email address",
     }),
     ApiBody({
       schema: {
         type: 'object',
         required: ['email'],
         properties: {
-          email: { type: 'string', format: 'email', example: 'user@example.com' },
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com',
+          },
         },
       },
     }),
@@ -199,7 +229,8 @@ export const ApiForgotPassword = () =>
         properties: {
           message: {
             type: 'string',
-            example: 'If an account with that email exists, a password reset link has been sent.',
+            example:
+              'If an account with that email exists, a password reset link has been sent.',
           },
         },
       },
@@ -229,7 +260,10 @@ export const ApiResetPassword = () =>
       schema: {
         type: 'object',
         properties: {
-          message: { type: 'string', example: 'Password has been reset successfully' },
+          message: {
+            type: 'string',
+            example: 'Password has been reset successfully',
+          },
         },
       },
     }),
@@ -277,7 +311,8 @@ export const ApiCreateVerificationCode = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Create verification code (Admin only)',
-      description: 'Create a new verification code for ADMIN or LECTURER role assignment',
+      description:
+        'Create a new verification code for ADMIN or LECTURER role assignment',
     }),
     ApiBody({
       schema: {
@@ -285,10 +320,25 @@ export const ApiCreateVerificationCode = () =>
         required: ['code', 'role'],
         properties: {
           code: { type: 'string', example: 'ADMIN-2025-ABC123' },
-          role: { type: 'string', enum: [Role.ADMIN, Role.LECTURER], example: 'ADMIN' },
-          description: { type: 'string', example: 'Admin verification code for 2025' },
-          maxUsage: { type: 'number', example: 10, description: 'Maximum number of uses' },
-          expiresAt: { type: 'string', format: 'date-time', description: 'Expiration date' },
+          role: {
+            type: 'string',
+            enum: [Role.ADMIN, Role.LECTURER],
+            example: 'ADMIN',
+          },
+          description: {
+            type: 'string',
+            example: 'Admin verification code for 2025',
+          },
+          maxUsage: {
+            type: 'number',
+            example: 10,
+            description: 'Maximum number of uses',
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Expiration date',
+          },
         },
       },
     }),
