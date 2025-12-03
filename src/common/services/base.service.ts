@@ -153,7 +153,10 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
 
     // Validate and sanitize values
     const validPageNum = Math.max(1, isNaN(pageNum) ? 1 : pageNum);
-    const validLimitNum = Math.max(1, Math.min(100, isNaN(limitNum) ? 10 : limitNum)); // Cap at 100
+    const validLimitNum = Math.max(
+      1,
+      Math.min(100, isNaN(limitNum) ? 10 : limitNum),
+    ); // Cap at 100
     const skip = (validPageNum - 1) * validLimitNum;
 
     const [data, total] = await Promise.all([

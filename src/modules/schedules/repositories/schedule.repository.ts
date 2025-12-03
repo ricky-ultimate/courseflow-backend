@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Schedule, Level, DayOfWeek, ClassType } from '../../../generated/prisma';
+import {
+  Schedule,
+  Level,
+  DayOfWeek,
+  ClassType,
+} from '../../../generated/prisma';
 
 @Injectable()
 export class ScheduleRepository {
