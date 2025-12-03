@@ -104,6 +104,18 @@ export class SchedulesController extends BaseController<
   findByLevel(@Param('level', new ParseEnumPipe(Level)) level: Level) {
     return this.schedulesService.findByLevel(level);
   }
+
+  @Get('department/:departmentCode/level/:level')
+  async findByDepartmentAndLevel(
+    @Param('departmentCode') departmentCode: string,
+    @Param('level', new ParseEnumPipe(Level)) level: Level,
+  ) {
+    return this.schedulesService.findByDepartmentAndLevel(
+      departmentCode,
+      level,
+    );
+  }
+
   @Post()
   @ApiCreateSchedule()
   create(@Body() createDto: CreateScheduleDto) {
