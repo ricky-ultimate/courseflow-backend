@@ -45,6 +45,16 @@ export class SchedulesService extends BaseService<
     return this.scheduleRepository.findByLevel(level);
   }
 
+  async findByDepartmentAndLevel(
+    departmentCode: string,
+    level: Level,
+  ): Promise<Schedule[]> {
+    return this.scheduleRepository.findByDepartmentAndLevel(
+      departmentCode,
+      level,
+    );
+  }
+
   async bulkCreateFromCsv(
     buffer: Buffer,
   ): Promise<BulkOperationResult<Schedule>> {
