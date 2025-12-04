@@ -6,19 +6,6 @@ import { Department } from '../../../generated/prisma';
 export class DepartmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async searchByName(searchTerm: string): Promise<Department[]> {
-    return this.prisma.department.findMany({
-      where: {
-        isActive: true,
-        name: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-  }
-
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.department.count({
       where: {
@@ -27,51 +14,6 @@ export class DepartmentRepository {
       },
     });
     return count > 0;
-  }
-
-  async findWithCourses(): Promise<Department[]> {
-    return this.prisma.department.findMany({
-      where: { isActive: true },
-      include: {
-        courses: {
-          where: { isActive: true },
-          orderBy: [{ level: 'asc' }, { code: 'asc' }],
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  async findWithCourseCount(): Promise<
-    Array<Department & { _count: { courses: number } }>
-  > {
-    return (await this.prisma.department.findMany({
-      where: { isActive: true },
-      include: {
-        _count: {
-          select: {
-            courses: {
-              where: { isActive: true },
-            },
-          },
-        },
-      },
-      orderBy: { name: 'asc' },
-    })) as unknown as Array<Department & { _count: { courses: number } }>;
-  }
-
-  async findWithoutCourses(): Promise<Department[]> {
-    return this.prisma.department.findMany({
-      where: {
-        isActive: true,
-        courses: {
-          none: {
-            isActive: true,
-          },
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
   }
 
   async getDepartmentStats(): Promise<{
@@ -152,45 +94,6 @@ export class DepartmentRepository {
     return { created, errors };
   }
 
-  async findByCriteria(criteria: {
-    searchTerm?: string;
-    hasCoursesOnly?: boolean;
-    withoutCoursesOnly?: boolean;
-  }): Promise<Department[]> {
-    const where: Record<string, unknown> = {};
-
-    if (criteria.searchTerm) {
-      where.OR = [
-        { name: { contains: criteria.searchTerm, mode: 'insensitive' } },
-        { code: { contains: criteria.searchTerm, mode: 'insensitive' } },
-      ];
-    }
-
-    if (criteria.hasCoursesOnly) {
-      where.courses = {
-        some: {
-          isActive: true,
-        },
-      };
-    }
-
-    if (criteria.withoutCoursesOnly) {
-      where.courses = {
-        none: {
-          isActive: true,
-        },
-      };
-    }
-
-    return this.prisma.department.findMany({
-      where: {
-        isActive: true,
-        ...where,
-      },
-      orderBy: { name: 'asc' },
-    });
-  }
-
   async findWithFullDetails(code: string): Promise<Department | null> {
     return this.prisma.department.findUnique({
       where: { code },
@@ -205,20 +108,6 @@ export class DepartmentRepository {
           orderBy: [{ level: 'asc' }, { code: 'asc' }],
         },
       },
-    });
-  }
-
-  async updateWithCascade(
-    code: string,
-    data: Partial<{ name: string; code: string }>,
-  ): Promise<Department> {
-    if (data.code && data.code !== code) {
-      throw new Error('Department code changes require special handling');
-    }
-
-    return this.prisma.department.update({
-      where: { code },
-      data,
     });
   }
 

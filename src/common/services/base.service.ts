@@ -142,21 +142,19 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
     return this.config.defaultOrderBy || { createdAt: 'desc' };
   }
 
-  private async findPaginated(
+  protected async findPaginated(
     where: Record<string, any>,
     options: PaginationOptions,
   ): Promise<PaginatedResult<T>> {
     const { page = 1, limit = 10 } = options;
-    // Ensure page and limit are numbers (convert from string if needed)
     const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
     const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
 
-    // Validate and sanitize values
     const validPageNum = Math.max(1, isNaN(pageNum) ? 1 : pageNum);
     const validLimitNum = Math.max(
       1,
       Math.min(100, isNaN(limitNum) ? 10 : limitNum),
-    ); // Cap at 100
+    );
     const skip = (validPageNum - 1) * validLimitNum;
 
     const [data, total] = await Promise.all([

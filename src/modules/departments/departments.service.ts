@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { DepartmentFilterDto } from './dto/department-filter.dto';
 import { BaseService } from '../../common/services/base.service';
 import { CsvService } from '../../common/services/csv.service';
 import { DepartmentRepository } from './repositories/department.repository';
@@ -11,6 +12,7 @@ import {
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
 import { Department } from '../../generated/prisma';
+import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
 export class DepartmentsService extends BaseService<
@@ -30,6 +32,37 @@ export class DepartmentsService extends BaseService<
       softDelete: true,
       defaultOrderBy: { name: 'asc' },
     });
+  }
+
+  async findAll(
+    query: DepartmentFilterDto = {},
+  ): Promise<Department[] | PaginatedResult<Department>> {
+    const where: Record<string, any> = { ...this.getActiveFilter() };
+
+    if (query.searchTerm) {
+      where.OR = [
+        { name: { contains: query.searchTerm, mode: 'insensitive' } },
+        { code: { contains: query.searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.hasCourses) {
+      where.courses = { some: { isActive: true } };
+    }
+
+    if (query.withoutCourses) {
+      where.courses = { none: { isActive: true } };
+    }
+
+    if (query.page && query.limit) {
+      return this.findPaginated(where, query);
+    }
+
+    return this.getModel().findMany({
+      where,
+      include: this.config.includeRelations,
+      orderBy: this.getOrderBy(query),
+    }) as Promise<Department[]>;
   }
 
   async bulkCreateFromCsv(
@@ -84,24 +117,6 @@ export class DepartmentsService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  async searchByName(searchTerm: string): Promise<Department[]> {
-    return this.departmentRepository.searchByName(searchTerm);
-  }
-
-  async findWithCourses(): Promise<Department[]> {
-    return this.departmentRepository.findWithCourses();
-  }
-
-  async findWithCourseCount(): Promise<
-    Array<Department & { _count: { courses: number } }>
-  > {
-    return this.departmentRepository.findWithCourseCount();
-  }
-
-  async findWithoutCourses(): Promise<Department[]> {
-    return this.departmentRepository.findWithoutCourses();
-  }
-
   async getDepartmentStatistics(): Promise<{
     totalDepartments: number;
     departmentsWithCourses: number;
@@ -109,14 +124,6 @@ export class DepartmentsService extends BaseService<
     averageCoursesPerDepartment: number;
   }> {
     return this.departmentRepository.getDepartmentStats();
-  }
-
-  async findByCriteria(criteria: {
-    searchTerm?: string;
-    hasCoursesOnly?: boolean;
-    withoutCoursesOnly?: boolean;
-  }): Promise<Department[]> {
-    return this.departmentRepository.findByCriteria(criteria);
   }
 
   async findWithFullDetails(code: string): Promise<Department | null> {
