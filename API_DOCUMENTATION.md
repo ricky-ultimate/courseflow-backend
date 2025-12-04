@@ -1,837 +1,324 @@
 # CourseFlow Backend API Documentation
 
-This document provides a comprehensive list of all API endpoints, their parameters, request bodies, and responses for the CourseFlow Backend application.
+## 1. Overview
+*   **Base URL:** `http://<host>:<port>/api/v1` (e.g., `http://localhost:3000/api/v1`)
+*   **Content-Type:** `application/json` (except for file uploads)
+*   **Date Format:** ISO 8601 (e.g., `2025-10-25T12:00:00Z`)
 
-## Base URL
-```
-http://localhost:3000/api/v1
-```
-
-## Authentication
-Most endpoints require JWT authentication. Include the token in the Authorization header:
-```
-Authorization: Bearer <jwt_token>
-```
-
-## Common Response Format
-Most endpoints use this standard format (automatically applied by ResponseInterceptor):
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "Request processed successfully"
-}
-```
-
-**Exceptions**: Endpoints marked with "**Does not use standard success/data format**" return custom response structures.
-
-## Error Response Format
-```json
-{
-  "success": false,
-  "error": "Error message",
-  "statusCode": 400,
-  "timestamp": "ISO 8601 date"
-}
-```
-
-## Enums
-
-### Role
-```typescript
-enum Role {
-  STUDENT = "STUDENT",
-  LECTURER = "LECTURER",
-  ADMIN = "ADMIN"
-}
-```
-
-### Level
-```typescript
-enum Level {
-  LEVEL_100 = "LEVEL_100",
-  LEVEL_200 = "LEVEL_200",
-  LEVEL_300 = "LEVEL_300",
-  LEVEL_400 = "LEVEL_400",
-  LEVEL_500 = "LEVEL_500"
-}
-```
-
-### DayOfWeek
-```typescript
-enum DayOfWeek {
-  MONDAY = "MONDAY",
-  TUESDAY = "TUESDAY",
-  WEDNESDAY = "WEDNESDAY",
-  THURSDAY = "THURSDAY",
-  FRIDAY = "FRIDAY",
-  SATURDAY = "SATURDAY",
-  SUNDAY = "SUNDAY"
-}
-```
-
-### ClassType
-```typescript
-enum ClassType {
-  LECTURE = "LECTURE",
-  SEMINAR = "SEMINAR",
-  LAB = "LAB",
-  TUTORIAL = "TUTORIAL"
-}
-```
-
-### ComplaintStatus
-```typescript
-enum ComplaintStatus {
-  PENDING = "PENDING",
-  IN_PROGRESS = "IN_PROGRESS",
-  RESOLVED = "RESOLVED",
-  CLOSED = "CLOSED"
-}
-```
+## 2. Authentication & Security
+*   **Method:** Bearer Token (JWT).
+*   **Header:** `Authorization: Bearer <your_access_token>`
+*   **Role Based Access Control (RBAC):**
+    *   **Public:** No token required.
+    *   **Authenticated:** Token required (Any role).
+    *   **Admin:** Token with `role: ADMIN` required.
+    *   **Lecturer:** Token with `role: LECTURER` required.
 
 ---
 
-## 1. Root Endpoint
+## 3. Common Data Types & Enums
 
-### GET /
-**Description**: Get application welcome message
-**Authentication**: Not required
-**Response**:
-```json
-{
-  "success": true,
-  "data": "Hello World!",
-  "message": "Request processed successfully"
-}
-```
+**Pagination & Filtering Query Parameters (Apply to list endpoints)**
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `page` | number | 1 | Page number |
+| `limit` | number | 10 | Items per page (Max 100) |
+| `orderBy` | string | createdAt | Field to sort by |
+| `orderDirection` | string | asc | `asc` or `desc` |
+
+**Enums**
+*   **Role:** `STUDENT`, `LECTURER`, `ADMIN`
+*   **Level:** `LEVEL_100`, `LEVEL_200`, `LEVEL_300`, `LEVEL_400`, `LEVEL_500`
+*   **DayOfWeek:** `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`
+*   **ClassType:** `LECTURE`, `SEMINAR`, `LAB`, `TUTORIAL`
+*   **ComplaintStatus:** `PENDING`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`
 
 ---
 
-## 2. Authentication Endpoints (`/auth`)
+## 4. Endpoints
 
-### POST /auth/register
-**Description**: Register a new user
-**Authentication**: Not required
+### 🔐 Authentication
+**Controller:** `AuthController`
 
-**Note**:
-- `matricNO` is **required** for all roles (use matric number for students, staff ID for lecturers/admins)
-- `verificationCode` is **required only** for ADMIN or LECTURER roles
-- `role` defaults to STUDENT if not provided
-- **Does not use standard success/data format**
-
-**Request Body Examples**:
-
-**Student Registration**:
-```json
-{
-  "matricNO": "CS/2023/001",
-  "email": "student@example.com",
-  "password": "password123",
-  "name": "John Doe", // optional
-  "role": "STUDENT" // optional, defaults to STUDENT
-}
-```
-
-**Lecturer Registration**:
-```json
-{
-  "matricNO": "LEC/2024/001",
-  "email": "lecturer@example.com",
-  "password": "password123",
-  "name": "Dr. Jane Smith", // optional
-  "role": "LECTURER",
-  "verificationCode": "LECTURER-2025-ABC123" // required for LECTURER role
-}
-```
-
-**Admin Registration**:
-```json
-{
-  "matricNO": "ADM/2024/001",
-  "email": "admin@example.com",
-  "password": "password123",
-  "name": "Admin User", // optional
-  "role": "ADMIN",
-  "verificationCode": "ADMIN-2025-XYZ789" // required for ADMIN role
-}
-```
-**Response**:
-```json
-{
-  "user": {
-    "id": "user_id",
-    "matricNO": "CS/2023/001",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "STUDENT",
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  },
-  "access_token": "jwt_token",
-  "token_type": "Bearer"
-}
-```
-
-### POST /auth/login
-**Description**: Login user
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Request Body**:
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-**Response**:
-```json
-{
-  "user": {
-    "id": "user_id",
-    "matricNO": "CS/2023/001",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "STUDENT"
-  },
-  "access_token": "jwt_token",
-  "token_type": "Bearer"
-}
-```
-
-### POST /auth/forgot-password
-**Description**: Request password reset
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Request Body**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-**Response**:
-```json
-{
-  "message": "If an account with that email exists, a password reset link has been sent."
-}
-```
-
-### POST /auth/reset-password
-**Description**: Reset password using token
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Request Body**:
-```json
-{
-  "token": "reset_token",
-  "newPassword": "newpassword123"
-}
-```
-**Response**:
-```json
-{
-  "message": "Password has been reset successfully"
-}
-```
-
-### GET /auth/me
-**Description**: Get current authenticated user information
-**Authentication**: Required (JWT Token)
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_id",
-    "matricNO": "CS/2023/001",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "STUDENT",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  },
-  "message": "User retrieved successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-**Error Responses**:
-```json
-// 401 - Invalid or expired token
-{
-  "success": false,
-  "error": "Invalid or expired token",
-  "statusCode": 401,
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-
-// 401 - Missing token
-{
-  "success": false,
-  "error": "Authorization token required",
-  "statusCode": 401,
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-
-// 401 - User not found or inactive
-{
-  "success": false,
-  "error": "User not found or inactive",
-  "statusCode": 401,
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### POST /auth/verification-codes
-**Description**: Create verification code (Admin only)
-**Authentication**: Required (ADMIN)
-**Request Body**:
-```json
-{
-  "code": "ADMIN-2025-ABC123",
-  "role": "ADMIN",
-  "expiresAt": "2025-12-31T23:59:59.000Z", // optional
-  "maxUses": 10 // optional
-}
-```
-
-### GET /auth/verification-codes
-**Description**: Get all verification codes (Admin only)
-**Authentication**: Required (ADMIN)
-**Response**:
-```json
-{
-  "success": true,
-  "data": [
+#### 1. Register User
+*   **Endpoint:** `POST /auth/register`
+*   **Access:** Public
+*   **Note:** `verificationCode` is **required** if role is `ADMIN` or `LECTURER`.
+*   **Body:**
+    ```json
     {
-      "id": "code_id",
-      "code": "ADMIN-2025-ABC123",
-      "role": "ADMIN",
-      "expiresAt": "2025-12-31T23:59:59.000Z",
-      "maxUses": 10,
-      "currentUses": 2,
-      "isActive": true
+      "matricNO": "CS/2023/001",
+      "email": "user@example.com",
+      "password": "password123", // Min 6 chars
+      "name": "John Doe",
+      "role": "STUDENT", // Optional, default STUDENT
+      "verificationCode": "ADMIN-CODE-123" // Conditional
     }
-  ],
-  "message": "Request processed successfully"
-}
-```
-
-### GET /auth/verification-codes/:id
-**Description**: Get verification code by ID (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `id` (path): Verification code ID
-
-### PATCH /auth/verification-codes/:id
-**Description**: Update verification code (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `id` (path): Verification code ID
-**Request Body**: Partial verification code object
-
-### DELETE /auth/verification-codes/:id
-**Description**: Delete verification code (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `id` (path): Verification code ID
-
----
-
-## 3. Users Endpoints (`/users`)
-
-### POST /users
-**Description**: Create a new user (Admin only)
-**Authentication**: Required (ADMIN)
-**Request Body**:
-```json
-{
-  "matricNO": "CS/2023/001",
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "John Doe", // optional
-  "role": "STUDENT" // optional
-}
-```
-
-### GET /users
-**Description**: Get all users with pagination (Admin only)
-**Authentication**: Required (ADMIN)
-**Query Parameters**:
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-- `orderBy` (optional): Field to order by
-- `orderDirection` (optional): `asc` or `desc`
-
-### GET /users/:matricNO
-**Description**: Get user by matric number (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `matricNO` (path): User's matric number
-
-### PATCH /users/:matricNO
-**Description**: Update user (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `matricNO` (path): User's matric number
-**Request Body**: Partial user object
-
-### DELETE /users/:matricNO
-**Description**: Delete user (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `matricNO` (path): User's matric number
-
----
-
-## 4. Departments Endpoints (`/departments`)
-
-### POST /departments
-**Description**: Create a new department
-**Authentication**: Required (ADMIN)
-**Request Body**:
-```json
-{
-  "name": "Computer Science",
-  "code": "CS"
-}
-```
-
-### GET /departments
-**Description**: Get all departments with pagination
-**Authentication**: Not required
-**Query Parameters**:
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-- `orderBy` (optional): Field to order by
-- `orderDirection` (optional): `asc` or `desc`
-
-### GET /departments/:code
-**Description**: Get department by code
-**Authentication**: Not required
-**Parameters**:
-- `code` (path): Department code
-
-### PATCH /departments/:code
-**Description**: Update department
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `code` (path): Department code
-**Request Body**: Partial department object
-
-### DELETE /departments/:code
-**Description**: Delete department
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `code` (path): Department code
-
-### POST /departments/bulk/upload
-**Description**: Bulk create departments from CSV
-**Authentication**: Required (ADMIN)
-**Request Body**: Form data with CSV file
-
-### GET /departments/bulk/template
-**Description**: Download CSV template for departments
-**Authentication**: Required (ADMIN)
-**Response**: CSV file download
-
-### GET /departments/statistics
-**Description**: Get department statistics
-**Authentication**: Not required
-
-### GET /departments/search/:searchTerm
-**Description**: Search departments by name
-**Authentication**: Not required
-**Parameters**:
-- `searchTerm` (path): Search term
-
-### GET /departments/with-courses
-**Description**: Get departments with their courses
-**Authentication**: Not required
-
-### GET /departments/without-courses
-**Description**: Get departments without courses
-**Authentication**: Not required
-
-### GET /departments/with-course-count
-**Description**: Get departments with course count
-**Authentication**: Not required
-
-### GET /departments/:code/full-details
-**Description**: Get department with full details
-**Authentication**: Not required
-**Parameters**:
-- `code` (path): Department code
-
----
-
-## 5. Courses Endpoints (`/courses`)
-
-### POST /courses
-**Description**: Create a new course
-**Authentication**: Required (ADMIN, LECTURER)
-**Request Body**:
-```json
-{
-  "code": "CS101",
-  "name": "Introduction to Computer Science",
-  "level": "LEVEL_100",
-  "credits": 3,
-  "departmentCode": "CS"
-}
-```
-
-### GET /courses
-**Description**: Get all courses with pagination
-**Authentication**: Not required
-**Query Parameters**:
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-- `orderBy` (optional): Field to order by
-- `orderDirection` (optional): `asc` or `desc`
-
-### GET /courses/:code
-**Description**: Get course by code
-**Authentication**: Not required
-**Parameters**:
-- `code` (path): Course code
-
-### PATCH /courses/:code
-**Description**: Update course
-**Authentication**: Required (ADMIN, LECTURER)
-**Parameters**:
-- `code` (path): Course code
-**Request Body**: Partial course object
-
-### DELETE /courses/:code
-**Description**: Delete course
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `code` (path): Course code
-
-### GET /courses/department/:departmentCode
-**Description**: Get courses by department
-**Authentication**: Not required
-**Parameters**:
-- `departmentCode` (path): Department code
-
-### GET /courses/level/:level
-**Description**: Get courses by level
-**Authentication**: Not required
-**Parameters**:
-- `level` (path): Course level (enum)
-
-### POST /courses/bulk/upload
-**Description**: Bulk create courses from CSV
-**Authentication**: Required (ADMIN, LECTURER)
-**Request Body**: Form data with CSV file
-
-### GET /courses/bulk/template
-**Description**: Download CSV template for courses
-**Authentication**: Required (ADMIN, LECTURER)
-**Response**: CSV file download
-
-### GET /courses/statistics
-**Description**: Get course statistics
-**Authentication**: Not required
-
-### GET /courses/search/:searchTerm
-**Description**: Search courses by name
-**Authentication**: Not required
-**Parameters**:
-- `searchTerm` (path): Search term
-
-### GET /courses/credits/:minCredits/:maxCredits
-**Description**: Find courses by credit range
-**Authentication**: Not required
-**Parameters**:
-- `minCredits` (path): Minimum credits
-- `maxCredits` (path): Maximum credits
-
-### GET /courses/without-schedules
-**Description**: Get courses without schedules
-**Authentication**: Not required
-
----
-
-## 6. Schedules Endpoints (`/schedules`)
-
-### POST /schedules
-**Description**: Create a new schedule
-**Authentication**: Required (ADMIN, LECTURER)
-**Request Body**:
-```json
-{
-  "courseCode": "CS101",
-  "dayOfWeek": "MONDAY",
-  "startTime": "08:00",
-  "endTime": "09:00",
-  "venue": "Room 101",
-  "type": "LECTURE"
-}
-```
-
-### GET /schedules
-**Description**: Get all schedules with pagination
-**Authentication**: Not required
-**Query Parameters**:
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-- `orderBy` (optional): Field to order by
-- `orderDirection` (optional): `asc` or `desc`
-
-### GET /schedules/:id
-**Description**: Get schedule by ID
-**Authentication**: Not required
-**Parameters**:
-- `id` (path): Schedule ID
-
-### PATCH /schedules/:id
-**Description**: Update schedule
-**Authentication**: Required (ADMIN, LECTURER)
-**Parameters**:
-- `id` (path): Schedule ID
-**Request Body**: Partial schedule object
-
-### DELETE /schedules/:id
-**Description**: Delete schedule
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `id` (path): Schedule ID
-
-### GET /schedules/course/:courseCode
-**Description**: Get schedules by course
-**Authentication**: Not required
-**Parameters**:
-- `courseCode` (path): Course code
-
-### GET /schedules/department/:departmentCode
-**Description**: Get schedules by department
-**Authentication**: Not required
-**Parameters**:
-- `departmentCode` (path): Department code
-
-### GET /schedules/level/:level
-**Description**: Get schedules by level
-**Authentication**: Not required
-**Parameters**:
-- `level` (path): Course level (enum)
-
-### GET /schedules/day/:dayOfWeek
-**Description**: Get schedules by day of week
-**Authentication**: Not required
-**Parameters**:
-- `dayOfWeek` (path): Day of week (enum)
-
-### GET /schedules/venue/:venue
-**Description**: Get schedules by venue
-**Authentication**: Not required
-**Parameters**:
-- `venue` (path): Venue name
-
-### GET /schedules/type/:type
-**Description**: Get schedules by class type
-**Authentication**: Not required
-**Parameters**:
-- `type` (path): Class type (enum)
-
-### POST /schedules/bulk/upload
-**Description**: Bulk create schedules from CSV
-**Authentication**: Required (ADMIN, LECTURER)
-**Request Body**: Form data with CSV file
-
-### GET /schedules/bulk/template
-**Description**: Download CSV template for schedules
-**Authentication**: Required (ADMIN, LECTURER)
-**Response**: CSV file download
-
-### GET /schedules/statistics
-**Description**: Get schedule statistics
-**Authentication**: Not required
-
----
-
-## 7. Complaints Endpoints (`/complaints`)
-
-### POST /complaints
-**Description**: Create a new complaint
-**Authentication**: Required (STUDENT, ADMIN)
-**Request Body**:
-```json
-{
-  "name": "John Doe",
-  "email": "john@student.edu",
-  "department": "Computer Science",
-  "subject": "System Issue",
-  "message": "Detailed description of the issue..."
-}
-```
-
-### GET /complaints
-**Description**: Get all complaints (Admin only)
-**Authentication**: Required (ADMIN)
-**Query Parameters**:
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-- `orderBy` (optional): Field to order by
-- `orderDirection` (optional): `asc` or `desc`
-
-### GET /complaints/my-complaints
-**Description**: Get current user's complaints
-**Authentication**: Required (STUDENT, ADMIN)
-
-### GET /complaints/pending
-**Description**: Get pending complaints (Admin only)
-**Authentication**: Required (ADMIN)
-
-### GET /complaints/resolved
-**Description**: Get resolved complaints (Admin only)
-**Authentication**: Required (ADMIN)
-
-### PATCH /complaints/:id/status
-**Description**: Update complaint status (Admin only)
-**Authentication**: Required (ADMIN)
-**Parameters**:
-- `id` (path): Complaint ID
-**Query Parameters**:
-- `status` (required): New complaint status (enum)
-
----
-
-## 8. Health Check Endpoints (`/health`)
-
-### GET /health
-**Description**: Comprehensive health check
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Response**:
-```json
-{
-  "status": "ok",
-  "info": {
-    "database": { "status": "up" },
-    "memory_heap": {
-      "status": "up",
-      "used": 50000000,
-      "limit": 157286400
-    },
-    "memory_rss": {
-      "status": "up",
-      "used": 100000000,
-      "limit": 157286400
+    ```
+*   **Response (201):**
+    ```json
+    {
+      "user": { "id": "...", "email": "..." },
+      "access_token": "ey...",
+      "token_type": "Bearer"
     }
-  },
-  "error": {},
-  "details": {
-    "database": { "status": "up" },
-    "memory_heap": { "status": "up" },
-    "memory_rss": { "status": "up" }
-  }
-}
-```
+    ```
 
-### GET /health/simple
-**Description**: Simple health check
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Response**:
-```json
-{
-  "status": "ok",
-  "timestamp": "2025-01-12T00:00:00.000Z",
-  "uptime": 3600,
-  "environment": "development",
-  "version": "1.0.0"
-}
-```
-
-### GET /health/database
-**Description**: Database health check
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Response**:
-```json
-{
-  "status": "ok",
-  "database": {
-    "connected": true,
-    "responseTime": 15,
-    "tables": {
-      "departments": 5,
-      "courses": 25,
-      "schedules": 100,
-      "users": 50
+#### 2. Login
+*   **Endpoint:** `POST /auth/login`
+*   **Access:** Public
+*   **Body:**
+    ```json
+    {
+      "email": "user@example.com",
+      "password": "password123"
     }
-  }
-}
-```
+    ```
 
-### GET /health/readiness
-**Description**: Readiness check for Kubernetes
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Response**:
-```json
-{
-  "status": "ready",
-  "checks": {
-    "database": true,
-    "dependencies": true
-  }
-}
-```
+#### 3. Get Current User Profile
+*   **Endpoint:** `GET /auth/me`
+*   **Access:** Authenticated
+*   **Response:** Returns full user profile object.
 
-### GET /health/liveness
-**Description**: Liveness check for Kubernetes
-**Authentication**: Not required
-**Note**: **Does not use standard success/data format**
-**Response**:
-```json
-{
-  "status": "alive",
-  "timestamp": "2025-01-12T00:00:00.000Z"
-}
-```
+#### 4. Password Management
+*   **Forgot Password:** `POST /auth/forgot-password` (Body: `{ "email": "..." }`)
+*   **Reset Password:** `POST /auth/reset-password` (Body: `{ "token": "...", "newPassword": "..." }`)
+
+#### 5. Verification Codes (Admin Only)
+*   **Create:** `POST /auth/verification-codes`
+    *   Body: `{ "code": "UniqueStr", "role": "ADMIN", "maxUsage": 10, "expiresAt": "ISO-Date" }`
+*   **List:** `GET /auth/verification-codes`
+*   **Get One:** `GET /auth/verification-codes/:id`
+*   **Update:** `PATCH /auth/verification-codes/:id` (Body: Partial Create DTO + `isActive`)
+*   **Delete:** `DELETE /auth/verification-codes/:id`
 
 ---
 
-## Common Pagination Response Format
+### 📚 Courses
+**Controller:** `CoursesController`
 
-For endpoints that support pagination, the response follows this format:
+#### 1. Get All Courses (Filtered)
+*   **Endpoint:** `GET /courses`
+*   **Access:** Authenticated
+*   **Query Parameters:**
+    *   Standard Pagination (`page`, `limit`, `orderBy`, `orderDirection`)
+    *   `departmentCode`: e.g., "CS"
+    *   `level`: e.g., "LEVEL_100"
+    *   `searchTerm`: Partial match on name or code
+    *   `lecturerEmail`: Filter by Lecturer's email address
+    *   `minCredits`: number
+    *   `maxCredits`: number
+*   **Response (200):** Paginated list of courses with department and lecturer details.
+
+#### 2. Get Course by Code
+*   **Endpoint:** `GET /courses/:code`
+*   **Access:** Authenticated
+
+#### 3. Create Course
+*   **Endpoint:** `POST /courses`
+*   **Access:** Admin, Lecturer
+*   **Body:**
+    ```json
+    {
+      "code": "CSC101",
+      "name": "Intro to CS",
+      "level": "LEVEL_100",
+      "credits": 3,
+      "departmentCode": "CSC",
+      "lecturerEmail": "lecturer@university.edu" // Uses Email to resolve ID
+    }
+    ```
+
+#### 4. Bulk Upload Courses
+*   **Endpoint:** `POST /courses/bulk/upload`
+*   **Access:** Admin, Lecturer
+*   **Content-Type:** `multipart/form-data`
+*   **Body:** Form field `file` containing the CSV.
+*   **CSV Headers:** `code`, `name`, `level`, `credits`, `departmentCode`, `lecturerEmail`
+
+#### 5. Download Template
+*   **Endpoint:** `GET /courses/bulk/template`
+*   **Access:** Authenticated
+*   **Response:** Downloadable CSV file with headers.
+
+#### 6. Other Course Endpoints
+*   `PATCH /courses/:code` (Admin, Lecturer) - Update course details.
+*   `DELETE /courses/:code` (Admin) - Soft delete.
+*   `GET /courses/without-schedules` - List courses missing a schedule.
+*   `GET /courses/statistics` - Aggregate stats (Total courses, breakdown by level/dept).
+
+---
+
+### 📅 Schedules (Timetable)
+**Controller:** `SchedulesController`
+
+#### 1. Get All Schedules (Filtered)
+*   **Endpoint:** `GET /schedules`
+*   **Access:** Authenticated
+*   **Query Parameters:**
+    *   Standard Pagination
+    *   `courseCode`: e.g., "CSC101"
+    *   `departmentCode`: e.g., "CSC" (Filters based on the related Course's department)
+    *   `level`: e.g., "LEVEL_100" (Filters based on the related Course's level)
+    *   `dayOfWeek`: e.g., "MONDAY"
+    *   `venue`: Partial search (e.g., "Hall")
+    *   `type`: e.g., "LECTURE"
+    *   `startTime` & `endTime`: HH:MM format. *If both are provided, it filters for classes overlapping with this range.*
+*   **Response:** Paginated list including nested Course details.
+
+#### 2. Create Schedule
+*   **Endpoint:** `POST /schedules`
+*   **Access:** Admin, Lecturer
+*   **Body:**
+    ```json
+    {
+      "courseCode": "CSC101",
+      "dayOfWeek": "MONDAY",
+      "startTime": "08:00", // HH:MM
+      "endTime": "10:00",   // HH:MM
+      "venue": "Lecture Hall 1",
+      "type": "LECTURE" // Optional
+    }
+    ```
+*   **Note:** Returns `409 Conflict` if time overlaps for the same course or within specific constraints.
+
+#### 3. Bulk Upload Schedules
+*   **Endpoint:** `POST /schedules/bulk/upload`
+*   **Access:** Admin, Lecturer
+*   **Content-Type:** `multipart/form-data` (field: `file`)
+*   **CSV Headers:** `courseCode`, `dayOfWeek`, `startTime`, `endTime`, `venue`, `type`
+
+#### 4. Other Schedule Endpoints
+*   `GET /schedules/:id` - Get single schedule.
+*   `PATCH /schedules/:id` (Admin, Lecturer) - Update schedule.
+*   `DELETE /schedules/:id` (Admin) - Delete schedule.
+*   `GET /schedules/statistics` - Stats by Day and Type.
+*   `GET /schedules/bulk/template` - Download CSV template.
+
+---
+
+### 🏛️ Departments
+**Controller:** `DepartmentsController`
+
+#### 1. Get All Departments
+*   **Endpoint:** `GET /departments`
+*   **Access:** Authenticated
+*   **Query Parameters:**
+    *   Standard Pagination
+    *   `searchTerm`: Search name or code.
+    *   `hasCourses`: `true` (Only return depts with active courses).
+    *   `withoutCourses`: `true` (Only return empty depts).
+
+#### 2. Get Department Details
+*   **Endpoint:** `GET /departments/:code` - Basic details.
+*   **Endpoint:** `GET /departments/:code/full-details` - Includes nested active courses and their schedules.
+
+#### 3. Administrative Actions (Admin Only)
+*   `POST /departments`: Body `{ "name": "...", "code": "..." }`
+*   `PATCH /departments/:code`: Update details.
+*   `DELETE /departments/:code`: **Note:** Fails if department has active courses.
+*   `POST /departments/bulk/upload`: CSV Headers `code`, `name`.
+*   `GET /departments/bulk/template`: Download CSV template.
+*   `GET /departments/statistics`: Stats overview.
+
+---
+
+### 👨‍🏫 Lecturers
+**Controller:** `LecturersController`
+
+#### 1. List Lecturers
+*   **Endpoint:** `GET /lecturers`
+*   **Access:** Authenticated
+*   **Query Parameters:** Standard Pagination.
+
+#### 2. Specific Lookups
+*   **Endpoint:** `GET /lecturers/:id`
+*   **Endpoint:** `GET /lecturers/search/:searchTerm` (Name search).
+*   **Endpoint:** `GET /lecturers/department/:departmentCode`
+
+#### 3. Administrative Actions (Admin Only)
+*   `POST /lecturers`: Body `{ "name": "...", "email": "...", "departmentCode": "..." }`
+*   `PATCH /lecturers/:id`
+*   `DELETE /lecturers/:id`
+
+---
+
+### 👥 Users (Students/Admins)
+**Controller:** `UsersController`
+
+#### 1. List Users
+*   **Endpoint:** `GET /users`
+*   **Access:** Admin Only
+*   **Query Parameters:** Pagination.
+
+#### 2. User Management (Admin Only)
+*   `POST /users`: Create user manually.
+*   `GET /users/:matricNO`: Get specific user.
+*   `PATCH /users/:matricNO`: Update user.
+*   `DELETE /users/:matricNO`: Delete user.
+
+---
+
+### 📢 Complaints
+**Controller:** `ComplaintsController`
+
+#### 1. Create Complaint
+*   **Endpoint:** `POST /complaints`
+*   **Access:** Public (or Authenticated)
+*   **Body:**
+    ```json
+    {
+      "name": "Student Name",
+      "email": "student@school.edu",
+      "department": "CSC",
+      "subject": "Missing Grades",
+      "message": "Full text description..."
+    }
+    ```
+
+#### 2. View My Complaints
+*   **Endpoint:** `GET /complaints/my-complaints`
+*   **Access:** Authenticated (Student/Admin)
+
+#### 3. Admin Management (Admin Only)
+*   `GET /complaints`: List all (Paginated).
+*   `GET /complaints/pending`: List only pending.
+*   `GET /complaints/resolved`: List only resolved.
+*   `PATCH /complaints/:id/status?status=RESOLVED`: Update status.
+
+---
+
+### 🏥 Health Checks
+**Controller:** `HealthController`
+*   `GET /health`: Comprehensive check (DB status, Memory usage).
+*   `GET /health/simple`: Quick uptime check.
+*   `GET /health/database`: DB connection latency and table counts.
+*   `GET /health/readiness`: Kubernetes readiness probe.
+*   `GET /health/liveness`: Kubernetes liveness probe.
+
+---
+
+## 5. Error Handling & Status Codes
+
+The API returns standard HTTP status codes. Errors generally follow this format:
 
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [...],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 100,
-      "totalPages": 10,
-      "hasNext": true,
-      "hasPrev": false
-    }
-  },
-  "message": "Request processed successfully"
+  "success": false,
+  "statusCode": 400,
+  "errorCode": "VALIDATION_ERROR",
+  "timestamp": "2025-10-25T12:00:00Z",
+  "path": "/api/v1/courses",
+  "message": ["email must be an email", "password is too short"]
 }
 ```
 
-## Rate Limiting
-
-All authentication endpoints are protected by rate limiting to prevent abuse. The default limits are:
-- Registration: 5 requests per minute
-- Login: 10 requests per minute
-- Password reset: 3 requests per minute
-
-## CORS
-
-The API supports CORS for web applications. Configure the frontend URL in the environment variables.
-
-## Environment Variables
-
-Key environment variables needed:
-- `DATABASE_URL`: PostgreSQL connection string
-- `JWT_SECRET`: Secret for JWT token signing
-- `JWT_EXPIRES_IN`: Token expiration time
-- `SMTP_*`: Email configuration for password reset
-- `NODE_ENV`: Environment (development/production)
-- `PORT`: Server port (default: 3000)
+*   **200 OK:** Successful request.
+*   **201 Created:** Resource successfully created.
+*   **400 Bad Request:** Validation failed or invalid input.
+*   **401 Unauthorized:** Invalid or missing JWT token.
+*   **403 Forbidden:** User role does not have permission.
+*   **404 Not Found:** Resource ID/Code does not exist.
+*   **409 Conflict:** Duplicate data (e.g., Email exists, Schedule time overlap).
+*   **429 Too Many Requests:** Rate limit exceeded.
+*   **500 Internal Server Error:** Server crash or DB error.
