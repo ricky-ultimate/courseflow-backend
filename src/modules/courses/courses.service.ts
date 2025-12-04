@@ -101,18 +101,61 @@ export class CoursesService extends BaseService<
       );
     }
 
-    // Validate Lecturer
+    // Validate Lecturer by Email and resolve ID
     const lecturer = await this.prisma.lecturer.findUnique({
-      where: { id: dto.lecturerId },
+      where: { email: dto.lecturerEmail },
     });
 
     if (!lecturer) {
       throw new NotFoundException(
-        `Lecturer with ID '${dto.lecturerId}' not found`,
+        `Lecturer with email '${dto.lecturerEmail}' not found`,
       );
     }
 
-    return dto as Record<string, any>;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { lecturerEmail, ...rest } = dto;
+    return {
+      ...rest,
+      lecturerId: lecturer.id,
+    };
+  }
+
+  protected async beforeUpdate(
+    dto: UpdateCourseDto,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _identifier: string,
+  ): Promise<Record<string, any>> {
+    const data: Record<string, any> = { ...dto };
+
+    // If department is being updated, verify it exists
+    if (dto.departmentCode) {
+      const department = await this.prisma.department.findUnique({
+        where: { code: dto.departmentCode },
+      });
+      if (!department) {
+        throw new NotFoundException(
+          `Department with code '${dto.departmentCode}' not found`,
+        );
+      }
+    }
+
+    // If lecturer is being updated via email, resolve to ID
+    if (dto.lecturerEmail) {
+      const lecturer = await this.prisma.lecturer.findUnique({
+        where: { email: dto.lecturerEmail },
+      });
+
+      if (!lecturer) {
+        throw new NotFoundException(
+          `Lecturer with email '${dto.lecturerEmail}' not found`,
+        );
+      }
+
+      data.lecturerId = lecturer.id;
+      delete data.lecturerEmail;
+    }
+
+    return data;
   }
 
   async bulkCreateFromCsv(

@@ -95,7 +95,8 @@ export const ApiCreateCourse = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Create a new course',
-      description: 'Create a new course with department validation',
+      description:
+        'Create a new course with department and lecturer validation',
     }),
     ApiResponse({
       status: 201,
@@ -214,7 +215,7 @@ export const ApiBulkCreateCourses = () =>
     ApiOperation({
       summary: 'Bulk create courses from CSV',
       description:
-        'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode',
+        'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode, lecturerEmail',
     }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
