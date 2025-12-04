@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { ScheduleFilterDto } from './dto/schedule-filter.dto';
 import { BaseService } from '../../common/services/base.service';
 import { CsvService } from '../../common/services/csv.service';
 import { ScheduleRepository } from './repositories/schedule.repository';
@@ -12,6 +13,7 @@ import {
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
 import { Schedule, Level, DayOfWeek, ClassType } from '../../generated/prisma';
+import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
 export class SchedulesService extends BaseService<
@@ -33,26 +35,84 @@ export class SchedulesService extends BaseService<
     });
   }
 
-  async findByCourse(courseCode: string): Promise<Schedule[]> {
-    return this.scheduleRepository.findByCourse(courseCode);
-  }
+  async findAll(
+    query: ScheduleFilterDto = {},
+  ): Promise<Schedule[] | PaginatedResult<Schedule>> {
+    const where: Record<string, any> = { ...this.getActiveFilter() };
 
-  async findByDepartment(departmentCode: string): Promise<Schedule[]> {
-    return this.scheduleRepository.findByDepartment(departmentCode);
-  }
+    // Relation filters
+    const courseFilter: Record<string, any> = {};
+    if (query.departmentCode) {
+      courseFilter.departmentCode = query.departmentCode;
+    }
+    if (query.level) {
+      courseFilter.level = query.level;
+    }
+    // Only add course relation filter if fields are present
+    if (Object.keys(courseFilter).length > 0) {
+      where.course = courseFilter;
+    }
 
-  async findByLevel(level: Level): Promise<Schedule[]> {
-    return this.scheduleRepository.findByLevel(level);
-  }
+    // Direct filters
+    if (query.courseCode) {
+      where.courseCode = query.courseCode;
+    }
 
-  async findByDepartmentAndLevel(
-    departmentCode: string,
-    level: Level,
-  ): Promise<Schedule[]> {
-    return this.scheduleRepository.findByDepartmentAndLevel(
-      departmentCode,
-      level,
-    );
+    if (query.dayOfWeek) {
+      where.dayOfWeek = query.dayOfWeek;
+    }
+
+    if (query.type) {
+      where.type = query.type;
+    }
+
+    if (query.venue) {
+      where.venue = { contains: query.venue, mode: 'insensitive' };
+    }
+
+    // Time filtering
+    if (query.startTime || query.endTime) {
+      const timeFilter: Record<string, any>[] = [];
+      if (query.startTime && query.endTime) {
+        // Range overlap logic
+        timeFilter.push(
+          {
+            AND: [
+              { startTime: { gte: query.startTime } },
+              { startTime: { lt: query.endTime } },
+            ],
+          },
+          {
+            AND: [
+              { endTime: { gt: query.startTime } },
+              { endTime: { lte: query.endTime } },
+            ],
+          },
+          {
+            AND: [
+              { startTime: { lte: query.startTime } },
+              { endTime: { gte: query.endTime } },
+            ],
+          },
+        );
+        where.OR = timeFilter;
+      } else if (query.startTime) {
+        where.startTime = { gte: query.startTime };
+      } else if (query.endTime) {
+        where.endTime = { lte: query.endTime };
+      }
+    }
+
+    // Pagination
+    if (query.page && query.limit) {
+      return this.findPaginated(where, query);
+    }
+
+    return this.getModel().findMany({
+      where,
+      include: this.config.includeRelations,
+      orderBy: this.getOrderBy(query),
+    }) as Promise<Schedule[]>;
   }
 
   async bulkCreateFromCsv(
@@ -181,51 +241,11 @@ export class SchedulesService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  async findByDayOfWeek(dayOfWeek: DayOfWeek): Promise<Schedule[]> {
-    return this.scheduleRepository.findByDayOfWeek(dayOfWeek);
-  }
-
-  async findByVenue(venue: string): Promise<Schedule[]> {
-    return this.scheduleRepository.findByVenue(venue);
-  }
-
-  async findByClassType(type: ClassType): Promise<Schedule[]> {
-    return this.scheduleRepository.findByClassType(type);
-  }
-
-  async findByTimeRange(
-    startTime: string,
-    endTime: string,
-    dayOfWeek?: DayOfWeek,
-  ): Promise<Schedule[]> {
-    return this.scheduleRepository.findByTimeRange(
-      startTime,
-      endTime,
-      dayOfWeek,
-    );
-  }
-
   async getScheduleStatistics(): Promise<{
     totalSchedules: number;
     schedulesByDay: Record<string, number>;
     schedulesByType: Record<string, number>;
   }> {
     return this.scheduleRepository.getScheduleStats();
-  }
-
-  async checkScheduleConflict(
-    courseCode: string,
-    dayOfWeek: DayOfWeek,
-    startTime: string,
-    endTime: string,
-    excludeId?: string,
-  ): Promise<Schedule | null> {
-    return this.scheduleRepository.findScheduleConflict(
-      courseCode,
-      dayOfWeek,
-      startTime,
-      endTime,
-      excludeId,
-    );
   }
 }
