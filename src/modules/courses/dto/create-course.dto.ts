@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEnum, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsEmail,
+} from 'class-validator';
 import { Level } from '../../../generated/prisma';
 
 export class CreateCourseDto {
@@ -32,10 +40,10 @@ export class CreateCourseDto {
   departmentCode: string;
 
   @ApiProperty({
-    example: 'lecturer-uuid-123',
-    description: 'ID of the lecturer taking the course',
+    example: 'lecturer@university.edu',
+    description: 'Email of the lecturer taking the course',
   })
-  @IsString({ message: 'Lecturer ID must be a string' })
-  @IsNotEmpty({ message: 'Lecturer ID is required' })
-  lecturerId: string;
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsNotEmpty({ message: 'Lecturer email is required' })
+  lecturerEmail: string;
 }

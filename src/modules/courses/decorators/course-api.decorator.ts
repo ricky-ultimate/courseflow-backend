@@ -21,7 +21,7 @@ export const ApiGetCourses = () =>
     ApiOperation({
       summary: 'Get all courses',
       description:
-        'Retrieve courses with optional filtering by department, level, credits, or search term.',
+        'Retrieve courses with optional filtering by department, level, credits, lecturer email, or search term.',
     }),
     ApiResponse({
       status: 200,
