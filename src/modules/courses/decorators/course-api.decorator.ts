@@ -21,7 +21,7 @@ export const ApiGetCourses = () =>
     ApiOperation({
       summary: 'Get all courses',
       description:
-        'Retrieve courses with optional filtering by department, level, credits, or search term.',
+        'Retrieve courses with optional filtering by department, level, credits, lecturer email, or search term.',
     }),
     ApiResponse({
       status: 200,
@@ -95,8 +95,7 @@ export const ApiCreateCourse = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Create a new course',
-      description:
-        'Create a new course with department and lecturer validation',
+      description: 'Create a new course with department validation',
     }),
     ApiResponse({
       status: 201,
@@ -215,7 +214,7 @@ export const ApiBulkCreateCourses = () =>
     ApiOperation({
       summary: 'Bulk create courses from CSV',
       description:
-        'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode, lecturerEmail',
+        'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode',
     }),
     ApiConsumes('multipart/form-data'),
     ApiBody({

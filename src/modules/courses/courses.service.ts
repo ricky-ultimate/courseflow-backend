@@ -49,8 +49,14 @@ export class CoursesService extends BaseService<
       where.level = query.level;
     }
 
-    if (query.lecturerId) {
-      where.lecturerId = query.lecturerId;
+    // Filter by Lecturer Email via Relation
+    if (query.lecturerEmail) {
+      where.lecturer = {
+        email: {
+          equals: query.lecturerEmail,
+          mode: 'insensitive',
+        },
+      };
     }
 
     if (query.minCredits !== undefined || query.maxCredits !== undefined) {
