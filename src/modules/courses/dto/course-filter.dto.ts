@@ -22,10 +22,10 @@ export class CourseFilterDto extends PaginationDto {
   @IsString()
   searchTerm?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by lecturer ID' })
+  @ApiPropertyOptional({ description: 'Filter by lecturer Email' })
   @IsOptional()
   @IsString()
-  lecturerId?: string;
+  lecturerEmail?: string;
 
   @ApiPropertyOptional({ description: 'Minimum credits', minimum: 1 })
   @IsOptional()
