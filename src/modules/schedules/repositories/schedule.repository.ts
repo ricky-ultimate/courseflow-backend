@@ -1,59 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import {
-  Schedule,
-  Level,
-  DayOfWeek,
-  ClassType,
-} from '../../../generated/prisma';
+import { Schedule, DayOfWeek, ClassType } from '../../../generated/prisma';
 
 @Injectable()
 export class ScheduleRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  async findByCourse(courseCode: string): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { courseCode },
-      include: { course: true },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findByDepartment(departmentCode: string): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { course: { departmentCode } },
-      include: { course: { include: { department: true } } },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findByLevel(level: Level): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { course: { level } },
-      include: { course: { include: { department: true } } },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findByDepartmentAndLevel(
-    departmentCode: string,
-    level: Level,
-  ): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: {
-        course: {
-          departmentCode: departmentCode,
-          level: level,
-        },
-      },
-      include: {
-        course: {
-          include: { department: true },
-        },
-      },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
 
   async findScheduleConflict(
     courseCode: string,
@@ -90,66 +41,6 @@ export class ScheduleRepository {
 
     return this.prisma.schedule.findFirst({
       where: whereClause,
-    });
-  }
-
-  async findByDayOfWeek(dayOfWeek: DayOfWeek): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { dayOfWeek },
-      include: { course: { include: { department: true } } },
-      orderBy: [{ startTime: 'asc' }, { courseCode: 'asc' }],
-    });
-  }
-
-  async findByVenue(venue: string): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { venue: { contains: venue, mode: 'insensitive' } },
-      include: { course: { include: { department: true } } },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findByClassType(type: ClassType): Promise<Schedule[]> {
-    return this.prisma.schedule.findMany({
-      where: { type },
-      include: { course: { include: { department: true } } },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  async findByTimeRange(
-    startTime: string,
-    endTime: string,
-    dayOfWeek?: DayOfWeek,
-  ): Promise<Schedule[]> {
-    const whereClause: Record<string, unknown> = {
-      OR: [
-        {
-          AND: [
-            { startTime: { gte: startTime } },
-            { startTime: { lt: endTime } },
-          ],
-        },
-        {
-          AND: [{ endTime: { gt: startTime } }, { endTime: { lte: endTime } }],
-        },
-        {
-          AND: [
-            { startTime: { lte: startTime } },
-            { endTime: { gte: endTime } },
-          ],
-        },
-      ],
-    };
-
-    if (dayOfWeek) {
-      whereClause.dayOfWeek = dayOfWeek;
-    }
-
-    return this.prisma.schedule.findMany({
-      where: whereClause,
-      include: { course: { include: { department: true } } },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
   }
 
