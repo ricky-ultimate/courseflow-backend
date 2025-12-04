@@ -7,7 +7,6 @@ import {
   Patch,
   Delete,
   Query,
-  ParseEnumPipe,
   UploadedFile,
   UseInterceptors,
   Res,
@@ -21,12 +20,6 @@ import {
   ApiCreateSchedule,
   ApiUpdateSchedule,
   ApiDeleteSchedule,
-  ApiGetSchedulesByCourse,
-  ApiGetSchedulesByDepartment,
-  ApiGetSchedulesByLevel,
-  ApiGetSchedulesByDayOfWeek,
-  ApiGetSchedulesByVenue,
-  ApiGetSchedulesByClassType,
   ApiGetScheduleStatistics,
   ApiBulkCreateSchedules,
   ApiDownloadScheduleTemplate,
@@ -34,16 +27,10 @@ import {
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { ScheduleFilterDto } from './dto/schedule-filter.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
-import {
-  Schedule,
-  Role,
-  Level,
-  DayOfWeek,
-  ClassType,
-} from '../../generated/prisma';
-import { PaginationOptions } from '../../common/interfaces/base-service.interface';
+import { Schedule, Role } from '../../generated/prisma';
 
 @ApiTags('Schedules')
 @Controller('schedules')
@@ -65,61 +52,27 @@ export class SchedulesController extends BaseController<
 
   @Get()
   @ApiGetSchedules()
-  findAll(@Query() query?: PaginationOptions) {
+  findAll(@Query() query?: ScheduleFilterDto) {
     return this.schedulesService.findAll(query);
   }
 
-  @Get(':id')
-  @ApiGetScheduleById()
-  findOne(@Param('id') id: string) {
-    return this.schedulesService.findOne(id);
+  @Get('statistics')
+  @ApiGetScheduleStatistics()
+  getStatistics() {
+    return this.schedulesService.getScheduleStatistics();
   }
 
-  @Patch(':id')
-  @ApiUpdateSchedule()
-  update(@Param('id') id: string, @Body() updateDto: UpdateScheduleDto) {
-    return this.schedulesService.update(id, updateDto);
-  }
+  @Get('bulk/template')
+  @ApiDownloadScheduleTemplate()
+  downloadCsvTemplate(@Res() res: Response) {
+    const template = this.schedulesService.generateCsvTemplate();
 
-  @Delete(':id')
-  @ApiDeleteSchedule()
-  remove(@Param('id') id: string) {
-    return this.schedulesService.remove(id);
-  }
-
-  @Get('course/:courseCode')
-  @ApiGetSchedulesByCourse()
-  findByCourse(@Param('courseCode') courseCode: string) {
-    return this.schedulesService.findByCourse(courseCode);
-  }
-
-  @Get('department/:departmentCode')
-  @ApiGetSchedulesByDepartment()
-  findByDepartment(@Param('departmentCode') departmentCode: string) {
-    return this.schedulesService.findByDepartment(departmentCode);
-  }
-
-  @Get('level/:level')
-  @ApiGetSchedulesByLevel()
-  findByLevel(@Param('level', new ParseEnumPipe(Level)) level: Level) {
-    return this.schedulesService.findByLevel(level);
-  }
-
-  @Get('department/:departmentCode/level/:level')
-  async findByDepartmentAndLevel(
-    @Param('departmentCode') departmentCode: string,
-    @Param('level', new ParseEnumPipe(Level)) level: Level,
-  ) {
-    return this.schedulesService.findByDepartmentAndLevel(
-      departmentCode,
-      level,
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=schedules-template.csv',
     );
-  }
-
-  @Post()
-  @ApiCreateSchedule()
-  create(@Body() createDto: CreateScheduleDto) {
-    return this.schedulesService.create(createDto);
+    res.send(template);
   }
 
   @Post('bulk/upload')
@@ -137,44 +90,27 @@ export class SchedulesController extends BaseController<
     return this.schedulesService.bulkCreateFromCsv(file.buffer);
   }
 
-  @Get('bulk/template')
-  @ApiDownloadScheduleTemplate()
-  downloadCsvTemplate(@Res() res: Response) {
-    const template = this.schedulesService.generateCsvTemplate();
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename=schedules-template.csv',
-    );
-    res.send(template);
+  @Get(':id')
+  @ApiGetScheduleById()
+  findOne(@Param('id') id: string) {
+    return this.schedulesService.findOne(id);
   }
 
-  @Get('statistics')
-  @ApiGetScheduleStatistics()
-  getStatistics() {
-    return this.schedulesService.getScheduleStatistics();
+  @Post()
+  @ApiCreateSchedule()
+  create(@Body() createDto: CreateScheduleDto) {
+    return this.schedulesService.create(createDto);
   }
 
-  @Get('day/:dayOfWeek')
-  @ApiGetSchedulesByDayOfWeek()
-  findByDayOfWeek(
-    @Param('dayOfWeek', new ParseEnumPipe(DayOfWeek)) dayOfWeek: DayOfWeek,
-  ) {
-    return this.schedulesService.findByDayOfWeek(dayOfWeek);
+  @Patch(':id')
+  @ApiUpdateSchedule()
+  update(@Param('id') id: string, @Body() updateDto: UpdateScheduleDto) {
+    return this.schedulesService.update(id, updateDto);
   }
 
-  @Get('venue/:venue')
-  @ApiGetSchedulesByVenue()
-  findByVenue(@Param('venue') venue: string) {
-    return this.schedulesService.findByVenue(venue);
-  }
-
-  @Get('type/:type')
-  @ApiGetSchedulesByClassType()
-  findByClassType(
-    @Param('type', new ParseEnumPipe(ClassType)) type: ClassType,
-  ) {
-    return this.schedulesService.findByClassType(type);
+  @Delete(':id')
+  @ApiDeleteSchedule()
+  remove(@Param('id') id: string) {
+    return this.schedulesService.remove(id);
   }
 }
