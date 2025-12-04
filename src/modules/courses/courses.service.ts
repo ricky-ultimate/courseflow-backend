@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { CourseFilterDto } from './dto/course-filter.dto';
 import { BaseService } from '../../common/services/base.service';
 import { CsvService } from '../../common/services/csv.service';
 import { CourseRepository } from './repositories/course.repository';
@@ -11,6 +12,7 @@ import {
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
 import { Course, Level } from '../../generated/prisma';
+import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
 export class CoursesService extends BaseService<
@@ -33,12 +35,56 @@ export class CoursesService extends BaseService<
     });
   }
 
-  async findByDepartment(departmentCode: string): Promise<Course[]> {
-    return this.courseRepository.findByDepartment(departmentCode);
-  }
+  async findAll(
+    query: CourseFilterDto = {},
+  ): Promise<Course[] | PaginatedResult<Course>> {
+    const where: Record<string, any> = { ...this.getActiveFilter() };
 
-  async findByLevel(level: Level): Promise<Course[]> {
-    return this.courseRepository.findByLevel(level);
+    // Apply filters
+    if (query.departmentCode) {
+      where.departmentCode = query.departmentCode;
+    }
+
+    if (query.level) {
+      where.level = query.level;
+    }
+
+    if (query.lecturerId) {
+      where.lecturerId = query.lecturerId;
+    }
+
+    if (query.minCredits !== undefined || query.maxCredits !== undefined) {
+      where.credits = {};
+      if (query.minCredits !== undefined) {
+        where.credits.gte = query.minCredits;
+      }
+      if (query.maxCredits !== undefined) {
+        where.credits.lte = query.maxCredits;
+      }
+    }
+
+    if (query.searchTerm) {
+      where.OR = [
+        { name: { contains: query.searchTerm, mode: 'insensitive' } },
+        { code: { contains: query.searchTerm, mode: 'insensitive' } },
+        {
+          lecturer: {
+            name: { contains: query.searchTerm, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    // Determine if pagination is requested
+    if (query.page && query.limit) {
+      return this.findPaginated(where, query);
+    }
+
+    return this.getModel().findMany({
+      where,
+      include: this.config.includeRelations,
+      orderBy: this.getOrderBy(query),
+    }) as Promise<Course[]>;
   }
 
   protected async beforeCreate(
@@ -189,31 +235,6 @@ export class CoursesService extends BaseService<
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
-  async findByCreditRange(
-    minCredits: number,
-    maxCredits: number,
-  ): Promise<Course[]> {
-    return this.courseRepository.findByCreditRange(minCredits, maxCredits);
-  }
-
-  async searchByName(searchTerm: string): Promise<Course[]> {
-    return this.courseRepository.searchByName(searchTerm);
-  }
-
-  async findByDepartmentAndLevel(
-    departmentCode: string,
-    level: Level,
-  ): Promise<Course[]> {
-    return this.courseRepository.findByDepartmentAndLevel(
-      departmentCode,
-      level,
-    );
-  }
-
-  async findWithSchedules(where?: Record<string, any>): Promise<Course[]> {
-    return this.courseRepository.findWithSchedules(where);
-  }
-
   async findWithoutSchedules(): Promise<Course[]> {
     return this.courseRepository.findWithoutSchedules();
   }
@@ -225,19 +246,5 @@ export class CoursesService extends BaseService<
     averageCredits: number;
   }> {
     return this.courseRepository.getCourseStats();
-  }
-
-  async findByCriteria(criteria: {
-    departmentCode?: string;
-    level?: any;
-    minCredits?: number;
-    maxCredits?: number;
-    searchTerm?: string;
-  }): Promise<Course[]> {
-    return this.courseRepository.findByCriteria(criteria);
-  }
-
-  async existsByCode(code: string): Promise<boolean> {
-    return this.courseRepository.existsByCode(code);
   }
 }

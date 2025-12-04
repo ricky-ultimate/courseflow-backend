@@ -6,74 +6,6 @@ import { Course, Level } from '../../../generated/prisma';
 export class CourseRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByDepartment(departmentCode: string): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        departmentCode,
-      },
-      include: { department: true, lecturer: true },
-      orderBy: [{ level: 'asc' }, { code: 'asc' }],
-    });
-  }
-
-  async findByLevel(level: Level): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        level,
-      },
-      include: { department: true, lecturer: true },
-      orderBy: [{ departmentCode: 'asc' }, { code: 'asc' }],
-    });
-  }
-
-  async findByCreditRange(
-    minCredits: number,
-    maxCredits: number,
-  ): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        credits: {
-          gte: minCredits,
-          lte: maxCredits,
-        },
-      },
-      include: { department: true, lecturer: true },
-      orderBy: [{ credits: 'asc' }, { code: 'asc' }],
-    });
-  }
-
-  async searchByName(searchTerm: string): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        name: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
-      },
-      include: { department: true, lecturer: true },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  async findByDepartmentAndLevel(
-    departmentCode: string,
-    level: Level,
-  ): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        departmentCode,
-        level,
-      },
-      include: { department: true, lecturer: true },
-      orderBy: { code: 'asc' },
-    });
-  }
-
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.course.count({
       where: {
@@ -124,23 +56,6 @@ export class CourseRepository {
       coursesByDepartment,
       averageCredits: creditSum._avg.credits || 0,
     };
-  }
-
-  async findWithSchedules(where?: Record<string, unknown>): Promise<Course[]> {
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        ...where,
-      },
-      include: {
-        department: true,
-        lecturer: true,
-        schedules: {
-          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-        },
-      },
-      orderBy: { code: 'asc' },
-    });
   }
 
   async findWithoutSchedules(): Promise<Course[]> {
@@ -223,57 +138,5 @@ export class CourseRepository {
     }
 
     return { created, errors };
-  }
-
-  async findByCriteria(criteria: {
-    departmentCode?: string;
-    level?: Level;
-    minCredits?: number;
-    maxCredits?: number;
-    searchTerm?: string;
-  }): Promise<Course[]> {
-    const where: Record<string, unknown> = {};
-
-    if (criteria.departmentCode) {
-      where.departmentCode = criteria.departmentCode;
-    }
-
-    if (criteria.level) {
-      where.level = criteria.level;
-    }
-
-    if (
-      criteria.minCredits !== undefined ||
-      criteria.maxCredits !== undefined
-    ) {
-      where.credits = {};
-      if (criteria.minCredits !== undefined) {
-        (where.credits as Record<string, unknown>).gte = criteria.minCredits;
-      }
-      if (criteria.maxCredits !== undefined) {
-        (where.credits as Record<string, unknown>).lte = criteria.maxCredits;
-      }
-    }
-
-    if (criteria.searchTerm) {
-      where.OR = [
-        { name: { contains: criteria.searchTerm, mode: 'insensitive' } },
-        { code: { contains: criteria.searchTerm, mode: 'insensitive' } },
-        {
-          lecturer: {
-            name: { contains: criteria.searchTerm, mode: 'insensitive' },
-          },
-        },
-      ];
-    }
-
-    return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        ...where,
-      },
-      include: { department: true, lecturer: true },
-      orderBy: [{ departmentCode: 'asc' }, { level: 'asc' }, { code: 'asc' }],
-    });
   }
 }

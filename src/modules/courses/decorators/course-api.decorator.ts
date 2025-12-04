@@ -20,7 +20,8 @@ export const ApiGetCourses = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get all courses',
-      description: 'Retrieve all active courses with department information',
+      description:
+        'Retrieve courses with optional filtering by department, level, credits, or search term.',
     }),
     ApiResponse({
       status: 200,
@@ -153,78 +154,6 @@ export const ApiDeleteCourse = () =>
       description: 'Course deleted successfully',
     }),
     ApiNotFoundResponse('Course'),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiGetCoursesByDepartment = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get courses by department',
-      description: 'Retrieve all courses for a specific department',
-    }),
-    ApiParam({
-      name: 'departmentCode',
-      type: 'string',
-      description: 'Department code',
-      example: 'CS',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Courses retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    }),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiGetCoursesByLevel = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get courses by academic level',
-      description: 'Retrieve all courses for a specific academic level',
-    }),
-    ApiParam({
-      name: 'level',
-      enum: Level,
-      description: 'Academic level',
-      example: 'LEVEL_100',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Courses retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    }),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiSearchCourses = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Search courses',
-      description: 'Search courses by name or code (case-insensitive)',
-    }),
-    ApiParam({
-      name: 'term',
-      type: 'string',
-      description: 'Search term',
-      example: 'programming',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Search results retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    }),
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
