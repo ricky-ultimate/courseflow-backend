@@ -20,9 +20,6 @@ import {
   ApiCreateDepartment,
   ApiUpdateDepartment,
   ApiDeleteDepartment,
-  ApiSearchDepartments,
-  ApiGetDepartmentsWithCourses,
-  ApiGetDepartmentsWithoutCourses,
   ApiGetDepartmentStatistics,
   ApiBulkCreateDepartments,
   ApiDownloadDepartmentTemplate,
@@ -30,10 +27,10 @@ import {
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { DepartmentFilterDto } from './dto/department-filter.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Department, Role } from '../../generated/prisma';
-import { PaginationOptions } from '../../common/interfaces/base-service.interface';
 
 @ApiTags('Departments')
 @Controller('departments')
@@ -61,26 +58,27 @@ export class DepartmentsController extends BaseController<
 
   @Get()
   @ApiGetDepartments()
-  findAll(@Query() query?: PaginationOptions) {
+  findAll(@Query() query?: DepartmentFilterDto) {
     return this.departmentsService.findAll(query);
   }
 
-  @Get(':code')
-  @ApiGetDepartmentByCode()
-  findOne(@Param('code') code: string) {
-    return this.departmentsService.findOne(code);
+  @Get('statistics')
+  @ApiGetDepartmentStatistics()
+  getStatistics() {
+    return this.departmentsService.getDepartmentStatistics();
   }
 
-  @Patch(':code')
-  @ApiUpdateDepartment()
-  update(@Param('code') code: string, @Body() updateDto: UpdateDepartmentDto) {
-    return this.departmentsService.update(code, updateDto);
-  }
+  @Get('bulk/template')
+  @ApiDownloadDepartmentTemplate()
+  downloadCsvTemplate(@Res() res: Response) {
+    const template = this.departmentsService.generateCsvTemplate();
 
-  @Delete(':code')
-  @ApiDeleteDepartment()
-  remove(@Param('code') code: string) {
-    return this.departmentsService.remove(code);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=departments-template.csv',
+    );
+    res.send(template);
   }
 
   @Post('bulk/upload')
@@ -98,52 +96,27 @@ export class DepartmentsController extends BaseController<
     return this.departmentsService.bulkCreateFromCsv(file.buffer);
   }
 
-  @Get('bulk/template')
-  @ApiDownloadDepartmentTemplate()
-  downloadCsvTemplate(@Res() res: Response) {
-    const template = this.departmentsService.generateCsvTemplate();
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename=departments-template.csv',
-    );
-    res.send(template);
-  }
-
-  @Get('statistics')
-  @ApiGetDepartmentStatistics()
-  getStatistics() {
-    return this.departmentsService.getDepartmentStatistics();
-  }
-
-  @Get('search/:searchTerm')
-  @ApiSearchDepartments()
-  searchByName(@Param('searchTerm') searchTerm: string) {
-    return this.departmentsService.searchByName(searchTerm);
-  }
-
-  @Get('with-courses')
-  @ApiGetDepartmentsWithCourses()
-  findWithCourses() {
-    return this.departmentsService.findWithCourses();
-  }
-
-  @Get('without-courses')
-  @ApiGetDepartmentsWithoutCourses()
-  findWithoutCourses() {
-    return this.departmentsService.findWithoutCourses();
-  }
-
-  @Get('with-course-count')
-  @ApiGetDepartmentsWithCourses() // Reusing this decorator as it's similar
-  findWithCourseCount() {
-    return this.departmentsService.findWithCourseCount();
+  @Get(':code')
+  @ApiGetDepartmentByCode()
+  findOne(@Param('code') code: string) {
+    return this.departmentsService.findOne(code);
   }
 
   @Get(':code/full-details')
-  @ApiGetDepartmentByCode() // Reusing this decorator as it's similar
+  @ApiGetDepartmentByCode()
   findWithFullDetails(@Param('code') code: string) {
     return this.departmentsService.findWithFullDetails(code);
+  }
+
+  @Patch(':code')
+  @ApiUpdateDepartment()
+  update(@Param('code') code: string, @Body() updateDto: UpdateDepartmentDto) {
+    return this.departmentsService.update(code, updateDto);
+  }
+
+  @Delete(':code')
+  @ApiDeleteDepartment()
+  remove(@Param('code') code: string) {
+    return this.departmentsService.remove(code);
   }
 }

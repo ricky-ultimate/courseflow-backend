@@ -19,7 +19,7 @@ export const ApiGetDepartments = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get all departments',
-      description: 'Retrieve all active departments',
+      description: 'Retrieve all active departments with optional filtering.',
     }),
     ApiResponse({
       status: 200,
@@ -154,77 +154,6 @@ export const ApiDeleteDepartment = () =>
       },
     }),
     ApiNotFoundResponse('Department'),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiSearchDepartments = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Search departments',
-      description: 'Search departments by name or code (case-insensitive)',
-    }),
-    ApiParam({
-      name: 'term',
-      type: 'string',
-      description: 'Search term',
-      example: 'computer',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Search results retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    }),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiGetDepartmentsWithCourses = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get departments with courses',
-      description: 'Retrieve departments that have active courses',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Departments with courses retrieved successfully',
-      schema: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            code: { type: 'string', example: 'CS' },
-            name: { type: 'string', example: 'Computer Science' },
-            courses: {
-              type: 'array',
-              items: { type: 'object' },
-            },
-          },
-        },
-      },
-    }),
-    ApiStandardResponses(),
-    ApiAuthRequired(),
-  );
-
-export const ApiGetDepartmentsWithoutCourses = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get departments without courses',
-      description: 'Retrieve departments that have no active courses',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Departments without courses retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
-    }),
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
