@@ -22,6 +22,7 @@
     "db:seed": "ts-node -r dotenv/config prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
+    "db:reset": "prisma migrate reset",
     "postinstall": "prisma generate"
   },
   "dependencies": {
