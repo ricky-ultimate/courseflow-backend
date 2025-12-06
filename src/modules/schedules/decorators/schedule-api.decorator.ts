@@ -21,7 +21,7 @@ export const ApiGetSchedules = () =>
     ApiOperation({
       summary: 'Get all schedules',
       description:
-        'Retrieve schedules with support for filtering by course, department, level, day, time range, and venue.',
+        'Retrieve schedules with support for filtering by course, department, level, day, time range, and venue. Includes lecturer information.',
     }),
     ApiResponse({
       status: 200,
@@ -61,6 +61,16 @@ export const ApiGetSchedules = () =>
                     name: { type: 'string', example: 'Computer Science' },
                   },
                 },
+                lecturer: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    name: { type: 'string', example: 'Dr. Jane Smith' },
+                    email: { type: 'string', example: 'jane.smith@university.edu' },
+                    phone: { type: 'string', example: '+1234567890' },
+                    departmentCode: { type: 'string', example: 'CS' },
+                  },
+                },
               },
             },
             createdAt: { type: 'string', format: 'date-time' },
@@ -77,7 +87,7 @@ export const ApiGetScheduleById = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get schedule by ID',
-      description: 'Retrieve a specific schedule by its ID',
+      description: 'Retrieve a specific schedule by its ID with lecturer information',
     }),
     ApiParam({
       name: 'id',
@@ -98,7 +108,18 @@ export const ApiGetScheduleById = () =>
           endTime: { type: 'string', example: '09:30' },
           venue: { type: 'string', example: 'Room 101' },
           type: { type: 'string', enum: Object.values(ClassType) },
-          course: { type: 'object' },
+          course: {
+            type: 'object',
+            properties: {
+              lecturer: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  email: { type: 'string' },
+                },
+              },
+            },
+          },
         },
       },
     }),
