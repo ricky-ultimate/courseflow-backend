@@ -39,10 +39,8 @@ export class AuthService {
       );
     }
 
-    // Default role is STUDENT
     const userRole = dto.role || Role.STUDENT;
 
-    // Verify verification code for ADMIN or LECTURER roles
     if (userRole === Role.ADMIN || userRole === Role.LECTURER) {
       if (!dto.verificationCode) {
         throw new BadRequestException(
@@ -82,7 +80,6 @@ export class AuthService {
         throw new BadRequestException('Verification code usage limit exceeded');
       }
 
-      // Update usage count
       await this.prisma.verificationCode.update({
         where: { id: verificationCode.id },
         data: { usageCount: { increment: 1 } },
@@ -131,7 +128,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -168,7 +164,6 @@ export class AuthService {
     });
 
     if (!user) {
-      // Don't reveal if email exists or not for security
       return {
         message:
           'If an account with that email exists, a password reset link has been sent.',
@@ -308,7 +303,6 @@ export class AuthService {
   async updateVerificationCode(id: string, dto: UpdateVerificationCodeDto) {
     const existingCode = await this.getVerificationCode(id);
 
-    // If updating the code itself, check for conflicts
     if (dto.code && dto.code !== existingCode.code) {
       const codeExists = await this.prisma.verificationCode.findUnique({
         where: { code: dto.code },

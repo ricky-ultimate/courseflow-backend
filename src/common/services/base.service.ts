@@ -168,15 +168,13 @@ protected async findPaginated(
     this.getModel().count({ where }),
   ]);
 
-  // Return in the format the frontend expects:
-  // { data: items[], total, page, limit, totalPages }
   return {
     data: data as T[],
     total,
     page: validPageNum,
     limit: validLimitNum,
     totalPages: Math.ceil(total / validLimitNum),
-  } as any; // Cast to PaginatedResult<T> which frontend expects
+  } as any;
 }
 
   private async checkUniqueConstraints(

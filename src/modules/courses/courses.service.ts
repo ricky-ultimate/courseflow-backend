@@ -40,7 +40,6 @@ export class CoursesService extends BaseService<
   ): Promise<Course[] | PaginatedResult<Course>> {
     const where: Record<string, any> = { ...this.getActiveFilter() };
 
-    // Apply filters
     if (query.departmentCode) {
       where.departmentCode = query.departmentCode;
     }
@@ -49,7 +48,6 @@ export class CoursesService extends BaseService<
       where.level = query.level;
     }
 
-    // Filter by Lecturer Email via Relation
     if (query.lecturerEmail) {
       where.lecturer = {
         email: {
@@ -81,7 +79,6 @@ export class CoursesService extends BaseService<
       ];
     }
 
-    // Determine if pagination is requested
     if (query.page && query.limit) {
       return this.findPaginated(where, query);
     }
@@ -96,7 +93,6 @@ export class CoursesService extends BaseService<
   protected async beforeCreate(
     dto: CreateCourseDto,
   ): Promise<Record<string, any>> {
-    // Validate Department
     const department = await this.prisma.department.findUnique({
       where: { code: dto.departmentCode },
     });
@@ -107,7 +103,6 @@ export class CoursesService extends BaseService<
       );
     }
 
-    // Validate Lecturer by Email and resolve ID
     const lecturer = await this.prisma.lecturer.findUnique({
       where: { email: dto.lecturerEmail },
     });
@@ -133,7 +128,6 @@ export class CoursesService extends BaseService<
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
 
-    // If department is being updated, verify it exists
     if (dto.departmentCode) {
       const department = await this.prisma.department.findUnique({
         where: { code: dto.departmentCode },
@@ -145,7 +139,6 @@ export class CoursesService extends BaseService<
       }
     }
 
-    // If lecturer is being updated via email, resolve to ID
     if (dto.lecturerEmail) {
       const lecturer = await this.prisma.lecturer.findUnique({
         where: { email: dto.lecturerEmail },
