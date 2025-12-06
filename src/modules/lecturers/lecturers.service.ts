@@ -37,7 +37,6 @@ export class LecturersService extends BaseService<
   protected async beforeCreate(
     dto: CreateLecturerDto,
   ): Promise<Record<string, any>> {
-    // Verify department exists
     const department = await this.prisma.department.findUnique({
       where: { code: dto.departmentCode },
     });

@@ -30,14 +30,13 @@ export class SchedulesService extends BaseService<
     super(prisma, {
       modelName: 'schedule',
       identifierField: 'id',
-      // Updated to include lecturer through course relation
       includeRelations: {
         course: {
           include: {
             department: true,
-            lecturer: true  // Added lecturer relation
-          }
-        }
+            lecturer: true,
+          },
+        },
       },
       defaultOrderBy: { startTime: 'asc' },
     });
@@ -48,7 +47,6 @@ export class SchedulesService extends BaseService<
   ): Promise<Schedule[] | PaginatedResult<Schedule>> {
     const where: Record<string, any> = { ...this.getActiveFilter() };
 
-    // Relation filters
     const courseFilter: Record<string, any> = {};
     if (query.departmentCode) {
       courseFilter.departmentCode = query.departmentCode;
@@ -56,12 +54,9 @@ export class SchedulesService extends BaseService<
     if (query.level) {
       courseFilter.level = query.level;
     }
-    // Only add course relation filter if fields are present
     if (Object.keys(courseFilter).length > 0) {
       where.course = courseFilter;
     }
-
-    // Direct filters
     if (query.courseCode) {
       where.courseCode = query.courseCode;
     }
@@ -77,12 +72,9 @@ export class SchedulesService extends BaseService<
     if (query.venue) {
       where.venue = { contains: query.venue, mode: 'insensitive' };
     }
-
-    // Time filtering
     if (query.startTime || query.endTime) {
       const timeFilter: Record<string, any>[] = [];
       if (query.startTime && query.endTime) {
-        // Range overlap logic
         timeFilter.push(
           {
             AND: [
@@ -110,8 +102,6 @@ export class SchedulesService extends BaseService<
         where.endTime = { lte: query.endTime };
       }
     }
-
-    // Pagination
     if (query.page && query.limit) {
       return this.findPaginated(where, query);
     }
