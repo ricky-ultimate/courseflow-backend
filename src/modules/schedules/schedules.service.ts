@@ -30,7 +30,15 @@ export class SchedulesService extends BaseService<
     super(prisma, {
       modelName: 'schedule',
       identifierField: 'id',
-      includeRelations: { course: { include: { department: true } } },
+      // Updated to include lecturer through course relation
+      includeRelations: {
+        course: {
+          include: {
+            department: true,
+            lecturer: true  // Added lecturer relation
+          }
+        }
+      },
       defaultOrderBy: { startTime: 'asc' },
     });
   }
