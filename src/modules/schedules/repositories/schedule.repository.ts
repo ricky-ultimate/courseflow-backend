@@ -101,6 +101,7 @@ export class ScheduleRepository {
       if (conflict) {
         conflicts.push({ index: i, conflict });
       } else {
+        // Updated to include lecturer in the create response
         const newSchedule = await this.prisma.schedule.create({
           data: {
             ...scheduleData,
@@ -108,7 +109,10 @@ export class ScheduleRepository {
           },
           include: {
             course: {
-              include: { department: true },
+              include: {
+                department: true,
+                lecturer: true  // Added lecturer relation
+              },
             },
           },
         });
