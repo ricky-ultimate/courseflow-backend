@@ -142,40 +142,40 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
     return this.config.defaultOrderBy || { createdAt: 'desc' };
   }
 
-protected async findPaginated(
-  where: Record<string, any>,
-  options: PaginationOptions,
-): Promise<PaginatedResult<T>> {
-  const { page = 1, limit = 10 } = options;
-  const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
-  const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+  protected async findPaginated(
+    where: Record<string, any>,
+    options: PaginationOptions,
+  ): Promise<PaginatedResult<T>> {
+    const { page = 1, limit = 10 } = options;
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
 
-  const validPageNum = Math.max(1, isNaN(pageNum) ? 1 : pageNum);
-  const validLimitNum = Math.max(
-    1,
-    Math.min(100, isNaN(limitNum) ? 10 : limitNum),
-  );
-  const skip = (validPageNum - 1) * validLimitNum;
+    const validPageNum = Math.max(1, isNaN(pageNum) ? 1 : pageNum);
+    const validLimitNum = Math.max(
+      1,
+      Math.min(100, isNaN(limitNum) ? 10 : limitNum),
+    );
+    const skip = (validPageNum - 1) * validLimitNum;
 
-  const [data, total] = await Promise.all([
-    this.getModel().findMany({
-      where,
-      include: this.config.includeRelations,
-      orderBy: this.getOrderBy(options),
-      skip,
-      take: validLimitNum,
-    }),
-    this.getModel().count({ where }),
-  ]);
+    const [data, total] = await Promise.all([
+      this.getModel().findMany({
+        where,
+        include: this.config.includeRelations,
+        orderBy: this.getOrderBy(options),
+        skip,
+        take: validLimitNum,
+      }),
+      this.getModel().count({ where }),
+    ]);
 
-  return {
-    data: data as T[],
-    total,
-    page: validPageNum,
-    limit: validLimitNum,
-    totalPages: Math.ceil(total / validLimitNum),
-  } as any;
-}
+    return {
+      data: data as T[],
+      total,
+      page: validPageNum,
+      limit: validLimitNum,
+      totalPages: Math.ceil(total / validLimitNum),
+    } as any;
+  }
 
   private async checkUniqueConstraints(
     dto: Record<string, any>,

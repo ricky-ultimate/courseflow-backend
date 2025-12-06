@@ -110,7 +110,7 @@ export class ScheduleRepository {
             course: {
               include: {
                 department: true,
-                lecturer: true
+                lecturer: true,
               },
             },
           },
