@@ -66,7 +66,10 @@ export const ApiGetSchedules = () =>
                   properties: {
                     id: { type: 'string', format: 'uuid' },
                     name: { type: 'string', example: 'Dr. Jane Smith' },
-                    email: { type: 'string', example: 'jane.smith@university.edu' },
+                    email: {
+                      type: 'string',
+                      example: 'jane.smith@university.edu',
+                    },
                     phone: { type: 'string', example: '+1234567890' },
                     departmentCode: { type: 'string', example: 'CS' },
                   },
@@ -87,7 +90,8 @@ export const ApiGetScheduleById = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get schedule by ID',
-      description: 'Retrieve a specific schedule by its ID with lecturer information',
+      description:
+        'Retrieve a specific schedule by its ID with lecturer information',
     }),
     ApiParam({
       name: 'id',
