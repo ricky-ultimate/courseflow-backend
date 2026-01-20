@@ -18,6 +18,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { LecturersModule } from './modules/lecturers/lecturers.module';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { ExamsModule } from './modules/exams/exams.module';
+import { VenuesModule } from './modules/venues/venues.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ExamsModule } from './modules/exams/exams.module';
     HealthModule,
     AcademicSessionsModule,
     ExamsModule,
+    VenuesModule,
   ],
   controllers: [AppController],
   providers: [
