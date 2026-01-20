@@ -118,3 +118,109 @@ export const ApiSearchLecturers = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
+export const ApiGetLecturerDashboard = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get lecturer dashboard statistics',
+      description: 'Retrieve dashboard statistics for the authenticated lecturer',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Dashboard statistics retrieved successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          totalCourses: { type: 'number', example: 5 },
+          totalSchedules: { type: 'number', example: 12 },
+          coursesByLevel: {
+            type: 'object',
+            example: {
+              LEVEL_100: 1,
+              LEVEL_200: 2,
+              LEVEL_300: 2,
+            },
+          },
+          schedulesByDay: {
+            type: 'object',
+            example: {
+              MONDAY: 3,
+              TUESDAY: 2,
+              WEDNESDAY: 3,
+              THURSDAY: 2,
+              FRIDAY: 2,
+            },
+          },
+          upcomingClasses: { type: 'number', example: 8 },
+        },
+      },
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
+export const ApiGetLecturerCourses = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get my courses',
+      description: 'Retrieve all courses taught by the authenticated lecturer',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Lecturer courses retrieved successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          lecturer: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              email: { type: 'string' },
+              departmentCode: { type: 'string' },
+            },
+          },
+          courses: {
+            type: 'array',
+            items: { type: 'object' },
+          },
+        },
+      },
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
+export const ApiGetLecturerSchedule = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get my schedule',
+      description: 'Retrieve the timetable for the authenticated lecturer',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Lecturer schedule retrieved successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          lecturer: { type: 'object' },
+          activeSession: { type: 'object', nullable: true },
+          schedulesByDay: {
+            type: 'object',
+            properties: {
+              MONDAY: { type: 'array' },
+              TUESDAY: { type: 'array' },
+              WEDNESDAY: { type: 'array' },
+              THURSDAY: { type: 'array' },
+              FRIDAY: { type: 'array' },
+              SATURDAY: { type: 'array' },
+              SUNDAY: { type: 'array' },
+            },
+          },
+          totalSchedules: { type: 'number' },
+        },
+      },
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );

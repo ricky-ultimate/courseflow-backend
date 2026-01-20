@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -16,14 +17,19 @@ import {
   ApiUpdateLecturer,
   ApiDeleteLecturer,
   ApiSearchLecturers,
+  ApiGetLecturerDashboard,
+  ApiGetLecturerCourses,
+  ApiGetLecturerSchedule,
 } from './decorators/lecturer-api.decorator';
 import { LecturersService } from './lecturers.service';
 import { CreateLecturerDto } from './dto/create-lecturer.dto';
 import { UpdateLecturerDto } from './dto/update-lecturer.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { Lecturer, Role } from '../../generated/prisma';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
+import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Lecturers')
 @Controller('lecturers')
@@ -53,6 +59,27 @@ export class LecturersController extends BaseController<
   @ApiGetLecturers()
   findAll(@Query() query?: PaginationOptions) {
     return this.lecturersService.findAll(query);
+  }
+
+  @Get('dashboard/stats')
+  @Roles(Role.LECTURER)
+  @ApiGetLecturerDashboard()
+  async getDashboardStats(@Req() req: AuthenticatedRequest) {
+    return this.lecturersService.getDashboardStats(req.user.email);
+  }
+
+  @Get('dashboard/my-courses')
+  @Roles(Role.LECTURER)
+  @ApiGetLecturerCourses()
+  async getMyCourses(@Req() req: AuthenticatedRequest) {
+    return this.lecturersService.getLecturerCourses(req.user.email);
+  }
+
+  @Get('dashboard/my-schedule')
+  @Roles(Role.LECTURER)
+  @ApiGetLecturerSchedule()
+  async getMySchedule(@Req() req: AuthenticatedRequest) {
+    return this.lecturersService.getLecturerSchedule(req.user.email);
   }
 
   @Get(':id')
