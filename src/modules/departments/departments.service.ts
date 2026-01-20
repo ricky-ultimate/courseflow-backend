@@ -44,7 +44,7 @@ export class DepartmentsService extends BaseService<
             name: true,
             email: true,
             role: true,
-            phone: true,
+            // phone: true, <--- REMOVED: User model does not have a phone field
           },
         },
       },
