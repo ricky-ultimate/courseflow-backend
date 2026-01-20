@@ -34,6 +34,7 @@ model Department {
     name        String
     code        String   @unique
     description String?  @db.Text
+    college     College  @default(CBAS)
     hodId       String?  @unique
     isActive    Boolean  @default(true)
     createdAt   DateTime @default(now())
@@ -120,21 +121,38 @@ model Schedule {
     @@map("schedules")
 }
 
+model Venue {
+    id        String   @id @default(cuid())
+    name      String   @unique
+    capacity  Int
+    isIct     Boolean  @default(false) // True for CBT centers
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    examSchedules ExamSchedule[]
+
+    @@map("venues")
+}
+
 model ExamSchedule {
-    id           String   @id @default(cuid())
-    courseCode   String
-    date         DateTime
-    startTime    String
-    endTime      String
-    venue        String
-    invigilators String?
-    semester     Semester
-    sessionId    String
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+    id            String   @id @default(cuid())
+    courseCode    String
+    date          DateTime
+    startTime     String
+    endTime       String
+    venueId       String
+    studentCount  Int // Expected count for this specific batch
+    targetCollege College? // If set, this exam batch is for this specific college (used for General Courses)
+    invigilators  String?
+    semester      Semester
+    sessionId     String
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
 
     course  Course          @relation(fields: [courseCode], references: [code], onDelete: Cascade)
     session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    venue   Venue           @relation(fields: [venueId], references: [id])
 
     @@map("exam_schedules")
 }
@@ -217,4 +235,9 @@ enum ClassType {
     SEMINAR
     LAB
     TUTORIAL
+}
+
+enum College {
+    CBAS // College of Basic and Applied Sciences
+    CHMS // College of Humanities and Management Sciences
 }
