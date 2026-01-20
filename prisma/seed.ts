@@ -6,6 +6,7 @@ import {
   DayOfWeek,
   ClassType,
   ComplaintStatus,
+  College,
 } from '../src/generated/prisma';
 import * as argon2 from 'argon2';
 
@@ -17,55 +18,61 @@ const CONFIG = {
 };
 
 const DEPARTMENTS = [
+  // CBAS (Sciences)
   {
     code: 'CSC',
     name: 'Computer Science',
-    description:
-      'Study of computation, information processing, and design of computer systems',
+    college: College.CBAS,
+    description: 'Study of computation and systems',
   },
   {
     code: 'MTH',
     name: 'Mathematics',
-    description: 'Study of numbers, quantities, shapes, and patterns',
+    college: College.CBAS,
+    description: 'Study of numbers and patterns',
   },
   {
     code: 'PHY',
     name: 'Physics',
-    description:
-      'Study of matter, energy, and the fundamental forces of nature',
+    college: College.CBAS,
+    description: 'Study of matter and energy',
   },
   {
     code: 'CHM',
     name: 'Chemistry',
-    description: 'Study of matter, its properties, and transformations',
+    college: College.CBAS,
+    description: 'Study of substances',
   },
   {
     code: 'BIO',
     name: 'Biology',
-    description: 'Study of living organisms and life processes',
+    college: College.CBAS,
+    description: 'Study of life',
   },
+  // CHMS (Humanities/Social)
   {
     code: 'ENG',
     name: 'English',
-    description: 'Study of English language, literature, and communication',
+    college: College.CHMS,
+    description: 'Study of language and literature',
   },
   {
     code: 'ECO',
     name: 'Economics',
-    description:
-      'Study of production, distribution, and consumption of goods and services',
+    college: College.CHMS,
+    description: 'Study of production and consumption',
   },
 ];
 
-const VENUES = [
-  'Lecture Hall 1',
-  'Lecture Hall 2',
-  'Auditorium A',
-  'Lab 1 (Computer)',
-  'Lab 2 (Science)',
-  'Seminar Room B',
-  'Room 101',
-  'Room 205',
+const VENUE_DATA = [
+  { name: 'University ICT Center', capacity: 500, isIct: true }, // For CBT
+  { name: 'Lecture Hall 1', capacity: 150, isIct: false },
+  { name: 'Lecture Hall 2', capacity: 150, isIct: false },
+  { name: 'Auditorium A', capacity: 300, isIct: false },
+  { name: 'Lab 1 (Computer)', capacity: 50, isIct: true }, // Mini CBT
+  { name: 'Seminar Room B', capacity: 40, isIct: false },
+  { name: 'Room 101', capacity: 30, isIct: false },
+  { name: 'Room 205', capacity: 30, isIct: false },
 ];
 
 const LECTURER_NAMES = [
@@ -171,6 +178,18 @@ async function main() {
   });
   console.log('✅ Academic session created');
 
+  // Create Venues
+  console.log('buildings Seeding Venues...');
+  const venueIds: string[] = [];
+  for (const v of VENUE_DATA) {
+    const venue = await prisma.venue.upsert({
+      where: { name: v.name },
+      update: {},
+      create: v,
+    });
+    venueIds.push(venue.id);
+  }
+
   // Create Departments with HODs
   console.log('🏗️  Seeding Departments...');
   const departmentIds: string[] = [];
@@ -182,6 +201,7 @@ async function main() {
         code: dept.code,
         name: dept.name,
         description: dept.description,
+        college: dept.college,
       },
     });
     departmentIds.push(department.id);
@@ -197,7 +217,6 @@ async function main() {
     const dept = DEPARTMENTS[i % DEPARTMENTS.length];
     const email = `${name.split(' ')[1].toLowerCase()}@courseflow.edu`;
 
-    // 1. Create Lecturer Profile (for Course association)
     const lecturer = await prisma.lecturer.upsert({
       where: { email },
       update: {},
@@ -210,17 +229,14 @@ async function main() {
     });
     lecturerIds.push(lecturer.id);
 
-    // 2. Create User Account (for Auth & HOD association)
-    // Generating a staff ID/matric for them
     const staffId = `STAFF${(i + 1).toString().padStart(3, '0')}`;
-
     const lecturerUser = await prisma.user.upsert({
       where: { email },
       update: {},
       create: {
         matricNO: staffId,
         email: email,
-        password: password, // same password as students for simplicity
+        password: password,
         name: name,
         role: Role.LECTURER,
       },
@@ -230,7 +246,6 @@ async function main() {
 
   // Assign HODs to departments
   console.log('👔 Assigning HODs to departments...');
-  // We use lecturerUserIds here because Department.hodId links to User table
   for (let i = 0; i < DEPARTMENTS.length && i < lecturerUserIds.length; i++) {
     await prisma.department.update({
       where: { code: DEPARTMENTS[i].code },
@@ -254,16 +269,10 @@ async function main() {
       semester: Semester.SECOND,
     },
     {
-      code: 'GST201',
-      name: 'Nigerian Peoples and Culture',
-      level: Level.LEVEL_200,
-      semester: Semester.FIRST,
-    },
-    {
-      code: 'GST202',
+      code: 'PIF101',
       name: 'Philosophy and Logic',
-      level: Level.LEVEL_200,
-      semester: Semester.SECOND,
+      level: Level.LEVEL_100,
+      semester: Semester.FIRST,
     },
   ];
 
@@ -278,34 +287,32 @@ async function main() {
         level: gst.level,
         semester: gst.semester,
         credits: 2,
-        departmentCode: 'ENG', // Assign to English department
-        lecturerId: lecturerIds[5], // Assign a lecturer (from Lecturer table)
+        departmentCode: 'ENG',
+        lecturerId: lecturerIds[5],
         isGeneral: true,
-        isLocked: true, // Prevent deletion
+        isLocked: true,
       },
     });
   }
 
-  // Create Courses & Schedules
-  console.log('📚 Seeding Courses and Schedules...');
+  // Create Courses
+  console.log('📚 Seeding Courses...');
   for (const dept of DEPARTMENTS) {
     for (const level of Object.values(Level)) {
       const levelNum = level.split('_')[1];
 
       for (let i = 1; i <= CONFIG.COURSES_PER_LEVEL_PER_DEPT; i++) {
         const courseCode = `${dept.code}${levelNum.charAt(0)}${i.toString().padStart(2, '0')}`;
-        const lecturerId = getRandomItem(lecturerIds); // Use Lecturer ID for course assignment
-
-        // Alternate between first and second semester
+        const lecturerId = getRandomItem(lecturerIds);
         const semester = i % 2 === 0 ? Semester.SECOND : Semester.FIRST;
 
-        const course = await prisma.course.upsert({
+        await prisma.course.upsert({
           where: { code: courseCode },
           update: {},
           create: {
             code: courseCode,
             name: `Introduction to ${dept.name} ${levelNum} - Part ${i}`,
-            overview: `Comprehensive study of ${dept.name.toLowerCase()} concepts for level ${levelNum}`,
+            overview: `Comprehensive study of ${dept.name.toLowerCase()} concepts`,
             level: level,
             semester: semester,
             credits: Math.floor(Math.random() * 4) + 1,
@@ -315,136 +322,11 @@ async function main() {
             isLocked: false,
           },
         });
-
-        // Create schedules for the course
-        const numSchedules = Math.floor(Math.random() * 2) + 1;
-        for (let s = 0; s < numSchedules; s++) {
-          const { start, end } = getRandomTime();
-
-          const existingSchedule = await prisma.schedule.findFirst({
-            where: {
-              courseCode: course.code,
-              sessionId: currentSession.id,
-              dayOfWeek: Object.values(DayOfWeek)[s],
-            },
-          });
-
-          if (!existingSchedule) {
-            await prisma.schedule.create({
-              data: {
-                courseCode: course.code,
-                semester: semester,
-                sessionId: currentSession.id,
-                dayOfWeek:
-                  Object.values(DayOfWeek)[Math.floor(Math.random() * 5)], // Mon-Fri
-                startTime: start,
-                endTime: end,
-                venue: getRandomItem(VENUES),
-                type: getRandomItem(Object.values(ClassType)),
-              },
-            });
-          }
-        }
-
-        // Create exam schedule
-        const examDate =
-          semester === Semester.FIRST
-            ? new Date('2024-12-15')
-            : new Date('2025-05-15');
-
-        examDate.setDate(examDate.getDate() + Math.floor(Math.random() * 10));
-
-        const existingExam = await prisma.examSchedule.findFirst({
-          where: {
-            courseCode: course.code,
-            sessionId: currentSession.id,
-            semester: semester,
-          },
-        });
-
-        if (!existingExam) {
-          await prisma.examSchedule.create({
-            data: {
-              courseCode: course.code,
-              date: examDate,
-              startTime: '09:00',
-              endTime: '12:00',
-              venue: getRandomItem(VENUES),
-              invigilators: `${getRandomItem(LECTURER_NAMES)}, ${getRandomItem(LECTURER_NAMES)}`,
-              semester: semester,
-              sessionId: currentSession.id,
-            },
-          });
-        }
       }
     }
   }
 
-  // Create Students
-  console.log('🎓 Seeding Students...');
-  const studentIds: string[] = [];
-
-  for (const level of Object.values(Level)) {
-    const yearPrefix = getYearPrefixForLevel(level);
-
-    for (let i = 1; i <= CONFIG.STUDENTS_PER_LEVEL; i++) {
-      const sequence = i.toString().padStart(3, '0');
-      const matricNO = `${yearPrefix}010301${sequence}`;
-      const email = `student${matricNO}@courseflow.edu`;
-
-      const student = await prisma.user.upsert({
-        where: { matricNO },
-        update: {},
-        create: {
-          matricNO,
-          email,
-          password: password,
-          name: `Student ${matricNO}`,
-          role: Role.STUDENT,
-        },
-      });
-      studentIds.push(student.id);
-    }
-  }
-
-  // Create Complaints
-  console.log('📝 Seeding Complaints...');
-  for (let i = 0; i < 20; i++) {
-    const studentId = getRandomItem(studentIds);
-    const student = await prisma.user.findUnique({ where: { id: studentId } });
-
-    if (student) {
-      await prisma.complaint.create({
-        data: {
-          userId: studentId,
-          name: student.name || 'Anonymous',
-          email: student.email,
-          department: getRandomItem(DEPARTMENTS).name,
-          subject: `Issue regarding ${getRandomItem(['Course Registration', 'Result', 'Timetable', 'Venue'])}`,
-          message:
-            'I am experiencing difficulties with my dashboard. Please assist.',
-          status: getRandomItem(Object.values(ComplaintStatus)),
-          createdAt: new Date(
-            Date.now() - Math.floor(Math.random() * 1000000000),
-          ),
-        },
-      });
-    }
-  }
-
   console.log('🎉 Database seeding completed successfully!');
-  console.log('\n📋 Test Data Summary:');
-  console.log(`   - Admin: admin@courseflow.edu / admin123`);
-  console.log(`   - Active Session: ${currentSession.name}`);
-  console.log(
-    `   - Students Created: ~${Object.keys(Level).length * CONFIG.STUDENTS_PER_LEVEL}`,
-  );
-  console.log(`   - Password for all students: password123`);
-  console.log(`   - Sample Matric (300L): 23010301001`);
-  console.log(`   - Sample Matric (100L): 25010301001`);
-  console.log(
-    `   - General Studies Courses: 4 (GST101, GST102, GST201, GST202)`,
-  );
 }
 
 main()
