@@ -32,6 +32,16 @@ export const ApiGetDepartments = () =>
             id: { type: 'string', format: 'uuid' },
             code: { type: 'string', example: 'CS' },
             name: { type: 'string', example: 'Computer Science' },
+            description: { type: 'string', example: 'Study of computers...' },
+            hodId: { type: 'string', format: 'uuid' },
+            hod: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Dr. Smith' },
+                email: { type: 'string', example: 'smith@uni.edu' },
+              },
+            },
             isActive: { type: 'boolean', example: true },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
@@ -64,6 +74,16 @@ export const ApiGetDepartmentByCode = () =>
           id: { type: 'string', format: 'uuid' },
           code: { type: 'string', example: 'CS' },
           name: { type: 'string', example: 'Computer Science' },
+          description: { type: 'string', example: 'Study of computers...' },
+          hodId: { type: 'string', format: 'uuid' },
+          hod: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string', example: 'Dr. Smith' },
+              email: { type: 'string', example: 'smith@uni.edu' },
+            },
+          },
           isActive: { type: 'boolean', example: true },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
