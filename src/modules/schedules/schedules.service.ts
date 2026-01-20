@@ -87,6 +87,21 @@ export class SchedulesService extends BaseService<
   ): Promise<Schedule[] | PaginatedResult<Schedule>> {
     const where: Record<string, any> = { ...this.getActiveFilter() };
 
+        if (query.semester) {
+      where.semester = query.semester;
+    }
+
+    if (query.sessionId) {
+      where.sessionId = query.sessionId;
+    } else {
+      const activeSession = await this.prisma.academicSession.findFirst({
+        where: { isActive: true }
+      });
+      if (activeSession) {
+        where.sessionId = activeSession.id;
+      }
+    }
+
     const courseFilter: Record<string, any> = {};
     if (query.departmentCode) {
       courseFilter.departmentCode = query.departmentCode;

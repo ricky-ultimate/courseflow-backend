@@ -21,7 +21,7 @@ export const ApiGetSchedules = () =>
     ApiOperation({
       summary: 'Get all schedules',
       description:
-        'Retrieve schedules with support for filtering by course, department, level, day, time range, and venue. Includes lecturer information.',
+        'Retrieve schedules with support for filtering by semester, session, course, department, level, day, time range, and venue.',
     }),
     ApiResponse({
       status: 200,
