@@ -9,11 +9,12 @@ import {
   IsEmail,
   IsOptional,
   IsBoolean,
+  MaxLength,
 } from 'class-validator';
 import { Level, Semester } from '../../../generated/prisma';
 
 export class CreateCourseDto {
-  @ApiProperty({ example: 'CS101' })
+  @ApiProperty({ example: 'CSC101' })
   @IsString({ message: 'Code must be a string' })
   @IsNotEmpty({ message: 'Code is required' })
   code: string;
@@ -21,15 +22,18 @@ export class CreateCourseDto {
   @ApiProperty({ example: 'Introduction to Computer Science' })
   @IsString({ message: 'Name must be a string' })
   @IsNotEmpty({ message: 'Name is required' })
+  @MaxLength(200, { message: 'Name cannot exceed 200 characters' })
   name: string;
 
   @ApiProperty({
     required: false,
-    example: 'This course introduces students to fundamental concepts of computer science',
-    description: 'Course overview/description'
+    example:
+      'This course introduces students to fundamental concepts of computer science, including algorithms, data structures, and basic programming logic.',
+    description: 'Course overview/description',
   })
   @IsString({ message: 'Overview must be a string' })
   @IsOptional()
+  @MaxLength(2000, { message: 'Overview cannot exceed 2000 characters' })
   overview?: string;
 
   @ApiProperty({ enum: Level })
@@ -49,7 +53,7 @@ export class CreateCourseDto {
   @Max(6, { message: 'Credits cannot exceed 6' })
   credits: number;
 
-  @ApiProperty({ example: 'CS' })
+  @ApiProperty({ example: 'CSC' })
   @IsString({ message: 'Department code must be a string' })
   @IsNotEmpty({ message: 'Department code is required' })
   departmentCode: string;
@@ -65,7 +69,8 @@ export class CreateCourseDto {
   @ApiProperty({
     required: false,
     default: false,
-    description: 'Whether this is a general studies course (available to all departments)',
+    description:
+      'Whether this is a general studies course (available to all departments)',
   })
   @IsBoolean({ message: 'isGeneral must be a boolean' })
   @IsOptional()
@@ -74,7 +79,8 @@ export class CreateCourseDto {
   @ApiProperty({
     required: false,
     default: false,
-    description: 'Whether this course is locked (prevents deletion by standard admins)',
+    description:
+      'Whether this course is locked (prevents deletion by standard admins)',
   })
   @IsBoolean({ message: 'isLocked must be a boolean' })
   @IsOptional()
