@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -123,9 +123,17 @@ export class CoursesService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateCourseDto,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _identifier: string,
+    identifier: string,
   ): Promise<Record<string, any>> {
+    // Check if course is locked
+    const course = await this.prisma.course.findUnique({
+      where: { code: identifier },
+    });
+
+    if (course?.isLocked && (dto.isLocked === false || 'isLocked' in dto)) {
+      throw new ForbiddenException('Cannot modify locked courses');
+    }
+
     const data: Record<string, any> = { ...dto };
 
     if (dto.departmentCode) {
@@ -155,6 +163,19 @@ export class CoursesService extends BaseService<
     }
 
     return data;
+  }
+
+  async remove(identifier: string): Promise<Course> {
+    // Check if course is locked
+    const course = await this.prisma.course.findUnique({
+      where: { code: identifier },
+    });
+
+    if (course?.isLocked) {
+      throw new ForbiddenException('Cannot delete locked courses');
+    }
+
+    return super.remove(identifier);
   }
 
   async bulkCreateFromCsv(
