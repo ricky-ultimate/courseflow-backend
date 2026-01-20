@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -46,6 +50,14 @@ export class CoursesService extends BaseService<
 
     if (query.level) {
       where.level = query.level;
+    }
+
+    if (query.semester) {
+      where.semester = query.semester;
+    }
+
+    if (query.isGeneral !== undefined) {
+      where.isGeneral = query.isGeneral;
     }
 
     if (query.lecturerEmail) {
