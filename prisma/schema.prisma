@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
     provider = "prisma-client"
     output   = "../src/generated/prisma"
@@ -30,18 +24,22 @@ model User {
 
     complaints        Complaint[]
     verificationCodes VerificationCode[]
+    managedDepartment Department?        @relation("DepartmentHOD")
 
     @@map("users")
 }
 
 model Department {
-    id        String   @id @default(cuid())
-    name      String
-    code      String   @unique
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id          String   @id @default(cuid())
+    name        String
+    code        String   @unique
+    description String?  @db.Text
+    hodId       String?  @unique
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
 
+    hod       User?      @relation("DepartmentHOD", fields: [hodId], references: [id], onDelete: SetNull)
     courses   Course[]
     lecturers Lecturer[]
 
@@ -68,35 +66,77 @@ model Course {
     id             String   @id @default(cuid())
     code           String   @unique
     name           String
+    overview       String?  @db.Text
     level          Level
     credits        Int      @default(2)
+    semester       Semester @default(FIRST)
     departmentCode String
-    lecturerId     String? // Optional initially, but recommended
+    lecturerId     String?
+    isGeneral      Boolean  @default(false)
+    isLocked       Boolean  @default(false)
     isActive       Boolean  @default(true)
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 
-    department Department @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
-    lecturer   Lecturer?  @relation(fields: [lecturerId], references: [id], onDelete: SetNull)
-    schedules  Schedule[]
+    department    Department     @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
+    lecturer      Lecturer?      @relation(fields: [lecturerId], references: [id], onDelete: SetNull)
+    schedules     Schedule[]
+    examSchedules ExamSchedule[]
 
     @@map("courses")
+}
+
+model AcademicSession {
+    id        String   @id @default(cuid())
+    name      String   @unique
+    startDate DateTime
+    endDate   DateTime
+    isActive  Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    schedules     Schedule[]
+    examSchedules ExamSchedule[]
+
+    @@map("academic_sessions")
 }
 
 model Schedule {
     id         String    @id @default(cuid())
     courseCode String
+    semester   Semester  @default(FIRST)
+    sessionId  String
     dayOfWeek  DayOfWeek
-    startTime  String // Format: "HH:MM"
-    endTime    String // Format: "HH:MM"
+    startTime  String
+    endTime    String
     venue      String
     type       ClassType @default(LECTURE)
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
 
-    course Course @relation(fields: [courseCode], references: [code], onDelete: Cascade)
+    course  Course          @relation(fields: [courseCode], references: [code], onDelete: Cascade)
+    session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
     @@map("schedules")
+}
+
+model ExamSchedule {
+    id           String   @id @default(cuid())
+    courseCode   String
+    date         DateTime
+    startTime    String
+    endTime      String
+    venue        String
+    invigilators String?
+    semester     Semester
+    sessionId    String
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    course  Course          @relation(fields: [courseCode], references: [code], onDelete: Cascade)
+    session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+    @@map("exam_schedules")
 }
 
 model Complaint {
@@ -125,7 +165,7 @@ model VerificationCode {
     description String?
     isActive    Boolean   @default(true)
     usageCount  Int       @default(0)
-    maxUsage    Int? // null means unlimited usage
+    maxUsage    Int?
     expiresAt   DateTime?
     createdBy   String
     createdAt   DateTime  @default(now())
@@ -148,6 +188,11 @@ enum Level {
     LEVEL_300
     LEVEL_400
     LEVEL_500
+}
+
+enum Semester {
+    FIRST
+    SECOND
 }
 
 enum DayOfWeek {
