@@ -29,13 +29,23 @@ export class CourseFilterDto extends PaginationDto {
   semester?: Semester;
 
   @ApiPropertyOptional({
-    description: 'Filter by General Course status',
+    description: 'Filter strictly by General Course status (true/false)',
     example: true,
   })
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   isGeneral?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'If true, includes General courses when filtering by Department (e.g., Fetch CSC courses + GST courses)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  includeGeneral?: boolean;
 
   @ApiPropertyOptional({
     description: 'Search by name or code (partial match)',
