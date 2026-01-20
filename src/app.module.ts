@@ -16,6 +16,7 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { LecturersModule } from './modules/lecturers/lecturers.module';
+import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { LecturersModule } from './modules/lecturers/lecturers.module';
     SchedulesModule,
     ComplaintsModule,
     HealthModule,
+    AcademicSessionsModule,
   ],
   controllers: [AppController],
   providers: [
