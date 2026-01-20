@@ -16,6 +16,7 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { LecturersModule } from './modules/lecturers/lecturers.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { LecturersModule } from './modules/lecturers/lecturers.module';
     DepartmentsModule,
     LecturersModule,
     CoursesModule,
+    SessionsModule,
     PrismaModule,
     SchedulesModule,
     ComplaintsModule,
