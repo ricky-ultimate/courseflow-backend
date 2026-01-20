@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Schedule, DayOfWeek, ClassType } from '../../../generated/prisma';
+import {
+  Schedule,
+  DayOfWeek,
+  ClassType,
+  Semester,
+} from '../../../generated/prisma';
 
 @Injectable()
 export class ScheduleRepository {
@@ -11,6 +16,7 @@ export class ScheduleRepository {
     dayOfWeek: DayOfWeek,
     startTime: string,
     endTime: string,
+    sessionId?: string,
     excludeId?: string,
   ): Promise<Schedule | null> {
     const whereClause: Record<string, unknown> = {
@@ -34,6 +40,10 @@ export class ScheduleRepository {
         },
       ],
     };
+
+    if (sessionId) {
+      whereClause.sessionId = sessionId;
+    }
 
     if (excludeId) {
       whereClause.id = { not: excludeId };
@@ -80,6 +90,8 @@ export class ScheduleRepository {
       endTime: string;
       venue: string;
       type?: ClassType;
+      sessionId: string;
+      semester: Semester;
     }>,
   ): Promise<{
     created: Schedule[];
@@ -96,6 +108,7 @@ export class ScheduleRepository {
         scheduleData.dayOfWeek,
         scheduleData.startTime,
         scheduleData.endTime,
+        scheduleData.sessionId,
       );
 
       if (conflict) {

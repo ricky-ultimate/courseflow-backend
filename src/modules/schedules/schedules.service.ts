@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -12,7 +16,13 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Schedule, Level, DayOfWeek, ClassType } from '../../generated/prisma';
+import {
+  Schedule,
+  Level,
+  DayOfWeek,
+  ClassType,
+  Semester,
+} from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -40,6 +50,36 @@ export class SchedulesService extends BaseService<
       },
       defaultOrderBy: { startTime: 'asc' },
     });
+  }
+
+  // Handle single creation
+  protected async beforeCreate(
+    dto: CreateScheduleDto,
+  ): Promise<Record<string, any>> {
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) {
+      throw new ConflictException('No active academic session found');
+    }
+
+    const course = await this.prisma.course.findUnique({
+      where: { code: dto.courseCode },
+      select: { semester: true },
+    });
+
+    if (!course) {
+      throw new NotFoundException(
+        `Course with code '${dto.courseCode}' not found`,
+      );
+    }
+
+    return {
+      ...dto,
+      sessionId: activeSession.id,
+      semester: course.semester,
+    };
   }
 
   async findAll(
@@ -116,6 +156,16 @@ export class SchedulesService extends BaseService<
   async bulkCreateFromCsv(
     buffer: Buffer,
   ): Promise<BulkOperationResult<Schedule>> {
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) {
+      throw new ConflictException(
+        'No active academic session found. Please activate a session first.',
+      );
+    }
+
     const requiredHeaders = [
       'courseCode',
       'dayOfWeek',
@@ -136,6 +186,14 @@ export class SchedulesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
+    // Fetch courses to check existence and get semesters
+    const courseCodes = [...new Set(data.map((d) => d.courseCode))];
+    const courses = await this.prisma.course.findMany({
+      where: { code: { in: courseCodes } },
+      select: { code: true, semester: true },
+    });
+    const courseMap = new Map(courses.map((c) => [c.code, c.semester]));
+
     const validatedSchedules: Array<{
       courseCode: string;
       dayOfWeek: any;
@@ -143,6 +201,8 @@ export class SchedulesService extends BaseService<
       endTime: string;
       venue: string;
       type?: any;
+      sessionId: string;
+      semester: Semester;
     }> = [];
 
     for (let i = 0; i < data.length; i++) {
@@ -164,11 +224,9 @@ export class SchedulesService extends BaseService<
         continue;
       }
 
-      const courseExists = await this.courseRepository.existsByCode(
-        scheduleData.courseCode,
-      );
+      const courseSemester = courseMap.get(scheduleData.courseCode);
 
-      if (!courseExists) {
+      if (!courseSemester) {
         allErrors.push({
           row: rowNumber,
           field: 'courseCode',
@@ -185,6 +243,8 @@ export class SchedulesService extends BaseService<
         endTime: scheduleData.endTime,
         venue: scheduleData.venue,
         type: scheduleData.type || 'LECTURE',
+        sessionId: activeSession.id,
+        semester: courseSemester,
       });
     }
 
