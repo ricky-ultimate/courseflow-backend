@@ -1,7 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Level } from '../../../generated/prisma';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsInt,
+  Min,
+  Max,
+  IsBoolean,
+} from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+import { Level, Semester } from '../../../generated/prisma';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class CourseFilterDto extends PaginationDto {
@@ -14,6 +22,30 @@ export class CourseFilterDto extends PaginationDto {
   @IsOptional()
   @IsEnum(Level)
   level?: Level;
+
+  @ApiPropertyOptional({ enum: Semester, description: 'Filter by Semester' })
+  @IsOptional()
+  @IsEnum(Semester)
+  semester?: Semester;
+
+  @ApiPropertyOptional({
+    description: 'Filter strictly by General Course status (true/false)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isGeneral?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'If true, includes General courses when filtering by Department (e.g., Fetch CSC courses + GST courses)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  includeGeneral?: boolean;
 
   @ApiPropertyOptional({
     description: 'Search by name or code (partial match)',
