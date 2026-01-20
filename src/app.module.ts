@@ -16,7 +16,7 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { LecturersModule } from './modules/lecturers/lecturers.module';
-import { SessionsModule } from './modules/sessions/sessions.module';
+import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 
 @Module({
   imports: [
@@ -44,11 +44,11 @@ import { SessionsModule } from './modules/sessions/sessions.module';
     DepartmentsModule,
     LecturersModule,
     CoursesModule,
-    SessionsModule,
     PrismaModule,
     SchedulesModule,
     ComplaintsModule,
     HealthModule,
+    AcademicSessionsModule,
   ],
   controllers: [AppController],
   providers: [
