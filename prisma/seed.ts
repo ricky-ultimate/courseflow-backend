@@ -187,15 +187,17 @@ async function main() {
     departmentIds.push(department.id);
   }
 
-  // Create Lecturers
+  // Create Lecturers & Lecturer Users
   console.log('👨‍🏫 Seeding Lecturers...');
-  const lecturerIds: string[] = [];
+  const lecturerIds: string[] = []; // IDs from Lecturer table (for courses)
+  const lecturerUserIds: string[] = []; // IDs from User table (for HODs)
 
   for (let i = 0; i < LECTURER_NAMES.length; i++) {
     const name = LECTURER_NAMES[i];
     const dept = DEPARTMENTS[i % DEPARTMENTS.length];
     const email = `${name.split(' ')[1].toLowerCase()}@courseflow.edu`;
 
+    // 1. Create Lecturer Profile (for Course association)
     const lecturer = await prisma.lecturer.upsert({
       where: { email },
       update: {},
@@ -207,14 +209,32 @@ async function main() {
       },
     });
     lecturerIds.push(lecturer.id);
+
+    // 2. Create User Account (for Auth & HOD association)
+    // Generating a staff ID/matric for them
+    const staffId = `STAFF${(i + 1).toString().padStart(3, '0')}`;
+
+    const lecturerUser = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        matricNO: staffId,
+        email: email,
+        password: password, // same password as students for simplicity
+        name: name,
+        role: Role.LECTURER,
+      },
+    });
+    lecturerUserIds.push(lecturerUser.id);
   }
 
   // Assign HODs to departments
   console.log('👔 Assigning HODs to departments...');
-  for (let i = 0; i < DEPARTMENTS.length && i < lecturerIds.length; i++) {
+  // We use lecturerUserIds here because Department.hodId links to User table
+  for (let i = 0; i < DEPARTMENTS.length && i < lecturerUserIds.length; i++) {
     await prisma.department.update({
       where: { code: DEPARTMENTS[i].code },
-      data: { hodId: lecturerIds[i] },
+      data: { hodId: lecturerUserIds[i] },
     });
   }
 
@@ -259,7 +279,7 @@ async function main() {
         semester: gst.semester,
         credits: 2,
         departmentCode: 'ENG', // Assign to English department
-        lecturerId: lecturerIds[5], // Assign a lecturer
+        lecturerId: lecturerIds[5], // Assign a lecturer (from Lecturer table)
         isGeneral: true,
         isLocked: true, // Prevent deletion
       },
@@ -274,7 +294,7 @@ async function main() {
 
       for (let i = 1; i <= CONFIG.COURSES_PER_LEVEL_PER_DEPT; i++) {
         const courseCode = `${dept.code}${levelNum.charAt(0)}${i.toString().padStart(2, '0')}`;
-        const lecturerId = getRandomItem(lecturerIds);
+        const lecturerId = getRandomItem(lecturerIds); // Use Lecturer ID for course assignment
 
         // Alternate between first and second semester
         const semester = i % 2 === 0 ? Semester.SECOND : Semester.FIRST;
