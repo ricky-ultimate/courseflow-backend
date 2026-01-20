@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -38,46 +42,77 @@ export class CoursesService extends BaseService<
   async findAll(
     query: CourseFilterDto = {},
   ): Promise<Course[] | PaginatedResult<Course>> {
-    const where: Record<string, any> = { ...this.getActiveFilter() };
+    const andConditions: Record<string, any>[] = [];
 
+    // 1. Soft Delete Filter
+    if (this.config.softDelete) {
+      andConditions.push({ isActive: true });
+    }
+
+    // 2. Department & General Course Logic
+    // If "includeGeneral" is true, we fetch: (DeptCode == X) OR (isGeneral == true)
     if (query.departmentCode) {
-      where.departmentCode = query.departmentCode;
+      if (query.includeGeneral) {
+        andConditions.push({
+          OR: [
+            { departmentCode: query.departmentCode },
+            { isGeneral: true },
+          ],
+        });
+      } else {
+        andConditions.push({ departmentCode: query.departmentCode });
+      }
+    } else if (query.isGeneral !== undefined) {
+      // If no department is specified, filter strictly by isGeneral status
+      andConditions.push({ isGeneral: query.isGeneral });
     }
 
+    // 3. Level & Semester Filters (Apply to both General and Department courses)
     if (query.level) {
-      where.level = query.level;
+      andConditions.push({ level: query.level });
     }
 
+    if (query.semester) {
+      andConditions.push({ semester: query.semester });
+    }
+
+    // 4. Lecturer Filter
     if (query.lecturerEmail) {
-      where.lecturer = {
-        email: {
-          equals: query.lecturerEmail,
-          mode: 'insensitive',
-        },
-      };
-    }
-
-    if (query.minCredits !== undefined || query.maxCredits !== undefined) {
-      where.credits = {};
-      if (query.minCredits !== undefined) {
-        where.credits.gte = query.minCredits;
-      }
-      if (query.maxCredits !== undefined) {
-        where.credits.lte = query.maxCredits;
-      }
-    }
-
-    if (query.searchTerm) {
-      where.OR = [
-        { name: { contains: query.searchTerm, mode: 'insensitive' } },
-        { code: { contains: query.searchTerm, mode: 'insensitive' } },
-        {
-          lecturer: {
-            name: { contains: query.searchTerm, mode: 'insensitive' },
+      andConditions.push({
+        lecturer: {
+          email: {
+            equals: query.lecturerEmail,
+            mode: 'insensitive',
           },
         },
-      ];
+      });
     }
+
+    // 5. Credit Range Filter
+    if (query.minCredits !== undefined || query.maxCredits !== undefined) {
+      const creditFilter: Record<string, any> = {};
+      if (query.minCredits !== undefined) creditFilter.gte = query.minCredits;
+      if (query.maxCredits !== undefined) creditFilter.lte = query.maxCredits;
+      andConditions.push({ credits: creditFilter });
+    }
+
+    // 6. Search Term (OR condition nested inside main AND)
+    if (query.searchTerm) {
+      andConditions.push({
+        OR: [
+          { name: { contains: query.searchTerm, mode: 'insensitive' } },
+          { code: { contains: query.searchTerm, mode: 'insensitive' } },
+          {
+            lecturer: {
+              name: { contains: query.searchTerm, mode: 'insensitive' },
+            },
+          },
+        ],
+      });
+    }
+
+    // Construct final where clause
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
 
     if (query.page && query.limit) {
       return this.findPaginated(where, query);
@@ -130,8 +165,16 @@ export class CoursesService extends BaseService<
       where: { code: identifier },
     });
 
-    if (course?.isLocked && (dto.isLocked === false || 'isLocked' in dto)) {
-      throw new ForbiddenException('Cannot modify locked courses');
+    // Prevent modification of locked courses (e.g., GST/PIF)
+    if (course?.isLocked) {
+      // Allow unlocking only if explicitly sending isLocked: false
+      if (dto.isLocked === false) {
+        // Proceed to allow unlocking
+      } else {
+        throw new ForbiddenException(
+          'Cannot modify locked university courses. Unlock the course first.',
+        );
+      }
     }
 
     const data: Record<string, any> = { ...dto };
@@ -172,7 +215,9 @@ export class CoursesService extends BaseService<
     });
 
     if (course?.isLocked) {
-      throw new ForbiddenException('Cannot delete locked courses');
+      throw new ForbiddenException(
+        'Cannot delete locked university courses (e.g. GST, PIF).',
+      );
     }
 
     return super.remove(identifier);
@@ -287,11 +332,11 @@ export class CoursesService extends BaseService<
       'lecturerEmail',
     ];
     const sampleData = {
-      code: 'CS101',
+      code: 'CSC101',
       name: 'Introduction to Programming',
       level: 'LEVEL_100',
       credits: '3',
-      departmentCode: 'CS',
+      departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',
     };
 

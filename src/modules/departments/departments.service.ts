@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
@@ -11,7 +16,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Department } from '../../generated/prisma';
+import { Department, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -31,6 +36,18 @@ export class DepartmentsService extends BaseService<
       uniqueFields: ['code', 'name'],
       softDelete: true,
       defaultOrderBy: { name: 'asc' },
+      // SECURITY FIX: Only select safe fields for HOD
+      includeRelations: {
+        hod: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            phone: true,
+          },
+        },
+      },
     });
   }
 
@@ -63,6 +80,73 @@ export class DepartmentsService extends BaseService<
       include: this.config.includeRelations,
       orderBy: this.getOrderBy(query),
     }) as Promise<Department[]>;
+  }
+
+  protected async beforeCreate(
+    dto: CreateDepartmentDto,
+  ): Promise<Record<string, any>> {
+    const data: Record<string, any> = { ...dto };
+
+    if (dto.hodEmail) {
+      const hodId = await this.resolveHodEmailToId(dto.hodEmail);
+      data.hodId = hodId;
+      delete data.hodEmail;
+    }
+
+    return data;
+  }
+
+  protected async beforeUpdate(
+    dto: UpdateDepartmentDto,
+    identifier: string,
+  ): Promise<Record<string, any>> {
+    const data: Record<string, any> = { ...dto };
+
+    if (dto.hodEmail) {
+      const hodId = await this.resolveHodEmailToId(dto.hodEmail, identifier);
+      data.hodId = hodId;
+      delete data.hodEmail;
+    }
+
+    return data;
+  }
+
+  private async resolveHodEmailToId(
+    email: string,
+    currentDeptCode?: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: {
+        managedDepartment: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with email '${email}' not found`);
+    }
+
+    if (user.role !== Role.LECTURER && user.role !== Role.ADMIN) {
+      throw new BadRequestException(
+        `User with email '${email}' must be a LECTURER or ADMIN to be assigned as HOD`,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new BadRequestException(`User with email '${email}' is not active`);
+    }
+
+    // Check if user is already HOD of ANOTHER department
+    if (
+      user.managedDepartment &&
+      user.managedDepartment.code !== currentDeptCode
+    ) {
+      throw new ConflictException(
+        `User is already HOD of ${user.managedDepartment.name} (${user.managedDepartment.code})`,
+      );
+    }
+
+    return user.id;
   }
 
   async bulkCreateFromCsv(
