@@ -21,7 +21,6 @@ import {
   Semester,
   DayOfWeek,
   VenueType,
-  ClassType,
 } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
@@ -119,10 +118,6 @@ export class SchedulesService extends BaseService<
       where.dayOfWeek = query.dayOfWeek;
     }
 
-    if (query.type) {
-      where.type = query.type;
-    }
-
     if (query.venue) {
       where.venue = { contains: query.venue, mode: 'insensitive' };
     }
@@ -213,7 +208,6 @@ export class SchedulesService extends BaseService<
       startTime: string;
       endTime: string;
       venue: VenueType;
-      type?: ClassType;
       sessionId: string;
       semester: Semester;
     }> = [];
@@ -255,7 +249,6 @@ export class SchedulesService extends BaseService<
         startTime: scheduleData.startTime,
         endTime: scheduleData.endTime,
         venue: scheduleData.venue,
-        type: scheduleData.type || ClassType.LECTURE,
         sessionId: activeSession.id,
         semester: courseSemester,
       });
@@ -298,7 +291,6 @@ export class SchedulesService extends BaseService<
       'startTime',
       'endTime',
       'venue',
-      'type',
     ];
     const sampleData = {
       courseCode: 'CS101',
@@ -306,7 +298,6 @@ export class SchedulesService extends BaseService<
       startTime: '08:00',
       endTime: '09:30',
       venue: 'Room 101',
-      type: 'LECTURE',
     };
 
     return this.csvService.generateCsvTemplate(headers, sampleData);
@@ -315,7 +306,6 @@ export class SchedulesService extends BaseService<
   async getScheduleStatistics(): Promise<{
     totalSchedules: number;
     schedulesByDay: Record<string, number>;
-    schedulesByType: Record<string, number>;
   }> {
     return this.scheduleRepository.getScheduleStats();
   }
