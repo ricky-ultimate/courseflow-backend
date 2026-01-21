@@ -16,7 +16,13 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Schedule, Semester } from '../../generated/prisma';
+import {
+  Schedule,
+  Semester,
+  DayOfWeek,
+  VenueType,
+  ClassType,
+} from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -203,11 +209,11 @@ export class SchedulesService extends BaseService<
 
     const validatedSchedules: Array<{
       courseCode: string;
-      dayOfWeek: any;
+      dayOfWeek: DayOfWeek;
       startTime: string;
       endTime: string;
-      venue: string;
-      type?: any;
+      venue: VenueType;
+      type?: ClassType;
       sessionId: string;
       semester: Semester;
     }> = [];
@@ -249,7 +255,7 @@ export class SchedulesService extends BaseService<
         startTime: scheduleData.startTime,
         endTime: scheduleData.endTime,
         venue: scheduleData.venue,
-        type: scheduleData.type || 'LECTURE',
+        type: scheduleData.type || ClassType.LECTURE,
         sessionId: activeSession.id,
         semester: courseSemester,
       });
