@@ -130,7 +130,6 @@ export class CsvService {
     return endMinutes > startMinutes;
   }
 
-
   createBulkResult<T>(
     created: T[],
     errors: CsvValidationError[],
