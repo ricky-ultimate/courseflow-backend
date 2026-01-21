@@ -8,7 +8,7 @@ import {
   Delete,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AcademicSessionsService } from './academic-sessions.service';
 import { CreateAcademicSessionDto } from './dto/create-academic-session.dto';
 import { UpdateAcademicSessionDto } from './dto/update-academic-session.dto';
@@ -16,7 +16,17 @@ import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { AcademicSession, Role } from '../../generated/prisma';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
-import { ApiActivateSession, ApiArchiveSession, ApiCreateAcademicSession, ApiDeleteAcademicSession, ApiGetAcademicSessionById, ApiGetAcademicSessions, ApiGetActiveSession, ApiGetSessionStatistics, ApiUpdateAcademicSession } from './decorators/academic-session-api.decorator';
+import {
+  ApiActivateSession,
+  ApiArchiveSession,
+  ApiCreateAcademicSession,
+  ApiDeleteAcademicSession,
+  ApiGetAcademicSessionById,
+  ApiGetAcademicSessions,
+  ApiGetActiveSession,
+  ApiGetSessionStatistics,
+  ApiUpdateAcademicSession,
+} from './decorators/academic-session-api.decorator';
 
 @ApiTags('Academic Sessions')
 @ApiBearerAuth('JWT-auth')
@@ -33,7 +43,9 @@ export class AcademicSessionsController extends BaseController<
   CreateAcademicSessionDto,
   UpdateAcademicSessionDto
 > {
-  constructor(private readonly academicSessionsService: AcademicSessionsService) {
+  constructor(
+    private readonly academicSessionsService: AcademicSessionsService,
+  ) {
     super(academicSessionsService);
   }
 

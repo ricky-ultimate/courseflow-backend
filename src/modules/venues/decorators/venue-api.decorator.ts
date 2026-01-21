@@ -8,7 +8,10 @@ import {
 
 export const ApiGetVenues = () =>
   applyDecorators(
-    ApiOperation({ summary: 'Get all venues', description: 'Retrieve all venues' }),
+    ApiOperation({
+      summary: 'Get all venues',
+      description: 'Retrieve all venues',
+    }),
     ApiResponse({
       status: 200,
       description: 'Venues retrieved successfully',

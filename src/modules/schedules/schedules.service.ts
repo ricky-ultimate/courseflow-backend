@@ -16,13 +16,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import {
-  Schedule,
-  Level,
-  DayOfWeek,
-  ClassType,
-  Semester,
-} from '../../generated/prisma';
+import { Schedule, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -52,7 +46,6 @@ export class SchedulesService extends BaseService<
     });
   }
 
-  // Handle single creation
   protected async beforeCreate(
     dto: CreateScheduleDto,
   ): Promise<Record<string, any>> {
@@ -87,7 +80,7 @@ export class SchedulesService extends BaseService<
   ): Promise<Schedule[] | PaginatedResult<Schedule>> {
     const where: Record<string, any> = { ...this.getActiveFilter() };
 
-        if (query.semester) {
+    if (query.semester) {
       where.semester = query.semester;
     }
 
@@ -95,7 +88,7 @@ export class SchedulesService extends BaseService<
       where.sessionId = query.sessionId;
     } else {
       const activeSession = await this.prisma.academicSession.findFirst({
-        where: { isActive: true }
+        where: { isActive: true },
       });
       if (activeSession) {
         where.sessionId = activeSession.id;
@@ -201,7 +194,6 @@ export class SchedulesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    // Fetch courses to check existence and get semesters
     const courseCodes = [...new Set(data.map((d) => d.courseCode))];
     const courses = await this.prisma.course.findMany({
       where: { code: { in: courseCodes } },

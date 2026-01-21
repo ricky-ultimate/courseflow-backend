@@ -13,7 +13,6 @@ import {
 } from '@nestjs/swagger';
 import { Role } from '../../../generated/prisma';
 
-// Common error responses
 const commonErrorResponses = () => [
   ApiBadRequestResponse({
     description: 'Bad Request - Invalid input data',
@@ -73,7 +72,6 @@ const adminOnlyResponses = () => [
   }),
 ];
 
-// Auth endpoint decorators
 export const ApiRegister = () =>
   applyDecorators(
     ApiOperation({

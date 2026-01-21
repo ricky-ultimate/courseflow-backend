@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
+import { Response as ExpressResponse } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import {
   ApiGetCourses,
@@ -66,12 +66,12 @@ export class CoursesController extends BaseController<
   @Get('statistics')
   @ApiGetCourseStatistics()
   getStatistics() {
-    return this.coursesService.getCourseStatistics();
+    return this.coursesService.getCourseStats();
   }
 
   @Get('bulk/template')
   @ApiDownloadCourseTemplate()
-  downloadCsvTemplate(@Res() res: Response) {
+  downloadCsvTemplate(@Res() res: ExpressResponse): void {
     const template = this.coursesService.generateCsvTemplate();
 
     res.setHeader('Content-Type', 'text/csv');

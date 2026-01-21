@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateLecturerDto } from './dto/create-lecturer.dto';
 import { UpdateLecturerDto } from './dto/update-lecturer.dto';
@@ -61,14 +65,12 @@ export class LecturersService extends BaseService<
       throw new NotFoundException('Lecturer profile not found');
     }
 
-    // Get active academic session
     const activeSession = await this.prisma.academicSession.findFirst({
       where: { isActive: true },
     });
 
     const sessionFilter = activeSession ? { sessionId: activeSession.id } : {};
 
-    // Get all courses taught by this lecturer
     const courses = await this.prisma.course.findMany({
       where: {
         lecturerId: lecturer.id,
@@ -165,7 +167,6 @@ export class LecturersService extends BaseService<
       throw new NotFoundException('Lecturer profile not found');
     }
 
-    // Get active academic session
     const activeSession = await this.prisma.academicSession.findFirst({
       where: { isActive: true },
     });
@@ -190,7 +191,6 @@ export class LecturersService extends BaseService<
       orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
     });
 
-    // Group schedules by day
     const schedulesByDay: Record<string, any[]> = {
       MONDAY: [],
       TUESDAY: [],
