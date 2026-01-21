@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsEnum,
   ValidateIf,
+  Matches,
 } from 'class-validator';
 import { Role } from '../../../generated/prisma';
 
@@ -58,4 +59,21 @@ export class RegisterDto {
     message: 'Verification code is required for ADMIN or LECTURER roles',
   })
   verificationCode?: string;
+
+  @ApiProperty({
+    required: false,
+    example: 'CSC',
+    description: 'Required for HOD and LECTURER roles',
+  })
+  @IsString()
+  @Matches(/^[A-Z]{2,4}$/, {
+    message: 'Department code must be 2-4 uppercase letters',
+  })
+  @ValidateIf(
+    (o: RegisterDto) => o.role === Role.LECTURER || o.role === Role.HOD,
+  )
+  @IsNotEmpty({
+    message: 'Department code is required for LECTURER and HOD roles',
+  })
+  departmentCode?: string;
 }

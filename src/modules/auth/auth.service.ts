@@ -92,22 +92,59 @@ export class AuthService {
 
     const hashedPassword = await argon2.hash(dto.password);
 
-    const user = await this.prisma.user.create({
-      data: {
-        matricNO: dto.matricNO,
-        email: dto.email,
-        password: hashedPassword,
-        name: dto.name,
-        role: userRole,
-      },
-      select: {
-        id: true,
-        matricNO: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+    const user = await this.prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          matricNO: dto.matricNO,
+          email: dto.email,
+          password: hashedPassword,
+          name: dto.name,
+          role: userRole,
+        },
+        select: {
+          id: true,
+          matricNO: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+
+      if (userRole === Role.HOD || userRole === Role.LECTURER) {
+        if (!dto.departmentCode) {
+          throw new BadRequestException(
+            `Department code is required for ${userRole} role`,
+          );
+        }
+
+        const department = await tx.department.findUnique({
+          where: { code: dto.departmentCode },
+        });
+
+        if (!department) {
+          throw new NotFoundException(
+            `Department with code '${dto.departmentCode}' not found`,
+          );
+        }
+
+        const existingLecturer = await tx.lecturer.findUnique({
+          where: { email: dto.email },
+        });
+
+        if (!existingLecturer) {
+          await tx.lecturer.create({
+            data: {
+              name: dto.name || dto.email.split('@')[0],
+              email: dto.email,
+              phone: null,
+              departmentCode: dto.departmentCode,
+            },
+          });
+        }
+      }
+
+      return newUser;
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
