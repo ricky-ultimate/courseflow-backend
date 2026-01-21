@@ -157,6 +157,13 @@ async function main() {
       createdBy: adminUser.id,
     },
     {
+      code: 'HOD-2025',
+      role: Role.HOD,
+      description: 'HOD verification code',
+      maxUsage: 50,
+      createdBy: adminUser.id,
+    },
+    {
       code: 'LECTURER-2025',
       role: Role.LECTURER,
       description: 'General lecturer verification code',
