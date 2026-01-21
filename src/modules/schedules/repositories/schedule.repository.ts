@@ -5,6 +5,7 @@ import {
   DayOfWeek,
   ClassType,
   Semester,
+  VenueType,
 } from '../../../generated/prisma';
 
 @Injectable()
@@ -88,7 +89,7 @@ export class ScheduleRepository {
       dayOfWeek: DayOfWeek;
       startTime: string;
       endTime: string;
-      venue: string;
+      venue: VenueType;
       type?: ClassType;
       sessionId: string;
       semester: Semester;

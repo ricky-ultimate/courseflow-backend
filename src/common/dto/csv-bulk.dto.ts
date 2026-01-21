@@ -135,7 +135,7 @@ export class ScheduleCsvRowDto {
   @ApiProperty({
     enum: VenueType,
     example: VenueType.LECTURE_HALL_1,
-    description: 'Venue for the class'
+    description: 'Venue for the class',
   })
   @IsEnum(VenueType, {
     message: 'Venue must be a valid venue type',

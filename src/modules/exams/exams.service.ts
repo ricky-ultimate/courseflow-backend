@@ -61,14 +61,12 @@ export class ExamsService extends BaseService<
       );
     }
 
-    let examCollege = course.department.college;
     if (course.isGeneral) {
       if (!dto.targetCollege) {
         throw new BadRequestException(
           'Target College required for General Courses',
         );
       }
-      examCollege = dto.targetCollege;
     }
 
     const data = {

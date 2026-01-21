@@ -37,7 +37,8 @@ export class CreateExamDto {
   @ApiProperty({
     enum: VenueType,
     example: VenueType.UNIVERSITY_ICT_CENTER,
-    description: 'Venue for the exam. 100L/General courses must use ICT venues.',
+    description:
+      'Venue for the exam. 100L/General courses must use ICT venues.',
   })
   @IsEnum(VenueType)
   @IsNotEmpty()
