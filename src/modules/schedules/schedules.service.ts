@@ -16,13 +16,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import {
-  Schedule,
-  Level,
-  DayOfWeek,
-  ClassType,
-  Semester,
-} from '../../generated/prisma';
+import { Schedule, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()

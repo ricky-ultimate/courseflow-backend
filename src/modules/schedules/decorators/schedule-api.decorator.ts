@@ -6,7 +6,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { Level, DayOfWeek, ClassType } from '../../../generated/prisma';
+import { DayOfWeek, ClassType } from '../../../generated/prisma';
 import {
   ApiStandardResponses,
   ApiAuthRequired,

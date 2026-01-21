@@ -24,7 +24,7 @@ export class AcademicSessionsService extends BaseService<
     });
   }
 
-  protected async beforeCreate(
+  protected beforeCreate(
     dto: CreateAcademicSessionDto,
   ): Promise<Record<string, any>> {
     const startDate = new Date(dto.startDate);
@@ -34,12 +34,12 @@ export class AcademicSessionsService extends BaseService<
       throw new BadRequestException('End date must be after start date');
     }
 
-    return {
+    return Promise.resolve({
       name: dto.name,
       startDate,
       endDate,
       isActive: false,
-    };
+    });
   }
 
   protected async beforeUpdate(
