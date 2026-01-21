@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsEnum, Matches } from 'class-validator';
-import { DayOfWeek, ClassType, VenueType } from '../../../generated/prisma';
+import { DayOfWeek, VenueType } from '../../../generated/prisma';
 import {
   IsTimeFormat,
   IsEndTimeAfterStartTime,
@@ -36,8 +36,4 @@ export class CreateScheduleDto {
   })
   @IsEnum(VenueType, { message: 'Invalid venue' })
   venue: VenueType;
-
-  @ApiProperty({ enum: ClassType, default: ClassType.LECTURE })
-  @IsEnum(ClassType, { message: 'Invalid class type' })
-  type: ClassType = ClassType.LECTURE;
 }
