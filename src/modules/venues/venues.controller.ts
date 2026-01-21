@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common'; // Added Query
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common'; // Added Query
 import { ApiTags } from '@nestjs/swagger'; // Removed specific decorators
 import { VenuesService } from './venues.service';
 import { CreateVenueDto } from './dto/create-venue.dto';
@@ -24,7 +33,11 @@ import {
   update: [Role.ADMIN],
   delete: [Role.ADMIN],
 })
-export class VenuesController extends BaseController<Venue, CreateVenueDto, UpdateVenueDto> {
+export class VenuesController extends BaseController<
+  Venue,
+  CreateVenueDto,
+  UpdateVenueDto
+> {
   constructor(private readonly venuesService: VenuesService) {
     super(venuesService);
   }
