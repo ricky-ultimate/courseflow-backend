@@ -2,13 +2,19 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { BaseService } from '../../common/services/base.service';
-import { ExamSchedule, College, Level, Venue } from '../../generated/prisma';
+import { ExamSchedule, Level, VenueType } from '../../generated/prisma';
+
+const ICT_VENUES: VenueType[] = [
+  VenueType.UNIVERSITY_ICT_CENTER,
+  VenueType.ICT_LAB_1,
+  VenueType.ICT_LAB_2,
+  VenueType.COMPUTER_LAB,
+];
 
 @Injectable()
 export class ExamsService extends BaseService<
@@ -22,7 +28,6 @@ export class ExamsService extends BaseService<
       identifierField: 'id',
       includeRelations: {
         course: { include: { department: true } },
-        venue: true,
       },
       defaultOrderBy: { date: 'asc' },
     });
@@ -34,7 +39,7 @@ export class ExamsService extends BaseService<
     });
 
     if (!activeSession) {
-      throw new ConflictException('No active academic session found');
+      throw new NotFoundException('No active academic session found');
     }
 
     const course = await this.prisma.course.findUnique({
@@ -46,43 +51,30 @@ export class ExamsService extends BaseService<
       throw new NotFoundException(`Course ${dto.courseCode} not found`);
     }
 
-    const venue = await this.prisma.venue.findUnique({
-      where: { id: dto.venueId },
-    });
-    if (!venue) throw new NotFoundException('Venue not found');
-
+    // Business Rule: 100L and General courses must use ICT venues (CBT)
     const isCBT = course.level === Level.LEVEL_100 || course.isGeneral;
-    if (isCBT && !venue.isIct) {
+    const isIctVenue = ICT_VENUES.includes(dto.venue);
+
+    if (isCBT && !isIctVenue) {
       throw new BadRequestException(
-        `Course ${course.code} is CBT-based (100L/General). Must use an ICT venue.`,
+        `Course ${course.code} is CBT-based (100L/General). Must use an ICT venue: ${ICT_VENUES.join(', ')}`,
       );
     }
 
-    let examCollege = course.department.college;
     if (course.isGeneral) {
-      if (!dto.targetCollege)
+      if (!dto.targetCollege) {
         throw new BadRequestException(
           'Target College required for General Courses',
         );
-      examCollege = dto.targetCollege;
+      }
     }
-
-    await this.validateVenueConstraints(
-      venue,
-      dto.date,
-      dto.startTime,
-      dto.endTime,
-      examCollege,
-      dto.studentCount,
-      activeSession.id,
-    );
 
     const data = {
       courseCode: dto.courseCode,
       date: new Date(dto.date),
       startTime: dto.startTime,
       endTime: dto.endTime,
-      venueId: dto.venueId,
+      venue: dto.venue,
       studentCount: dto.studentCount,
       targetCollege: course.isGeneral ? dto.targetCollege : null,
       invigilators: dto.invigilators,
@@ -94,64 +86,7 @@ export class ExamsService extends BaseService<
       data,
       include: {
         course: { include: { department: true } },
-        venue: true,
       },
     });
-  }
-
-  private async validateVenueConstraints(
-    venue: Venue,
-    dateString: string,
-    startTime: string,
-    endTime: string,
-    newExamCollege: College,
-    newStudentCount: number,
-    sessionId: string,
-  ) {
-    const date = new Date(dateString);
-
-    const examsInVenue = await this.prisma.examSchedule.findMany({
-      where: {
-        venueId: venue.id,
-        sessionId,
-        date: {
-          gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
-          lt: new Date(new Date(date).setHours(23, 59, 59, 999)),
-        },
-      },
-      include: {
-        course: {
-          include: { department: true },
-        },
-      },
-    });
-
-    let currentOccupancy = 0;
-
-    for (const exam of examsInVenue) {
-      const overlap =
-        (startTime >= exam.startTime && startTime < exam.endTime) ||
-        (endTime > exam.startTime && endTime <= exam.endTime) ||
-        (startTime <= exam.startTime && endTime >= exam.endTime);
-
-      if (overlap) {
-        const existingExamCollege =
-          exam.targetCollege ?? exam.course.department.college;
-
-        if (existingExamCollege !== newExamCollege) {
-          throw new ConflictException(
-            `College Conflict: Venue occupied by ${existingExamCollege} (${exam.courseCode}). Cannot schedule ${newExamCollege} exam here at the same time.`,
-          );
-        }
-
-        currentOccupancy += exam.studentCount;
-      }
-    }
-
-    if (currentOccupancy + newStudentCount > venue.capacity) {
-      throw new ConflictException(
-        `Venue Capacity Exceeded: Current(${currentOccupancy}) + New(${newStudentCount}) > Max(${venue.capacity})`,
-      );
-    }
   }
 }

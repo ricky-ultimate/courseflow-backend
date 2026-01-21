@@ -12,7 +12,7 @@ import {
   IsTimeFormat,
   IsEndTimeAfterStartTime,
 } from '../../../common/validators/time.validator';
-import { College } from '../../../generated/prisma';
+import { College, VenueType } from '../../../generated/prisma';
 
 export class CreateExamDto {
   @ApiProperty({ example: 'CSC201' })
@@ -35,12 +35,14 @@ export class CreateExamDto {
   endTime: string;
 
   @ApiProperty({
-    example: 'venue-uuid-123',
-    description: 'ID of the venue',
+    enum: VenueType,
+    example: VenueType.UNIVERSITY_ICT_CENTER,
+    description:
+      'Venue for the exam. 100L/General courses must use ICT venues.',
   })
-  @IsString()
+  @IsEnum(VenueType)
   @IsNotEmpty()
-  venueId: string;
+  venue: VenueType;
 
   @ApiProperty({ example: 50, description: 'Number of students in this batch' })
   @IsInt()

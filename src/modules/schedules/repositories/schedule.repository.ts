@@ -3,8 +3,8 @@ import { PrismaService } from '../../database/prisma.service';
 import {
   Schedule,
   DayOfWeek,
-  ClassType,
   Semester,
+  VenueType,
 } from '../../../generated/prisma';
 
 @Injectable()
@@ -57,7 +57,6 @@ export class ScheduleRepository {
   async getScheduleStats(): Promise<{
     totalSchedules: number;
     schedulesByDay: Record<DayOfWeek, number>;
-    schedulesByType: Record<ClassType, number>;
   }> {
     const totalSchedules = await this.prisma.schedule.count();
 
@@ -68,17 +67,9 @@ export class ScheduleRepository {
       });
     }
 
-    const schedulesByType = {} as Record<ClassType, number>;
-    for (const type of Object.values(ClassType)) {
-      schedulesByType[type] = await this.prisma.schedule.count({
-        where: { type },
-      });
-    }
-
     return {
       totalSchedules,
       schedulesByDay,
-      schedulesByType,
     };
   }
 
@@ -88,8 +79,7 @@ export class ScheduleRepository {
       dayOfWeek: DayOfWeek;
       startTime: string;
       endTime: string;
-      venue: string;
-      type?: ClassType;
+      venue: VenueType;
       sessionId: string;
       semester: Semester;
     }>,
@@ -115,10 +105,7 @@ export class ScheduleRepository {
         conflicts.push({ index: i, conflict });
       } else {
         const newSchedule = await this.prisma.schedule.create({
-          data: {
-            ...scheduleData,
-            type: scheduleData.type || ClassType.LECTURE,
-          },
+          data: scheduleData,
           include: {
             course: {
               include: {

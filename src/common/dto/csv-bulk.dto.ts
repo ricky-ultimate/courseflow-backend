@@ -3,13 +3,12 @@ import {
   IsString,
   IsNotEmpty,
   IsEnum,
-  IsOptional,
   IsInt,
   Min,
   Max,
   Matches,
 } from 'class-validator';
-import { Level, DayOfWeek, ClassType } from '../../generated/prisma';
+import { Level, DayOfWeek, VenueType } from '../../generated/prisma';
 
 export interface CsvValidationError {
   row: number;
@@ -132,20 +131,13 @@ export class ScheduleCsvRowDto {
   })
   endTime: string;
 
-  @ApiProperty({ example: 'Room 101', description: 'Venue/classroom' })
-  @IsString({ message: 'Venue must be a string' })
-  @IsNotEmpty({ message: 'Venue is required' })
-  venue: string;
-
   @ApiProperty({
-    enum: ClassType,
-    example: 'LECTURE',
-    description: 'Type of class',
-    required: false,
+    enum: VenueType,
+    example: VenueType.LECTURE_HALL_1,
+    description: 'Venue for the class',
   })
-  @IsEnum(ClassType, {
-    message: 'Type must be LECTURE, SEMINAR, LAB, or TUTORIAL',
+  @IsEnum(VenueType, {
+    message: 'Venue must be a valid venue type',
   })
-  @IsOptional()
-  type?: ClassType;
+  venue: VenueType;
 }

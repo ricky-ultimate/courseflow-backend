@@ -110,8 +110,7 @@ model Schedule {
     dayOfWeek  DayOfWeek
     startTime  String
     endTime    String
-    venue      String
-    type       ClassType @default(LECTURE)
+    venue      VenueType
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
 
@@ -121,38 +120,23 @@ model Schedule {
     @@map("schedules")
 }
 
-model Venue {
-    id        String   @id @default(cuid())
-    name      String   @unique
-    capacity  Int
-    isIct     Boolean  @default(false)
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    examSchedules ExamSchedule[]
-
-    @@map("venues")
-}
-
 model ExamSchedule {
-    id            String   @id @default(cuid())
+    id            String    @id @default(cuid())
     courseCode    String
     date          DateTime
     startTime     String
     endTime       String
-    venueId       String
+    venue         VenueType
     studentCount  Int
     targetCollege College?
     invigilators  String?
     semester      Semester
     sessionId     String
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
 
     course  Course          @relation(fields: [courseCode], references: [code], onDelete: Cascade)
     session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    venue   Venue           @relation(fields: [venueId], references: [id])
 
     @@map("exam_schedules")
 }
@@ -231,14 +215,32 @@ enum ComplaintStatus {
     CLOSED
 }
 
-enum ClassType {
-    LECTURE
-    SEMINAR
-    LAB
-    TUTORIAL
-}
-
 enum College {
     CBAS
     CHMS
+}
+
+enum VenueType {
+    UNIVERSITY_ICT_CENTER
+    ICT_LAB_1
+    ICT_LAB_2
+
+    LECTURE_HALL_1
+    LECTURE_HALL_2
+    LECTURE_HALL_3
+    AUDITORIUM_A
+    AUDITORIUM_B
+
+    SEMINAR_ROOM_A
+    SEMINAR_ROOM_B
+    ROOM_101
+    ROOM_102
+    ROOM_201
+    ROOM_202
+    ROOM_301
+    ROOM_302
+
+    COMPUTER_LAB
+    SCIENCE_LAB_1
+    SCIENCE_LAB_2
 }

@@ -16,7 +16,12 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Schedule, Semester } from '../../generated/prisma';
+import {
+  Schedule,
+  Semester,
+  DayOfWeek,
+  VenueType,
+} from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -113,10 +118,6 @@ export class SchedulesService extends BaseService<
       where.dayOfWeek = query.dayOfWeek;
     }
 
-    if (query.type) {
-      where.type = query.type;
-    }
-
     if (query.venue) {
       where.venue = { contains: query.venue, mode: 'insensitive' };
     }
@@ -203,11 +204,10 @@ export class SchedulesService extends BaseService<
 
     const validatedSchedules: Array<{
       courseCode: string;
-      dayOfWeek: any;
+      dayOfWeek: DayOfWeek;
       startTime: string;
       endTime: string;
-      venue: string;
-      type?: any;
+      venue: VenueType;
       sessionId: string;
       semester: Semester;
     }> = [];
@@ -249,7 +249,6 @@ export class SchedulesService extends BaseService<
         startTime: scheduleData.startTime,
         endTime: scheduleData.endTime,
         venue: scheduleData.venue,
-        type: scheduleData.type || 'LECTURE',
         sessionId: activeSession.id,
         semester: courseSemester,
       });
@@ -292,7 +291,6 @@ export class SchedulesService extends BaseService<
       'startTime',
       'endTime',
       'venue',
-      'type',
     ];
     const sampleData = {
       courseCode: 'CS101',
@@ -300,7 +298,6 @@ export class SchedulesService extends BaseService<
       startTime: '08:00',
       endTime: '09:30',
       venue: 'Room 101',
-      type: 'LECTURE',
     };
 
     return this.csvService.generateCsvTemplate(headers, sampleData);
@@ -309,7 +306,6 @@ export class SchedulesService extends BaseService<
   async getScheduleStatistics(): Promise<{
     totalSchedules: number;
     schedulesByDay: Record<string, number>;
-    schedulesByType: Record<string, number>;
   }> {
     return this.scheduleRepository.getScheduleStats();
   }

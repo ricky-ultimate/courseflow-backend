@@ -1,12 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNotEmpty,
-  IsEnum,
-  MaxLength,
-  Matches,
-} from 'class-validator';
-import { DayOfWeek, ClassType } from '../../../generated/prisma';
+import { IsString, IsNotEmpty, IsEnum, Matches } from 'class-validator';
+import { DayOfWeek, VenueType } from '../../../generated/prisma';
 import {
   IsTimeFormat,
   IsEndTimeAfterStartTime,
@@ -35,13 +29,11 @@ export class CreateScheduleDto {
   @IsEndTimeAfterStartTime('startTime')
   endTime: string;
 
-  @ApiProperty({ example: 'Room 101' })
-  @IsString({ message: 'Venue must be a string' })
-  @IsNotEmpty({ message: 'Venue is required' })
-  @MaxLength(100, { message: 'Venue cannot exceed 100 characters' })
-  venue: string;
-
-  @ApiProperty({ enum: ClassType, default: ClassType.LECTURE })
-  @IsEnum(ClassType, { message: 'Invalid class type' })
-  type: ClassType = ClassType.LECTURE;
+  @ApiProperty({
+    enum: VenueType,
+    example: VenueType.LECTURE_HALL_1,
+    description: 'Venue for the class',
+  })
+  @IsEnum(VenueType, { message: 'Invalid venue' })
+  venue: VenueType;
 }
