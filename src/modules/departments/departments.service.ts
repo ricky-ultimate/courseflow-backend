@@ -36,7 +36,6 @@ export class DepartmentsService extends BaseService<
       uniqueFields: ['code', 'name'],
       softDelete: true,
       defaultOrderBy: { name: 'asc' },
-      // SECURITY FIX: Only select safe fields for HOD
       includeRelations: {
         hod: {
           select: {
@@ -44,7 +43,6 @@ export class DepartmentsService extends BaseService<
             name: true,
             email: true,
             role: true,
-            // phone: true, <--- REMOVED: User model does not have a phone field
           },
         },
       },

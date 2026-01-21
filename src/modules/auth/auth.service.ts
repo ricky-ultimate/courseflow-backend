@@ -175,7 +175,7 @@ export class AuthService {
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -337,7 +337,7 @@ export class AuthService {
   }
 
   async deleteVerificationCode(id: string) {
-    await this.getVerificationCode(id); // Check if exists
+    await this.getVerificationCode(id);
 
     return this.prisma.verificationCode.delete({
       where: { id },

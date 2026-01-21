@@ -7,9 +7,6 @@ import { CsvValidationError, BulkOperationResult } from '../dto/csv-bulk.dto';
 
 @Injectable()
 export class CsvService {
-  /**
-   * Parse CSV buffer and validate rows against DTO class
-   */
   async parseCsvFile<T>(
     buffer: Buffer,
     dtoClass: new () => T,
@@ -96,9 +93,6 @@ export class CsvService {
     return validatedData;
   }
 
-  /**
-   * Generate CSV template for a given DTO class
-   */
   generateCsvTemplate(
     headers: string[],
     sampleData?: Record<string, unknown>,
@@ -126,9 +120,6 @@ export class CsvService {
     return csv;
   }
 
-  /**
-   * Validate time format and ensure end time is after start time
-   */
   validateTimeRange(startTime: string, endTime: string): boolean {
     const startParts = startTime.split(':');
     const endParts = endTime.split(':');
@@ -139,9 +130,7 @@ export class CsvService {
     return endMinutes > startMinutes;
   }
 
-  /**
-   * Create a standardized bulk operation result
-   */
+
   createBulkResult<T>(
     created: T[],
     errors: CsvValidationError[],

@@ -12,7 +12,6 @@ async function bootstrap() {
   const apiPrefix = configService.get<string>('app.apiPrefix');
   if (apiPrefix) {
     app.setGlobalPrefix(apiPrefix);
-    //console.log(`API prefix set to: /${apiPrefix}`);
   }
 
   const corsOrigin = configService.get<string>('app.security.corsOrigin');

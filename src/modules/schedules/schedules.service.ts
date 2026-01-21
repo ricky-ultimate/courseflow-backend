@@ -52,7 +52,6 @@ export class SchedulesService extends BaseService<
     });
   }
 
-  // Handle single creation
   protected async beforeCreate(
     dto: CreateScheduleDto,
   ): Promise<Record<string, any>> {
@@ -201,7 +200,6 @@ export class SchedulesService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    // Fetch courses to check existence and get semesters
     const courseCodes = [...new Set(data.map((d) => d.courseCode))];
     const courses = await this.prisma.course.findMany({
       where: { code: { in: courseCodes } },

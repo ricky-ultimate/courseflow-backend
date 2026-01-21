@@ -56,7 +56,6 @@ export class AcademicSessionsService extends BaseService<
       data.endDate = new Date(dto.endDate);
     }
 
-    // If setting this session as active, deactivate all others
     if (dto.isActive === true) {
       await this.prisma.academicSession.updateMany({
         where: {
@@ -77,13 +76,11 @@ export class AcademicSessionsService extends BaseService<
   }
 
   async setActiveSession(id: string): Promise<AcademicSession> {
-    // Deactivate all sessions
     await this.prisma.academicSession.updateMany({
       where: { isActive: true },
       data: { isActive: false },
     });
 
-    // Activate the specified session
     return this.prisma.academicSession.update({
       where: { id },
       data: { isActive: true },
