@@ -29,7 +29,7 @@ import {
 @CrudRoles({
   entity: 'exam',
   create: [Role.ADMIN],
-  read: [Role.ADMIN, Role.LECTURER, Role.STUDENT],
+  read: [],
   update: [Role.ADMIN],
   delete: [Role.ADMIN],
 })

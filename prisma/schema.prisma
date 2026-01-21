@@ -125,7 +125,7 @@ model Venue {
     id        String   @id @default(cuid())
     name      String   @unique
     capacity  Int
-    isIct     Boolean  @default(false) // True for CBT centers
+    isIct     Boolean  @default(false)
     isActive  Boolean  @default(true)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -142,8 +142,8 @@ model ExamSchedule {
     startTime     String
     endTime       String
     venueId       String
-    studentCount  Int // Expected count for this specific batch
-    targetCollege College? // If set, this exam batch is for this specific college (used for General Courses)
+    studentCount  Int
+    targetCollege College?
     invigilators  String?
     semester      Semester
     sessionId     String
@@ -197,6 +197,7 @@ model VerificationCode {
 enum Role {
     STUDENT
     LECTURER
+    HOD
     ADMIN
 }
 
@@ -238,6 +239,6 @@ enum ClassType {
 }
 
 enum College {
-    CBAS // College of Basic and Applied Sciences
-    CHMS // College of Humanities and Management Sciences
+    CBAS
+    CHMS
 }
