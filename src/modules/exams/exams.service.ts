@@ -20,7 +20,6 @@ export class ExamsService extends BaseService<
     super(prisma, {
       modelName: 'examSchedule',
       identifierField: 'id',
-      // Define the default relations to fetch here so BaseService uses them automatically
       includeRelations: {
         course: { include: { department: true } },
         venue: true,
@@ -29,9 +28,7 @@ export class ExamsService extends BaseService<
     });
   }
 
-  // Override create because of the complex business logic validation
   async create(dto: CreateExamDto): Promise<ExamSchedule> {
-    // 1. Get Active Session
     const activeSession = await this.prisma.academicSession.findFirst({
       where: { isActive: true },
     });
@@ -40,7 +37,6 @@ export class ExamsService extends BaseService<
       throw new ConflictException('No active academic session found');
     }
 
-    // 2. Fetch Course
     const course = await this.prisma.course.findUnique({
       where: { code: dto.courseCode },
       include: { department: true },
@@ -50,13 +46,11 @@ export class ExamsService extends BaseService<
       throw new NotFoundException(`Course ${dto.courseCode} not found`);
     }
 
-    // 3. Fetch Venue
     const venue = await this.prisma.venue.findUnique({
       where: { id: dto.venueId },
     });
     if (!venue) throw new NotFoundException('Venue not found');
 
-    // 4. CBT Rules
     const isCBT = course.level === Level.LEVEL_100 || course.isGeneral;
     if (isCBT && !venue.isIct) {
       throw new BadRequestException(
@@ -64,7 +58,6 @@ export class ExamsService extends BaseService<
       );
     }
 
-    // 5. Determine College context
     let examCollege = course.department.college;
     if (course.isGeneral) {
       if (!dto.targetCollege)
@@ -74,7 +67,6 @@ export class ExamsService extends BaseService<
       examCollege = dto.targetCollege;
     }
 
-    // 6. Validate Conflicts
     await this.validateVenueConstraints(
       venue,
       dto.date,
@@ -85,7 +77,6 @@ export class ExamsService extends BaseService<
       activeSession.id,
     );
 
-    // 7. Prepare Data
     const data = {
       courseCode: dto.courseCode,
       date: new Date(dto.date),
@@ -101,17 +92,12 @@ export class ExamsService extends BaseService<
 
     return this.prisma.examSchedule.create({
       data,
-      // Include relations on return so the frontend gets full details immediately
       include: {
         course: { include: { department: true } },
         venue: true,
       },
     });
   }
-
-  // REMOVED: findAll()
-  // Reason: BaseService already implements findAll with pagination, sorting,
-  // and the includeRelations defined in the constructor.
 
   private async validateVenueConstraints(
     venue: Venue,
@@ -124,13 +110,11 @@ export class ExamsService extends BaseService<
   ) {
     const date = new Date(dateString);
 
-    // Fetch all exams in this venue on this date
     const examsInVenue = await this.prisma.examSchedule.findMany({
       where: {
         venueId: venue.id,
         sessionId,
         date: {
-          // Use stricter date comparison to ensure timezone safety
           gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
           lt: new Date(new Date(date).setHours(23, 59, 59, 999)),
         },
@@ -145,14 +129,12 @@ export class ExamsService extends BaseService<
     let currentOccupancy = 0;
 
     for (const exam of examsInVenue) {
-      // Check for Time Overlap
       const overlap =
         (startTime >= exam.startTime && startTime < exam.endTime) ||
         (endTime > exam.startTime && endTime <= exam.endTime) ||
-        (startTime <= exam.startTime && endTime >= exam.endTime); // Handles case where new exam engulfs old exam
+        (startTime <= exam.startTime && endTime >= exam.endTime);
 
       if (overlap) {
-        // Rule: College Separation
         const existingExamCollege =
           exam.targetCollege ?? exam.course.department.college;
 
@@ -166,7 +148,6 @@ export class ExamsService extends BaseService<
       }
     }
 
-    // Rule: Capacity Check
     if (currentOccupancy + newStudentCount > venue.capacity) {
       throw new ConflictException(
         `Venue Capacity Exceeded: Current(${currentOccupancy}) + New(${newStudentCount}) > Max(${venue.capacity})`,

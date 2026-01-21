@@ -19,7 +19,6 @@ export interface BaseServiceConfig<TInclude = unknown> {
   defaultOrderBy?: Record<string, 'asc' | 'desc'>;
 }
 
-// Type for Prisma model operations
 type PrismaModelOperations = {
   create: (args: any) => Promise<any>;
   findMany: (args?: any) => Promise<any[]>;

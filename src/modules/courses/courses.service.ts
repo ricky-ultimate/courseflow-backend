@@ -44,13 +44,10 @@ export class CoursesService extends BaseService<
   ): Promise<Course[] | PaginatedResult<Course>> {
     const andConditions: Record<string, any>[] = [];
 
-    // 1. Soft Delete Filter
     if (this.config.softDelete) {
       andConditions.push({ isActive: true });
     }
 
-    // 2. Department & General Course Logic
-    // If "includeGeneral" is true, we fetch: (DeptCode == X) OR (isGeneral == true)
     if (query.departmentCode) {
       if (query.includeGeneral) {
         andConditions.push({
@@ -60,11 +57,9 @@ export class CoursesService extends BaseService<
         andConditions.push({ departmentCode: query.departmentCode });
       }
     } else if (query.isGeneral !== undefined) {
-      // If no department is specified, filter strictly by isGeneral status
       andConditions.push({ isGeneral: query.isGeneral });
     }
 
-    // 3. Level & Semester Filters (Apply to both General and Department courses)
     if (query.level) {
       andConditions.push({ level: query.level });
     }
@@ -73,7 +68,6 @@ export class CoursesService extends BaseService<
       andConditions.push({ semester: query.semester });
     }
 
-    // 4. Lecturer Filter
     if (query.lecturerEmail) {
       andConditions.push({
         lecturer: {
@@ -85,7 +79,6 @@ export class CoursesService extends BaseService<
       });
     }
 
-    // 5. Credit Range Filter
     if (query.minCredits !== undefined || query.maxCredits !== undefined) {
       const creditFilter: Record<string, any> = {};
       if (query.minCredits !== undefined) creditFilter.gte = query.minCredits;
@@ -93,7 +86,6 @@ export class CoursesService extends BaseService<
       andConditions.push({ credits: creditFilter });
     }
 
-    // 6. Search Term (OR condition nested inside main AND)
     if (query.searchTerm) {
       andConditions.push({
         OR: [
@@ -108,7 +100,6 @@ export class CoursesService extends BaseService<
       });
     }
 
-    // Construct final where clause
     const where = andConditions.length > 0 ? { AND: andConditions } : {};
 
     if (query.page && query.limit) {
@@ -157,16 +148,12 @@ export class CoursesService extends BaseService<
     dto: UpdateCourseDto,
     identifier: string,
   ): Promise<Record<string, any>> {
-    // Check if course is locked
     const course = await this.prisma.course.findUnique({
       where: { code: identifier },
     });
 
-    // Prevent modification of locked courses (e.g., GST/PIF)
     if (course?.isLocked) {
-      // Allow unlocking only if explicitly sending isLocked: false
       if (dto.isLocked === false) {
-        // Proceed to allow unlocking
       } else {
         throw new ForbiddenException(
           'Cannot modify locked university courses. Unlock the course first.',
@@ -206,7 +193,6 @@ export class CoursesService extends BaseService<
   }
 
   async remove(identifier: string): Promise<Course> {
-    // Check if course is locked
     const course = await this.prisma.course.findUnique({
       where: { code: identifier },
     });
@@ -324,6 +310,7 @@ export class CoursesService extends BaseService<
       'code',
       'name',
       'level',
+      'semester',
       'credits',
       'departmentCode',
       'lecturerEmail',
@@ -332,6 +319,7 @@ export class CoursesService extends BaseService<
       code: 'CSC101',
       name: 'Introduction to Programming',
       level: 'LEVEL_100',
+      semester: 'FIRST',
       credits: '3',
       departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',
