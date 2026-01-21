@@ -6,7 +6,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { DayOfWeek, ClassType } from '../../../generated/prisma';
+import { DayOfWeek } from '../../../generated/prisma';
 import {
   ApiStandardResponses,
   ApiAuthRequired,
@@ -41,11 +41,6 @@ export const ApiGetSchedules = () =>
             startTime: { type: 'string', example: '08:00' },
             endTime: { type: 'string', example: '09:30' },
             venue: { type: 'string', example: 'Room 101' },
-            type: {
-              type: 'string',
-              enum: Object.values(ClassType),
-              example: 'LECTURE',
-            },
             course: {
               type: 'object',
               properties: {
@@ -111,7 +106,6 @@ export const ApiGetScheduleById = () =>
           startTime: { type: 'string', example: '08:00' },
           endTime: { type: 'string', example: '09:30' },
           venue: { type: 'string', example: 'Room 101' },
-          type: { type: 'string', enum: Object.values(ClassType) },
           course: {
             type: 'object',
             properties: {
@@ -205,7 +199,7 @@ export const ApiGetScheduleStatistics = () =>
     ApiOperation({
       summary: 'Get schedule statistics',
       description:
-        'Retrieve comprehensive statistics about schedules including counts by day and type',
+        'Retrieve comprehensive statistics about schedules including counts by day',
     }),
     ApiResponse({
       status: 200,
@@ -224,15 +218,6 @@ export const ApiGetScheduleStatistics = () =>
             SUNDAY: { type: 'number', example: 10 },
           },
         },
-        schedulesByType: {
-          type: 'object',
-          properties: {
-            LECTURE: { type: 'number', example: 60 },
-            SEMINAR: { type: 'number', example: 25 },
-            LAB: { type: 'number', example: 20 },
-            TUTORIAL: { type: 'number', example: 15 },
-          },
-        },
       }),
     }),
     ApiStandardResponses(),
@@ -244,7 +229,7 @@ export const ApiBulkCreateSchedules = () =>
     ApiOperation({
       summary: 'Bulk create schedules from CSV',
       description:
-        'Upload a CSV file to create multiple schedules at once. CSV must have columns: courseCode, dayOfWeek, startTime, endTime, venue, type (optional)',
+        'Upload a CSV file to create multiple schedules at once. CSV must have columns: courseCode, dayOfWeek, startTime, endTime, venue',
     }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
