@@ -36,9 +36,9 @@ import { Schedule, Role } from '../../generated/prisma';
 @Controller('schedules')
 @CrudRoles({
   entity: 'schedule',
-  create: [Role.ADMIN, Role.LECTURER],
+  create: [Role.ADMIN, Role.HOD],
   read: [],
-  update: [Role.ADMIN, Role.LECTURER],
+  update: [Role.ADMIN, Role.HOD],
   delete: [Role.ADMIN],
 })
 export class SchedulesController extends BaseController<

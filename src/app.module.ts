@@ -15,6 +15,7 @@ import { SchedulesModule } from './modules/schedules/schedules.module';
 import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
+import { HodDepartmentGuard } from './common/guards/hod-department.guard';
 import { LecturersModule } from './modules/lecturers/lecturers.module';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { ExamsModule } from './modules/exams/exams.module';
@@ -68,6 +69,10 @@ import { VenuesModule } from './modules/venues/venues.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: HodDepartmentGuard,
     },
   ],
 })

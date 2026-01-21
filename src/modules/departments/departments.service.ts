@@ -126,9 +126,13 @@ export class DepartmentsService extends BaseService<
       throw new NotFoundException(`User with email '${email}' not found`);
     }
 
-    if (user.role !== Role.LECTURER && user.role !== Role.ADMIN) {
+    if (
+      user.role !== Role.HOD &&
+      user.role !== Role.LECTURER &&
+      user.role !== Role.ADMIN
+    ) {
       throw new BadRequestException(
-        `User with email '${email}' must be a LECTURER or ADMIN to be assigned as HOD`,
+        `User with email '${email}' must have HOD, LECTURER, or ADMIN role to be assigned as department head`,
       );
     }
 
@@ -136,7 +140,6 @@ export class DepartmentsService extends BaseService<
       throw new BadRequestException(`User with email '${email}' is not active`);
     }
 
-    // Check if user is already HOD of ANOTHER department
     if (
       user.managedDepartment &&
       user.managedDepartment.code !== currentDeptCode
@@ -144,6 +147,13 @@ export class DepartmentsService extends BaseService<
       throw new ConflictException(
         `User is already HOD of ${user.managedDepartment.name} (${user.managedDepartment.code})`,
       );
+    }
+
+    if (user.role !== Role.HOD) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { role: Role.HOD },
+      });
     }
 
     return user.id;
