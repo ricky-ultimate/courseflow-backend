@@ -62,21 +62,21 @@ export class LecturersController extends BaseController<
   }
 
   @Get('dashboard/stats')
-  @Roles(Role.LECTURER)
+  @Roles(Role.LECTURER, Role.HOD)
   @ApiGetLecturerDashboard()
   async getDashboardStats(@Req() req: AuthenticatedRequest) {
     return this.lecturersService.getDashboardStats(req.user.email);
   }
 
   @Get('dashboard/my-courses')
-  @Roles(Role.LECTURER)
+  @Roles(Role.LECTURER, Role.HOD)
   @ApiGetLecturerCourses()
   async getMyCourses(@Req() req: AuthenticatedRequest) {
     return this.lecturersService.getLecturerCourses(req.user.email);
   }
 
   @Get('dashboard/my-schedule')
-  @Roles(Role.LECTURER)
+  @Roles(Role.LECTURER, Role.HOD)
   @ApiGetLecturerSchedule()
   async getMySchedule(@Req() req: AuthenticatedRequest) {
     return this.lecturersService.getLecturerSchedule(req.user.email);
