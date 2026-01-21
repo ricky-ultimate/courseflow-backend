@@ -24,6 +24,6 @@ export class CreateVenueDto {
     description: 'Is this an ICT center suitable for CBT exams?',
   })
   @IsBoolean()
-  @IsOptional() // Defaults to false in DB
+  @IsOptional()
   isIct?: boolean;
 }

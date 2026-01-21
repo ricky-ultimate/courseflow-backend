@@ -11,7 +11,6 @@ import {
 } from 'class-validator';
 import { Level, DayOfWeek, ClassType } from '../../generated/prisma';
 
-// Base CSV row interface
 export interface CsvValidationError {
   row: number;
   field: string;
@@ -30,7 +29,6 @@ export interface BulkOperationResult<T> {
   };
 }
 
-// Department CSV row DTO
 export class DepartmentCsvRowDto {
   @ApiProperty({
     example: 'CS',
@@ -47,7 +45,6 @@ export class DepartmentCsvRowDto {
   name: string;
 }
 
-// Course CSV row DTO
 export class CourseCsvRowDto {
   @ApiProperty({ example: 'CS101', description: 'Course code' })
   @IsString({ message: 'Code must be a string' })
@@ -100,7 +97,6 @@ export class CourseCsvRowDto {
   lecturerEmail: string;
 }
 
-// Schedule CSV row DTO
 export class ScheduleCsvRowDto {
   @ApiProperty({ example: 'CS101', description: 'Course code' })
   @IsString({ message: 'Course code must be a string' })

@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAcademicSessionDto } from './dto/create-academic-session.dto';
 import { UpdateAcademicSessionDto } from './dto/update-academic-session.dto';
@@ -20,7 +24,9 @@ export class AcademicSessionsService extends BaseService<
     });
   }
 
-  protected async beforeCreate(dto: CreateAcademicSessionDto): Promise<Record<string, any>> {
+  protected beforeCreate(
+    dto: CreateAcademicSessionDto,
+  ): Promise<Record<string, any>> {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
 
@@ -28,12 +34,12 @@ export class AcademicSessionsService extends BaseService<
       throw new BadRequestException('End date must be after start date');
     }
 
-    return {
+    return Promise.resolve({
       name: dto.name,
       startDate,
       endDate,
       isActive: false,
-    };
+    });
   }
 
   protected async beforeUpdate(
@@ -50,7 +56,6 @@ export class AcademicSessionsService extends BaseService<
       data.endDate = new Date(dto.endDate);
     }
 
-    // If setting this session as active, deactivate all others
     if (dto.isActive === true) {
       await this.prisma.academicSession.updateMany({
         where: {
@@ -71,13 +76,11 @@ export class AcademicSessionsService extends BaseService<
   }
 
   async setActiveSession(id: string): Promise<AcademicSession> {
-    // Deactivate all sessions
     await this.prisma.academicSession.updateMany({
       where: { isActive: true },
       data: { isActive: false },
     });
 
-    // Activate the specified session
     return this.prisma.academicSession.update({
       where: { id },
       data: { isActive: true },
@@ -118,12 +121,12 @@ export class AcademicSessionsService extends BaseService<
       totalSchedules: schedules.length,
       totalExams: exams.length,
       schedulesBySemester: {
-        FIRST: schedules.filter(s => s.semester === 'FIRST').length,
-        SECOND: schedules.filter(s => s.semester === 'SECOND').length,
+        FIRST: schedules.filter((s) => s.semester === 'FIRST').length,
+        SECOND: schedules.filter((s) => s.semester === 'SECOND').length,
       },
       examsBySemester: {
-        FIRST: exams.filter(e => e.semester === 'FIRST').length,
-        SECOND: exams.filter(e => e.semester === 'SECOND').length,
+        FIRST: exams.filter((e) => e.semester === 'FIRST').length,
+        SECOND: exams.filter((e) => e.semester === 'SECOND').length,
       },
     };
   }

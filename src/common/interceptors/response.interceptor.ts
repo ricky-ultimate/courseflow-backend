@@ -20,7 +20,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
     next: CallHandler,
   ): Observable<Response<T>> {
     return next.handle().pipe(
-      map((data: T) => {
+      map((data: unknown) => {
         if (
           data &&
           typeof data === 'object' &&
@@ -29,8 +29,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         ) {
           return {
             success: true,
-            ...data,
-          } as any;
+            ...(data as object),
+          } as unknown as Response<T>;
         }
 
         if (
@@ -39,16 +39,20 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
           'user' in data &&
           'access_token' in data
         ) {
-          return data as any;
+          return data as unknown as Response<T>;
         }
 
         if (Array.isArray(data)) {
-          return data as any;
+          return {
+            success: true,
+            data: data as unknown as T,
+            message: 'Request processed successfully',
+          };
         }
 
         return {
           success: true,
-          data,
+          data: data as T,
           message: 'Request processed successfully',
         };
       }),

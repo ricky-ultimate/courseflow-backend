@@ -19,7 +19,6 @@ export interface BaseServiceConfig<TInclude = unknown> {
   defaultOrderBy?: Record<string, 'asc' | 'desc'>;
 }
 
-// Type for Prisma model operations
 type PrismaModelOperations = {
   create: (args: any) => Promise<any>;
   findMany: (args?: any) => Promise<any[]>;
@@ -168,13 +167,15 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
       this.getModel().count({ where }),
     ]);
 
-    return {
+    const result: PaginatedResult<T> = {
       data: data as T[],
       total,
       page: validPageNum,
       limit: validLimitNum,
       totalPages: Math.ceil(total / validLimitNum),
-    } as any;
+    };
+
+    return result;
   }
 
   private async checkUniqueConstraints(
