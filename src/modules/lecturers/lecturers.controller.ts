@@ -36,7 +36,7 @@ import { AuthenticatedRequest } from '../../common/types/auth.types';
 @CrudRoles({
   entity: 'lecturer',
   create: [Role.ADMIN],
-  read: [Role.ADMIN, Role.LECTURER, Role.STUDENT],
+  read: [],
   update: [Role.ADMIN],
   delete: [Role.ADMIN],
 })
