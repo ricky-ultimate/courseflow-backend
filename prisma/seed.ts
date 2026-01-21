@@ -7,7 +7,7 @@ import {
   ClassType,
   ComplaintStatus,
   College,
-  Venue, // Imported Venue type to fix the TypeScript error
+  VenueType,
 } from '../src/generated/prisma';
 import * as argon2 from 'argon2';
 
@@ -65,16 +65,34 @@ const DEPARTMENTS = [
   },
 ];
 
-const VENUE_DATA = [
-  { name: 'University ICT Center', capacity: 500, isIct: true }, // For CBT
-  { name: 'Lecture Hall 1', capacity: 150, isIct: false },
-  { name: 'Lecture Hall 2', capacity: 150, isIct: false },
-  { name: 'Auditorium A', capacity: 300, isIct: false },
-  { name: 'Lab 1 (Computer)', capacity: 50, isIct: true }, // Mini CBT
-  { name: 'Seminar Room B', capacity: 40, isIct: false },
-  { name: 'Room 101', capacity: 30, isIct: false },
-  { name: 'Room 205', capacity: 30, isIct: false },
+// ICT venues for CBT exams
+const ICT_VENUES = [
+  VenueType.UNIVERSITY_ICT_CENTER,
+  VenueType.ICT_LAB_1,
+  VenueType.ICT_LAB_2,
+  VenueType.COMPUTER_LAB,
 ];
+
+// Regular venues for non-CBT exams
+const REGULAR_VENUES = [
+  VenueType.LECTURE_HALL_1,
+  VenueType.LECTURE_HALL_2,
+  VenueType.LECTURE_HALL_3,
+  VenueType.AUDITORIUM_A,
+  VenueType.AUDITORIUM_B,
+  VenueType.SEMINAR_ROOM_A,
+  VenueType.SEMINAR_ROOM_B,
+  VenueType.ROOM_101,
+  VenueType.ROOM_102,
+  VenueType.ROOM_201,
+  VenueType.ROOM_202,
+  VenueType.ROOM_301,
+  VenueType.ROOM_302,
+  VenueType.SCIENCE_LAB_1,
+  VenueType.SCIENCE_LAB_2,
+];
+
+const ALL_VENUES = [...ICT_VENUES, ...REGULAR_VENUES];
 
 const LECTURER_NAMES = [
   'Dr. Alan Turing',
@@ -116,7 +134,6 @@ const COMPLAINT_SUBJECTS = [
 const getRandomItem = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)];
 
-// Helper to get non-overlapping times roughly
 const TIME_SLOTS = [
   { start: '08:00', end: '10:00' },
   { start: '10:00', end: '12:00' },
@@ -135,7 +152,7 @@ async function main() {
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@courseflow.edu' },
     update: {
-      isActive: true, // Ensure admin is active if previously soft deleted
+      isActive: true,
     },
     create: {
       matricNO: 'ADMIN001',
@@ -194,32 +211,9 @@ async function main() {
     },
   });
 
-  // 4. Create Venues
-  console.log('buildings Seeding Venues...');
-  // FIX: Explicitly type the array as Venue[] to prevent "never" type inference
-  const venues: Venue[] = [];
-
-  for (const v of VENUE_DATA) {
-    const venue = await prisma.venue.upsert({
-      where: { name: v.name },
-      update: {
-        capacity: v.capacity,
-        isIct: v.isIct,
-        isActive: true,
-      },
-      create: v,
-    });
-    venues.push(venue);
-  }
-
-  const ictVenues = venues.filter((v) => v.isIct);
-  const regularVenues = venues.filter((v) => !v.isIct);
-
-  // 5. Create Departments with HODs
+  // 4. Create Departments
   console.log('🏗️  Seeding Departments...');
   for (const dept of DEPARTMENTS) {
-    // FIX: Populating the 'update' object ensures that if the dept exists
-    // but was soft-deleted (isActive: false), it gets reactivated.
     await prisma.department.upsert({
       where: { code: dept.code },
       update: {
@@ -238,7 +232,7 @@ async function main() {
     });
   }
 
-  // 6. Create Lecturers & Lecturer Users
+  // 5. Create Lecturers & Lecturer Users
   console.log('👨‍🏫 Seeding Lecturers...');
   const lecturerIds: string[] = [];
   const lecturerUserIds: string[] = [];
@@ -290,7 +284,7 @@ async function main() {
     });
   }
 
-  // 7. Create Students
+  // 6. Create Students
   console.log('🎓 Seeding Students...');
   const studentIds: string[] = [];
   for (let i = 0; i < CONFIG.STUDENTS_TO_SEED; i++) {
@@ -315,7 +309,7 @@ async function main() {
     studentIds.push(student.id);
   }
 
-  // 8. Create General Studies Courses
+  // 7. Create General Studies Courses
   console.log('📖 Creating General Studies Courses...');
   const generalCourses = [
     {
@@ -352,14 +346,14 @@ async function main() {
         semester: gst.semester,
         credits: 2,
         departmentCode: 'ENG',
-        lecturerId: lecturerIds[5], // Assign random lecturer
+        lecturerId: lecturerIds[5],
         isGeneral: true,
         isLocked: true,
       },
     });
   }
 
-  // 9. Create Departmental Courses
+  // 8. Create Departmental Courses
   console.log('📚 Seeding Departmental Courses...');
   for (const dept of DEPARTMENTS) {
     for (const level of Object.values(Level)) {
@@ -393,35 +387,17 @@ async function main() {
     }
   }
 
-  // 10. Create Schedules (Time Table)
+  // 9. Create Schedules (Time Table)
   console.log('📅 Seeding Schedules...');
   const allCourses = await prisma.course.findMany();
-  // We'll clean up old schedules to prevent duplicates if seeding runs multiple times
   await prisma.schedule.deleteMany();
 
   for (const course of allCourses) {
-    // Only schedule active courses
     if (!course.isActive) continue;
 
     const timeSlot = getRandomItem(TIME_SLOTS);
     const day = getRandomItem(Object.values(DayOfWeek));
-
-    // Safety check: ensure we have venues
-    if (venues.length === 0) {
-      console.warn('⚠️ No venues available for scheduling');
-      break;
-    }
-
-    // General/100L courses often use large halls
-    const suitableVenues =
-      course.isGeneral || course.level === Level.LEVEL_100
-        ? venues.filter((v) => v.capacity >= 100)
-        : venues;
-
-    // Fallback to any venue if filtering returns empty (e.g. if seed data changed)
-    const venue = getRandomItem(
-      suitableVenues.length > 0 ? suitableVenues : venues,
-    );
+    const venue = getRandomItem(ALL_VENUES);
 
     await prisma.schedule.create({
       data: {
@@ -431,7 +407,7 @@ async function main() {
         dayOfWeek: day,
         startTime: timeSlot.start,
         endTime: timeSlot.end,
-        venue: venue.name,
+        venue: venue,
         type: ClassType.LECTURE,
       },
     });
@@ -450,37 +426,29 @@ async function main() {
           dayOfWeek: secondDay,
           startTime: '14:00',
           endTime: '16:00',
-          venue: getRandomItem(venues).name,
+          venue: getRandomItem(ALL_VENUES),
           type: type,
         },
       });
     }
   }
 
-  // 11. Create Exam Schedules
+  // 10. Create Exam Schedules
   console.log('📝 Seeding Exam Schedules...');
   await prisma.examSchedule.deleteMany();
 
   let startDate = new Date(currentSession.endDate);
-  startDate.setDate(startDate.getDate() - 21); // Exams start 3 weeks before session end
+  startDate.setDate(startDate.getDate() - 21);
 
   for (const course of allCourses) {
-    // Determine exam date (random day in exam period)
     const examDate = new Date(startDate);
     examDate.setDate(startDate.getDate() + Math.floor(Math.random() * 14));
 
-    // Determine Venue
-    // Business Logic: 100L and General courses are CBT -> Must use ICT center
+    // Business Logic: 100L and General courses are CBT -> Must use ICT venue
     const isCbt = course.level === Level.LEVEL_100 || course.isGeneral;
-    let venueId: string;
-
-    if (isCbt && ictVenues.length > 0) {
-      // Pick an ICT venue
-      venueId = getRandomItem(ictVenues).id;
-    } else {
-      // Pick a regular venue (or fallback to any if no regular venues)
-      venueId = (getRandomItem(regularVenues) || venues[0]).id;
-    }
+    const venue = isCbt
+      ? getRandomItem(ICT_VENUES)
+      : getRandomItem(REGULAR_VENUES);
 
     const timeSlot = getRandomItem(TIME_SLOTS);
 
@@ -490,9 +458,9 @@ async function main() {
         date: examDate,
         startTime: timeSlot.start,
         endTime: timeSlot.end,
-        venueId: venueId,
+        venue: venue,
         studentCount: Math.floor(Math.random() * 100) + 20,
-        targetCollege: course.isGeneral ? College.CBAS : null, // Assuming batch 1 is CBAS
+        targetCollege: course.isGeneral ? College.CBAS : null,
         semester: course.semester,
         sessionId: currentSession.id,
         invigilators: 'Dr. Proctor, Mr. Watcher',
@@ -500,7 +468,7 @@ async function main() {
     });
   }
 
-  // 12. Create Complaints
+  // 11. Create Complaints
   console.log('🗣️ Seeding Complaints...');
   await prisma.complaint.deleteMany();
 
