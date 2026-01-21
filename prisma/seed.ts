@@ -4,7 +4,6 @@ import {
   Level,
   Semester,
   DayOfWeek,
-  ClassType,
   ComplaintStatus,
   College,
   VenueType,
@@ -408,29 +407,8 @@ async function main() {
         startTime: timeSlot.start,
         endTime: timeSlot.end,
         venue: venue,
-        type: ClassType.LECTURE,
       },
     });
-
-    // Add a Lab/Tutorial for some courses (30% chance)
-    if (Math.random() > 0.7) {
-      const type = Math.random() > 0.5 ? ClassType.LAB : ClassType.TUTORIAL;
-      const otherDays = Object.values(DayOfWeek).filter((d) => d !== day);
-      const secondDay = getRandomItem(otherDays);
-
-      await prisma.schedule.create({
-        data: {
-          courseCode: course.code,
-          semester: course.semester,
-          sessionId: currentSession.id,
-          dayOfWeek: secondDay,
-          startTime: '14:00',
-          endTime: '16:00',
-          venue: getRandomItem(ALL_VENUES),
-          type: type,
-        },
-      });
-    }
   }
 
   // 10. Create Exam Schedules
