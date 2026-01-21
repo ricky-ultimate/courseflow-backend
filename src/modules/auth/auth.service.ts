@@ -41,7 +41,11 @@ export class AuthService {
 
     const userRole = dto.role || Role.STUDENT;
 
-    if (userRole === Role.ADMIN || userRole === Role.LECTURER) {
+    if (
+      userRole === Role.ADMIN ||
+      userRole === Role.LECTURER ||
+      userRole === Role.HOD
+    ) {
       if (!dto.verificationCode) {
         throw new BadRequestException(
           `Verification code is required for ${userRole} role`,
