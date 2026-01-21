@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAcademicSessionDto } from './dto/create-academic-session.dto';
 import { UpdateAcademicSessionDto } from './dto/update-academic-session.dto';
@@ -20,7 +24,9 @@ export class AcademicSessionsService extends BaseService<
     });
   }
 
-  protected async beforeCreate(dto: CreateAcademicSessionDto): Promise<Record<string, any>> {
+  protected async beforeCreate(
+    dto: CreateAcademicSessionDto,
+  ): Promise<Record<string, any>> {
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
 
@@ -118,12 +124,12 @@ export class AcademicSessionsService extends BaseService<
       totalSchedules: schedules.length,
       totalExams: exams.length,
       schedulesBySemester: {
-        FIRST: schedules.filter(s => s.semester === 'FIRST').length,
-        SECOND: schedules.filter(s => s.semester === 'SECOND').length,
+        FIRST: schedules.filter((s) => s.semester === 'FIRST').length,
+        SECOND: schedules.filter((s) => s.semester === 'SECOND').length,
       },
       examsBySemester: {
-        FIRST: exams.filter(e => e.semester === 'FIRST').length,
-        SECOND: exams.filter(e => e.semester === 'SECOND').length,
+        FIRST: exams.filter((e) => e.semester === 'FIRST').length,
+        SECOND: exams.filter((e) => e.semester === 'SECOND').length,
       },
     };
   }

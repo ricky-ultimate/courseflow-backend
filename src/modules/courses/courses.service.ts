@@ -54,10 +54,7 @@ export class CoursesService extends BaseService<
     if (query.departmentCode) {
       if (query.includeGeneral) {
         andConditions.push({
-          OR: [
-            { departmentCode: query.departmentCode },
-            { isGeneral: true },
-          ],
+          OR: [{ departmentCode: query.departmentCode }, { isGeneral: true }],
         });
       } else {
         andConditions.push({ departmentCode: query.departmentCode });

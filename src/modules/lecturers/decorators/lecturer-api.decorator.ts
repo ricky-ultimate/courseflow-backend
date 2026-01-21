@@ -123,7 +123,8 @@ export const ApiGetLecturerDashboard = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get lecturer dashboard statistics',
-      description: 'Retrieve dashboard statistics for the authenticated lecturer',
+      description:
+        'Retrieve dashboard statistics for the authenticated lecturer',
     }),
     ApiResponse({
       status: 200,

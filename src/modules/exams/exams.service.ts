@@ -68,7 +68,9 @@ export class ExamsService extends BaseService<
     let examCollege = course.department.college;
     if (course.isGeneral) {
       if (!dto.targetCollege)
-        throw new BadRequestException('Target College required for General Courses');
+        throw new BadRequestException(
+          'Target College required for General Courses',
+        );
       examCollege = dto.targetCollege;
     }
 
@@ -103,7 +105,7 @@ export class ExamsService extends BaseService<
       include: {
         course: { include: { department: true } },
         venue: true,
-      }
+      },
     });
   }
 
