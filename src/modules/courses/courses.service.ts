@@ -153,8 +153,7 @@ export class CoursesService extends BaseService<
     });
 
     if (course?.isLocked) {
-      if (dto.isLocked === false) {
-      } else {
+      if (dto.isLocked !== false) {
         throw new ForbiddenException(
           'Cannot modify locked university courses. Unlock the course first.',
         );
@@ -332,7 +331,7 @@ export class CoursesService extends BaseService<
     return this.courseRepository.findWithoutSchedules();
   }
 
-  async getCourseStatistics(): Promise<{
+  async getCourseStats(): Promise<{
     totalCourses: number;
     coursesByLevel: Record<string, number>;
     coursesByDepartment: Record<string, number>;
