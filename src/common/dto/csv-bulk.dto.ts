@@ -89,7 +89,7 @@ export class CourseCsvRowDto {
 
   @ApiProperty({
     example: 'lecturer@university.edu',
-    description: 'Email of the lecturer taking the course',
+    description: 'Email of the lecturer (used for CSV lookup)',
   })
   @IsString({ message: 'Lecturer email must be a string' })
   @IsNotEmpty({ message: 'Lecturer email is required' })
@@ -136,8 +136,6 @@ export class ScheduleCsvRowDto {
     example: VenueType.LECTURE_HALL_1,
     description: 'Venue for the class',
   })
-  @IsEnum(VenueType, {
-    message: 'Venue must be a valid venue type',
-  })
+  @IsEnum(VenueType, { message: 'Venue must be a valid venue type' })
   venue: VenueType;
 }
