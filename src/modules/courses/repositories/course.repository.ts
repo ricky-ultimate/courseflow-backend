@@ -8,20 +8,12 @@ export class CourseRepository {
 
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.course.count({
-      where: {
-        isActive: true,
-        code,
-      },
+      where: { isActive: true, code },
     });
     return count > 0;
   }
 
-  async getCourseStats(): Promise<{
-    totalCourses: number;
-    coursesByLevel: Record<Level, number>;
-    coursesByDepartment: Record<string, number>;
-    averageCredits: number;
-  }> {
+  async getCourseStats() {
     const totalCourses = await this.prisma.course.count({
       where: { isActive: true },
     });
@@ -60,13 +52,19 @@ export class CourseRepository {
 
   async findWithoutSchedules(): Promise<Course[]> {
     return this.prisma.course.findMany({
-      where: {
-        isActive: true,
-        schedules: {
-          none: {},
+      where: { isActive: true, schedules: { none: {} } },
+      include: {
+        department: true,
+        lecturer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            departmentCode: true,
+          },
         },
       },
-      include: { department: true, lecturer: true },
       orderBy: { code: 'asc' },
     });
   }
@@ -80,19 +78,14 @@ export class CourseRepository {
       departmentCode: string;
       lecturerId: string;
     }>,
-  ): Promise<{
-    created: Course[];
-    errors: Array<{ index: number; error: string }>;
-  }> {
+  ) {
     const created: Course[] = [];
     const errors: Array<{ index: number; error: string }> = [];
 
     for (let i = 0; i < courses.length; i++) {
       const courseData = courses[i];
-
       try {
-        const existingCourse = await this.existsByCode(courseData.code);
-        if (existingCourse) {
+        if (await this.existsByCode(courseData.code)) {
           errors.push({
             index: i,
             error: `Course with code '${courseData.code}' already exists`,
@@ -103,30 +96,39 @@ export class CourseRepository {
         const department = await this.prisma.department.findUnique({
           where: { code: courseData.departmentCode },
         });
-
         if (!department) {
           errors.push({
             index: i,
-            error: `Department with code '${courseData.departmentCode}' does not exist`,
+            error: `Department '${courseData.departmentCode}' does not exist`,
           });
           continue;
         }
 
-        const lecturer = await this.prisma.lecturer.findUnique({
+        const lecturer = await this.prisma.user.findUnique({
           where: { id: courseData.lecturerId },
         });
-
         if (!lecturer) {
           errors.push({
             index: i,
-            error: `Lecturer with ID '${courseData.lecturerId}' does not exist`,
+            error: `Lecturer with id '${courseData.lecturerId}' does not exist`,
           });
           continue;
         }
 
         const newCourse = await this.prisma.course.create({
           data: courseData,
-          include: { department: true, lecturer: true },
+          include: {
+            department: true,
+            lecturer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                departmentCode: true,
+              },
+            },
+          },
         });
         created.push(newCourse);
       } catch (error) {
