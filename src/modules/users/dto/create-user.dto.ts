@@ -6,28 +6,29 @@ import {
   IsEnum,
   IsNotEmpty,
   MinLength,
+  Matches,
 } from 'class-validator';
 import { Role } from '../../../generated/prisma';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'CS/2023/001' })
-  @IsString({ message: 'Matric number must be a string' })
-  @IsNotEmpty({ message: 'Matric number is required' })
+  @IsString()
+  @IsNotEmpty()
   matricNO: string;
 
   @ApiProperty({ example: 'user@example.com' })
-  @IsEmail({}, { message: 'Please provide a valid email address' })
-  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty({ example: 'password123', minLength: 6 })
-  @IsString({ message: 'Password must be a string' })
-  @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
   password: string;
 
   @ApiProperty({ required: false, example: 'John Doe' })
-  @IsString({ message: 'Name must be a string' })
+  @IsString()
   @IsOptional()
   name?: string;
 
@@ -35,4 +36,21 @@ export class CreateUserDto {
   @IsEnum(Role)
   @IsOptional()
   role?: Role;
+
+  @ApiProperty({ required: false, example: '+1234567890' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty({
+    required: false,
+    example: 'CSC',
+    description: 'Required for LECTURER and HOD roles',
+  })
+  @IsString()
+  @IsOptional()
+  @Matches(/^[A-Z]{2,4}$/, {
+    message: 'Department code must be 2-4 uppercase letters',
+  })
+  departmentCode?: string;
 }
