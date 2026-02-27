@@ -10,7 +10,6 @@ import { ScheduleFilterDto } from './dto/schedule-filter.dto';
 import { BaseService } from '../../common/services/base.service';
 import { CsvService } from '../../common/services/csv.service';
 import { ScheduleRepository } from './repositories/schedule.repository';
-import { CourseRepository } from '../courses/repositories/course.repository';
 import {
   ScheduleCsvRowDto,
   BulkOperationResult,
@@ -34,7 +33,6 @@ export class SchedulesService extends BaseService<
     prisma: PrismaService,
     private readonly csvService: CsvService,
     private readonly scheduleRepository: ScheduleRepository,
-    private readonly courseRepository: CourseRepository,
   ) {
     super(prisma, {
       modelName: 'schedule',
@@ -43,7 +41,15 @@ export class SchedulesService extends BaseService<
         course: {
           include: {
             department: true,
-            lecturer: true,
+            lecturer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                departmentCode: true,
+              },
+            },
           },
         },
       },

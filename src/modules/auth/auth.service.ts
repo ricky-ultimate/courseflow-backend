@@ -56,27 +56,21 @@ export class AuthService {
         where: { code: dto.verificationCode },
       });
 
-      if (!verificationCode) {
+      if (!verificationCode)
         throw new BadRequestException('Invalid verification code');
-      }
-
-      if (!verificationCode.isActive) {
+      if (!verificationCode.isActive)
         throw new BadRequestException('Verification code is inactive');
-      }
-
       if (verificationCode.role !== userRole) {
         throw new BadRequestException(
           `Verification code is not valid for ${userRole} role`,
         );
       }
-
       if (
         verificationCode.expiresAt &&
         verificationCode.expiresAt < new Date()
       ) {
         throw new BadRequestException('Verification code has expired');
       }
-
       if (
         verificationCode.maxUsage &&
         verificationCode.usageCount >= verificationCode.maxUsage
@@ -90,69 +84,51 @@ export class AuthService {
       });
     }
 
+    // Validate department for LECTURER / HOD
+    if (userRole === Role.LECTURER || userRole === Role.HOD) {
+      if (!dto.departmentCode) {
+        throw new BadRequestException(
+          `Department code is required for ${userRole} role`,
+        );
+      }
+      const department = await this.prisma.department.findUnique({
+        where: { code: dto.departmentCode },
+      });
+      if (!department) {
+        throw new NotFoundException(
+          `Department with code '${dto.departmentCode}' not found`,
+        );
+      }
+    }
+
     const hashedPassword = await argon2.hash(dto.password);
 
-    const user = await this.prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          matricNO: dto.matricNO,
-          email: dto.email,
-          password: hashedPassword,
-          name: dto.name,
-          role: userRole,
-        },
-        select: {
-          id: true,
-          matricNO: true,
-          email: true,
-          name: true,
-          role: true,
-          createdAt: true,
-        },
-      });
-
-      if (userRole === Role.HOD || userRole === Role.LECTURER) {
-        if (!dto.departmentCode) {
-          throw new BadRequestException(
-            `Department code is required for ${userRole} role`,
-          );
-        }
-
-        const department = await tx.department.findUnique({
-          where: { code: dto.departmentCode },
-        });
-
-        if (!department) {
-          throw new NotFoundException(
-            `Department with code '${dto.departmentCode}' not found`,
-          );
-        }
-
-        const existingLecturer = await tx.lecturer.findUnique({
-          where: { email: dto.email },
-        });
-
-        if (!existingLecturer) {
-          await tx.lecturer.create({
-            data: {
-              name: dto.name || dto.email.split('@')[0],
-              email: dto.email,
-              phone: null,
-              departmentCode: dto.departmentCode,
-            },
-          });
-        }
-      }
-
-      return newUser;
+    const user = await this.prisma.user.create({
+      data: {
+        matricNO: dto.matricNO,
+        email: dto.email,
+        password: hashedPassword,
+        name: dto.name,
+        role: userRole,
+        phone: dto.phone,
+        departmentCode:
+          userRole === Role.LECTURER || userRole === Role.HOD
+            ? dto.departmentCode
+            : null,
+      },
+      select: {
+        id: true,
+        matricNO: true,
+        email: true,
+        name: true,
+        role: true,
+        departmentCode: true,
+        createdAt: true,
+      },
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
-
-    return {
-      user,
-      ...tokens,
-    };
+    return { user, ...tokens };
   }
 
   async login(dto: LoginDto) {
@@ -175,7 +151,6 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
-
     return {
       user: {
         id: user.id,
@@ -190,12 +165,7 @@ export class AuthService {
   async validateUser(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId, isActive: true },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-      },
+      select: { id: true, email: true, name: true, role: true },
     });
   }
 
@@ -216,43 +186,29 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: {
-        resetToken,
-        resetTokenExpiry,
-      },
+      data: { resetToken, resetTokenExpiry },
     });
 
-    // TODO: Send email with reset token
-    // For now, we'll return the token in development mode
-    // In production, this should be sent via email
     console.log(`Password reset token for ${user.email}: ${resetToken}`);
 
     return {
       message:
         'If an account with that email exists, a password reset link has been sent.',
-      // Remove this in production - only for development
       ...(process.env.NODE_ENV === 'development' && { resetToken }),
     };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.prisma.user.findUnique({
-      where: {
-        resetToken: dto.token,
-        isActive: true,
-      },
+      where: { resetToken: dto.token, isActive: true },
     });
 
-    if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
+    if (!user) throw new BadRequestException('Invalid or expired reset token');
     if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
       throw new BadRequestException('Reset token has expired');
     }
 
     const hashedPassword = await argon2.hash(dto.newPassword);
-
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -262,9 +218,7 @@ export class AuthService {
       },
     });
 
-    return {
-      message: 'Password has been reset successfully',
-    };
+    return { message: 'Password has been reset successfully' };
   }
 
   async createVerificationCode(
@@ -274,12 +228,10 @@ export class AuthService {
     const existingCode = await this.prisma.verificationCode.findUnique({
       where: { code: dto.code },
     });
-
-    if (existingCode) {
+    if (existingCode)
       throw new ConflictException('Verification code already exists');
-    }
 
-    const verificationCode = await this.prisma.verificationCode.create({
+    return this.prisma.verificationCode.create({
       data: {
         code: dto.code,
         role: dto.role,
@@ -289,31 +241,15 @@ export class AuthService {
         createdBy,
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        creator: { select: { id: true, name: true, email: true, role: true } },
       },
     });
-
-    return verificationCode;
   }
 
   async getVerificationCodes() {
     return this.prisma.verificationCode.findMany({
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        creator: { select: { id: true, name: true, email: true, role: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -323,21 +259,11 @@ export class AuthService {
     const verificationCode = await this.prisma.verificationCode.findUnique({
       where: { id },
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        creator: { select: { id: true, name: true, email: true, role: true } },
       },
     });
-
-    if (!verificationCode) {
+    if (!verificationCode)
       throw new NotFoundException('Verification code not found');
-    }
-
     return verificationCode;
   }
 
@@ -348,10 +274,8 @@ export class AuthService {
       const codeExists = await this.prisma.verificationCode.findUnique({
         where: { code: dto.code },
       });
-
-      if (codeExists) {
+      if (codeExists)
         throw new ConflictException('Verification code already exists');
-      }
     }
 
     return this.prisma.verificationCode.update({
@@ -361,24 +285,14 @@ export class AuthService {
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        creator: { select: { id: true, name: true, email: true, role: true } },
       },
     });
   }
 
   async deleteVerificationCode(id: string) {
     await this.getVerificationCode(id);
-
-    return this.prisma.verificationCode.delete({
-      where: { id },
-    });
+    return this.prisma.verificationCode.delete({ where: { id } });
   }
 
   async getMe(userId: string) {
@@ -390,14 +304,15 @@ export class AuthService {
         email: true,
         name: true,
         role: true,
+        phone: true,
+        departmentCode: true,
+        department: { select: { name: true, code: true } },
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found or inactive');
-    }
+    if (!user) throw new UnauthorizedException('User not found or inactive');
 
     return {
       success: true,
@@ -409,12 +324,7 @@ export class AuthService {
 
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
-
     const accessToken = await this.jwtService.signAsync(payload);
-
-    return {
-      access_token: accessToken,
-      token_type: 'Bearer',
-    };
+    return { access_token: accessToken, token_type: 'Bearer' };
   }
 }
