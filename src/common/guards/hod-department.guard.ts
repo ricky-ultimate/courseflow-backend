@@ -9,19 +9,9 @@ import { PrismaService } from '../../modules/database/prisma.service';
 import { Role } from '../../generated/prisma';
 
 interface RequestWithUser {
-  user?: {
-    id: string;
-    role: Role;
-    email: string;
-  };
-  params?: {
-    code?: string;
-    id?: string;
-  };
-  body?: {
-    departmentCode?: string;
-    courseCode?: string;
-  };
+  user?: { id: string; role: Role; email: string };
+  params?: { code?: string; id?: string };
+  body?: { departmentCode?: string; courseCode?: string };
   method: string;
 }
 
@@ -36,25 +26,19 @@ export class HodDepartmentGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const { user, method } = request;
 
-    if (!user || user.role !== Role.HOD) {
-      return true;
-    }
+    if (!user || user.role !== Role.HOD) return true;
+    if (method === 'GET') return true;
 
-    if (method === 'GET') {
-      return true;
-    }
-
-    const hodDepartment = await this.prisma.user.findUnique({
+    const hodUser = await this.prisma.user.findUnique({
       where: { id: user.id },
       include: { managedDepartment: true },
     });
 
-    if (!hodDepartment?.managedDepartment) {
+    if (!hodUser?.managedDepartment) {
       throw new ForbiddenException('HOD must be assigned to a department');
     }
 
-    const hodDeptCode = hodDepartment.managedDepartment.code;
-
+    const hodDeptCode = hodUser.managedDepartment.code;
     const resourceDeptCode = await this.getResourceDepartmentCode(request);
 
     if (resourceDeptCode && resourceDeptCode !== hodDeptCode) {
@@ -71,9 +55,7 @@ export class HodDepartmentGuard implements CanActivate {
   ): Promise<string | null> {
     const { params, body } = request;
 
-    if (body?.departmentCode) {
-      return body.departmentCode;
-    }
+    if (body?.departmentCode) return body.departmentCode;
 
     if (body?.courseCode) {
       const course = await this.prisma.course.findUnique({
