@@ -18,7 +18,6 @@ const CONFIG = {
 };
 
 const DEPARTMENTS = [
-  // CBAS (Sciences)
   {
     code: 'CSC',
     name: 'Computer Science',
@@ -49,7 +48,6 @@ const DEPARTMENTS = [
     college: College.CBAS,
     description: 'Study of life',
   },
-  // CHMS (Humanities/Social)
   {
     code: 'ENG',
     name: 'English',
@@ -64,7 +62,6 @@ const DEPARTMENTS = [
   },
 ];
 
-// ICT venues for CBT exams
 const ICT_VENUES = [
   VenueType.UNIVERSITY_ICT_CENTER,
   VenueType.ICT_LAB_1,
@@ -72,7 +69,6 @@ const ICT_VENUES = [
   VenueType.COMPUTER_LAB,
 ];
 
-// Regular venues for non-CBT exams
 const REGULAR_VENUES = [
   VenueType.LECTURE_HALL_1,
   VenueType.LECTURE_HALL_2,
@@ -150,9 +146,7 @@ async function main() {
   // 1. Create Admin
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@courseflow.edu' },
-    update: {
-      isActive: true,
-    },
+    update: { isActive: true },
     create: {
       matricNO: 'ADMIN001',
       email: 'admin@courseflow.edu',
@@ -231,59 +225,51 @@ async function main() {
     });
   }
 
-  // 5. Create Lecturers & Lecturer Users
+  // 5. Create Lecturer Users (unified - no separate Lecturer table)
   console.log('👨‍🏫 Seeding Lecturers...');
   const lecturerIds: string[] = [];
-  const lecturerUserIds: string[] = [];
 
   for (let i = 0; i < LECTURER_NAMES.length; i++) {
     const name = LECTURER_NAMES[i];
     const dept = DEPARTMENTS[i % DEPARTMENTS.length];
     const email = `${name.split(' ')[1].toLowerCase()}@courseflow.edu`;
-
-    const lecturer = await prisma.lecturer.upsert({
-      where: { email },
-      update: {
-        departmentCode: dept.code,
-        isActive: true,
-      },
-      create: {
-        name: name,
-        email: email,
-        phone: `+23480${Math.floor(Math.random() * 100000000)}`,
-        departmentCode: dept.code,
-      },
-    });
-    lecturerIds.push(lecturer.id);
-
     const staffId = `STAFF${(i + 1).toString().padStart(3, '0')}`;
+
     const lecturerUser = await prisma.user.upsert({
       where: { email },
       update: {
         role: Role.LECTURER,
+        departmentCode: dept.code,
         isActive: true,
       },
       create: {
         matricNO: staffId,
-        email: email,
-        password: password,
-        name: name,
+        email,
+        password,
+        name,
         role: Role.LECTURER,
+        phone: `+23480${Math.floor(Math.random() * 100000000)}`,
+        departmentCode: dept.code,
       },
     });
-    lecturerUserIds.push(lecturerUser.id);
+    lecturerIds.push(lecturerUser.id);
   }
 
-  // Assign HODs
+  // 6. Assign HODs
   console.log('👔 Assigning HODs...');
-  for (let i = 0; i < DEPARTMENTS.length && i < lecturerUserIds.length; i++) {
+  for (let i = 0; i < DEPARTMENTS.length && i < lecturerIds.length; i++) {
+    // Promote first lecturer of each dept to HOD
+    await prisma.user.update({
+      where: { id: lecturerIds[i] },
+      data: { role: Role.HOD },
+    });
     await prisma.department.update({
       where: { code: DEPARTMENTS[i].code },
-      data: { hodId: lecturerUserIds[i] },
+      data: { hodId: lecturerIds[i] },
     });
   }
 
-  // 6. Create Students
+  // 7. Create Students
   console.log('🎓 Seeding Students...');
   const studentIds: string[] = [];
   for (let i = 0; i < CONFIG.STUDENTS_TO_SEED; i++) {
@@ -294,21 +280,13 @@ async function main() {
 
     const student = await prisma.user.upsert({
       where: { matricNO },
-      update: {
-        isActive: true,
-      },
-      create: {
-        matricNO,
-        email,
-        password: password,
-        name: name,
-        role: Role.STUDENT,
-      },
+      update: { isActive: true },
+      create: { matricNO, email, password, name, role: Role.STUDENT },
     });
     studentIds.push(student.id);
   }
 
-  // 7. Create General Studies Courses
+  // 8. Create General Studies Courses
   console.log('📖 Creating General Studies Courses...');
   const generalCourses = [
     {
@@ -334,9 +312,7 @@ async function main() {
   for (const gst of generalCourses) {
     await prisma.course.upsert({
       where: { code: gst.code },
-      update: {
-        isActive: true,
-      },
+      update: { isActive: true },
       create: {
         code: gst.code,
         name: gst.name,
@@ -352,12 +328,11 @@ async function main() {
     });
   }
 
-  // 8. Create Departmental Courses
+  // 9. Create Departmental Courses
   console.log('📚 Seeding Departmental Courses...');
   for (const dept of DEPARTMENTS) {
     for (const level of Object.values(Level)) {
       const levelNum = level.split('_')[1];
-
       for (let i = 1; i <= CONFIG.COURSES_PER_LEVEL_PER_DEPT; i++) {
         const courseCode = `${dept.code}${levelNum.charAt(0)}${i.toString().padStart(2, '0')}`;
         const lecturerId = getRandomItem(lecturerIds);
@@ -365,19 +340,16 @@ async function main() {
 
         await prisma.course.upsert({
           where: { code: courseCode },
-          update: {
-            isActive: true,
-            departmentCode: dept.code,
-          },
+          update: { isActive: true, departmentCode: dept.code },
           create: {
             code: courseCode,
             name: `Introduction to ${dept.name} ${levelNum} - Part ${i}`,
             overview: `Comprehensive study of ${dept.name.toLowerCase()} concepts`,
-            level: level,
-            semester: semester,
+            level,
+            semester,
             credits: Math.floor(Math.random() * 4) + 1,
             departmentCode: dept.code,
-            lecturerId: lecturerId,
+            lecturerId,
             isGeneral: false,
             isLocked: false,
           },
@@ -386,14 +358,13 @@ async function main() {
     }
   }
 
-  // 9. Create Schedules (Time Table)
+  // 10. Create Schedules
   console.log('📅 Seeding Schedules...');
   const allCourses = await prisma.course.findMany();
   await prisma.schedule.deleteMany();
 
   for (const course of allCourses) {
     if (!course.isActive) continue;
-
     const timeSlot = getRandomItem(TIME_SLOTS);
     const day = getRandomItem(Object.values(DayOfWeek));
     const venue = getRandomItem(ALL_VENUES);
@@ -406,28 +377,26 @@ async function main() {
         dayOfWeek: day,
         startTime: timeSlot.start,
         endTime: timeSlot.end,
-        venue: venue,
+        venue,
       },
     });
   }
 
-  // 10. Create Exam Schedules
+  // 11. Create Exam Schedules
   console.log('📝 Seeding Exam Schedules...');
   await prisma.examSchedule.deleteMany();
 
-  let startDate = new Date(currentSession.endDate);
+  const startDate = new Date(currentSession.endDate);
   startDate.setDate(startDate.getDate() - 21);
 
   for (const course of allCourses) {
     const examDate = new Date(startDate);
     examDate.setDate(startDate.getDate() + Math.floor(Math.random() * 14));
 
-    // Business Logic: 100L and General courses are CBT -> Must use ICT venue
     const isCbt = course.level === Level.LEVEL_100 || course.isGeneral;
     const venue = isCbt
       ? getRandomItem(ICT_VENUES)
       : getRandomItem(REGULAR_VENUES);
-
     const timeSlot = getRandomItem(TIME_SLOTS);
 
     await prisma.examSchedule.create({
@@ -436,7 +405,7 @@ async function main() {
         date: examDate,
         startTime: timeSlot.start,
         endTime: timeSlot.end,
-        venue: venue,
+        venue,
         studentCount: Math.floor(Math.random() * 100) + 20,
         targetCollege: course.isGeneral ? College.CBAS : null,
         semester: course.semester,
@@ -446,7 +415,7 @@ async function main() {
     });
   }
 
-  // 11. Create Complaints
+  // 12. Create Complaints
   console.log('🗣️ Seeding Complaints...');
   await prisma.complaint.deleteMany();
 
@@ -467,7 +436,7 @@ async function main() {
         department: 'General',
         subject: getRandomItem(COMPLAINT_SUBJECTS),
         message: 'I am experiencing issues with my academic records.',
-        status: status,
+        status,
         resolvedBy: isResolved ? adminUser.name : null,
         resolvedAt: isResolved ? new Date() : null,
       },
