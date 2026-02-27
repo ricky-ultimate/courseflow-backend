@@ -6,7 +6,6 @@ import {
   IsInt,
   Min,
   Max,
-  IsEmail,
   IsOptional,
   IsBoolean,
   MaxLength,
@@ -15,25 +14,20 @@ import { Level, Semester } from '../../../generated/prisma';
 
 export class CreateCourseDto {
   @ApiProperty({ example: 'CSC101' })
-  @IsString({ message: 'Code must be a string' })
-  @IsNotEmpty({ message: 'Code is required' })
+  @IsString()
+  @IsNotEmpty()
   code: string;
 
   @ApiProperty({ example: 'Introduction to Computer Science' })
-  @IsString({ message: 'Name must be a string' })
-  @IsNotEmpty({ message: 'Name is required' })
-  @MaxLength(200, { message: 'Name cannot exceed 200 characters' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
   name: string;
 
-  @ApiProperty({
-    required: false,
-    example:
-      'This course introduces students to fundamental concepts of computer science, including algorithms, data structures, and basic programming logic.',
-    description: 'Course overview/description',
-  })
-  @IsString({ message: 'Overview must be a string' })
+  @ApiProperty({ required: false })
+  @IsString()
   @IsOptional()
-  @MaxLength(2000, { message: 'Overview cannot exceed 2000 characters' })
+  @MaxLength(2000)
   overview?: string;
 
   @ApiProperty({ enum: Level })
@@ -44,45 +38,32 @@ export class CreateCourseDto {
   @IsEnum(Semester)
   semester: Semester = Semester.FIRST;
 
-  @ApiProperty({
-    example: 3,
-    description: 'Number of credits for the course (1-6)',
-  })
-  @IsInt({ message: 'Credits must be an integer' })
-  @Min(1, { message: 'Credits must be at least 1' })
-  @Max(6, { message: 'Credits cannot exceed 6' })
+  @ApiProperty({ example: 3 })
+  @IsInt()
+  @Min(1)
+  @Max(6)
   credits: number;
 
   @ApiProperty({ example: 'CSC' })
-  @IsString({ message: 'Department code must be a string' })
-  @IsNotEmpty({ message: 'Department code is required' })
+  @IsString()
+  @IsNotEmpty()
   departmentCode: string;
 
   @ApiProperty({
-    example: 'lecturer@university.edu',
-    description: 'Email of the lecturer taking the course',
+    example: 'clxyz123abc456def789',
+    description: 'ID of the lecturer (User with role LECTURER or HOD)',
   })
-  @IsEmail({}, { message: 'Please provide a valid email address' })
-  @IsNotEmpty({ message: 'Lecturer email is required' })
-  lecturerEmail: string;
+  @IsString()
+  @IsOptional()
+  lecturerId?: string;
 
-  @ApiProperty({
-    required: false,
-    default: false,
-    description:
-      'Whether this is a general studies course (available to all departments)',
-  })
-  @IsBoolean({ message: 'isGeneral must be a boolean' })
+  @ApiProperty({ required: false, default: false })
+  @IsBoolean()
   @IsOptional()
   isGeneral?: boolean;
 
-  @ApiProperty({
-    required: false,
-    default: false,
-    description:
-      'Whether this course is locked (prevents deletion by standard admins)',
-  })
-  @IsBoolean({ message: 'isLocked must be a boolean' })
+  @ApiProperty({ required: false, default: false })
+  @IsBoolean()
   @IsOptional()
   isLocked?: boolean;
 }
