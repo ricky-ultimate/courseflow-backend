@@ -15,7 +15,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Course, Level } from '../../generated/prisma';
+import { Course, Level, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -34,7 +34,18 @@ export class CoursesService extends BaseService<
       identifierField: 'code',
       uniqueFields: ['code'],
       softDelete: true,
-      includeRelations: { department: true, lecturer: true },
+      includeRelations: {
+        department: true,
+        lecturer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            departmentCode: true,
+          },
+        },
+      },
       defaultOrderBy: { code: 'asc' },
     });
   }
@@ -44,10 +55,7 @@ export class CoursesService extends BaseService<
   ): Promise<Course[] | PaginatedResult<Course>> {
     const andConditions: Record<string, any>[] = [];
 
-    if (this.config.softDelete) {
-      andConditions.push({ isActive: true });
-    }
-
+    if (this.config.softDelete) andConditions.push({ isActive: true });
     if (query.departmentCode) {
       if (query.includeGeneral) {
         andConditions.push({
@@ -59,24 +67,12 @@ export class CoursesService extends BaseService<
     } else if (query.isGeneral !== undefined) {
       andConditions.push({ isGeneral: query.isGeneral });
     }
+    if (query.level) andConditions.push({ level: query.level });
+    if (query.semester) andConditions.push({ semester: query.semester });
 
-    if (query.level) {
-      andConditions.push({ level: query.level });
-    }
-
-    if (query.semester) {
-      andConditions.push({ semester: query.semester });
-    }
-
-    if (query.lecturerEmail) {
-      andConditions.push({
-        lecturer: {
-          email: {
-            equals: query.lecturerEmail,
-            mode: 'insensitive',
-          },
-        },
-      });
+    // lecturerId filter (by id)
+    if (query.lecturerId) {
+      andConditions.push({ lecturerId: query.lecturerId });
     }
 
     if (query.minCredits !== undefined || query.maxCredits !== undefined) {
@@ -102,9 +98,7 @@ export class CoursesService extends BaseService<
 
     const where = andConditions.length > 0 ? { AND: andConditions } : {};
 
-    if (query.page && query.limit) {
-      return this.findPaginated(where, query);
-    }
+    if (query.page && query.limit) return this.findPaginated(where, query);
 
     return this.getModel().findMany({
       where,
@@ -119,29 +113,30 @@ export class CoursesService extends BaseService<
     const department = await this.prisma.department.findUnique({
       where: { code: dto.departmentCode },
     });
-
     if (!department) {
       throw new NotFoundException(
         `Department with code '${dto.departmentCode}' not found`,
       );
     }
 
-    const lecturer = await this.prisma.lecturer.findUnique({
-      where: { email: dto.lecturerEmail },
-    });
-
-    if (!lecturer) {
-      throw new NotFoundException(
-        `Lecturer with email '${dto.lecturerEmail}' not found`,
-      );
+    // lecturerId is passed directly
+    if (dto.lecturerId) {
+      const lecturer = await this.prisma.user.findUnique({
+        where: { id: dto.lecturerId, isActive: true },
+      });
+      if (!lecturer) {
+        throw new NotFoundException(
+          `Lecturer with id '${dto.lecturerId}' not found`,
+        );
+      }
+      if (lecturer.role !== Role.LECTURER && lecturer.role !== Role.HOD) {
+        throw new NotFoundException(
+          `User '${dto.lecturerId}' is not a lecturer`,
+        );
+      }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { lecturerEmail, ...rest } = dto;
-    return {
-      ...rest,
-      lecturerId: lecturer.id,
-    };
+    return dto as Record<string, any>;
   }
 
   protected async beforeUpdate(
@@ -152,15 +147,11 @@ export class CoursesService extends BaseService<
       where: { code: identifier },
     });
 
-    if (course?.isLocked) {
-      if (dto.isLocked !== false) {
-        throw new ForbiddenException(
-          'Cannot modify locked university courses. Unlock the course first.',
-        );
-      }
+    if (course?.isLocked && dto.isLocked !== false) {
+      throw new ForbiddenException(
+        'Cannot modify locked university courses. Unlock the course first.',
+      );
     }
-
-    const data: Record<string, any> = { ...dto };
 
     if (dto.departmentCode) {
       const department = await this.prisma.department.findUnique({
@@ -173,35 +164,34 @@ export class CoursesService extends BaseService<
       }
     }
 
-    if (dto.lecturerEmail) {
-      const lecturer = await this.prisma.lecturer.findUnique({
-        where: { email: dto.lecturerEmail },
+    if (dto.lecturerId) {
+      const lecturer = await this.prisma.user.findUnique({
+        where: { id: dto.lecturerId, isActive: true },
       });
-
       if (!lecturer) {
         throw new NotFoundException(
-          `Lecturer with email '${dto.lecturerEmail}' not found`,
+          `Lecturer with id '${dto.lecturerId}' not found`,
         );
       }
-
-      data.lecturerId = lecturer.id;
-      delete data.lecturerEmail;
+      if (lecturer.role !== Role.LECTURER && lecturer.role !== Role.HOD) {
+        throw new NotFoundException(
+          `User '${dto.lecturerId}' is not a lecturer`,
+        );
+      }
     }
 
-    return data;
+    return dto as Record<string, any>;
   }
 
   async remove(identifier: string): Promise<Course> {
     const course = await this.prisma.course.findUnique({
       where: { code: identifier },
     });
-
     if (course?.isLocked) {
       throw new ForbiddenException(
         'Cannot delete locked university courses (e.g. GST, PIF).',
       );
     }
-
     return super.remove(identifier);
   }
 
@@ -222,25 +212,27 @@ export class CoursesService extends BaseService<
       CourseCsvRowDto,
       requiredHeaders,
     );
-
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length === 0) {
+    if (data.length === 0)
       return this.csvService.createBulkResult([], allErrors, errors.length);
-    }
 
+    // CSV uses email for human-readable lookup → resolve to id
     const lecturerEmails = [
-      ...new Set(data.map((row) => row.lecturerEmail.toLowerCase())),
+      ...new Set(data.map((r) => r.lecturerEmail.toLowerCase())),
     ];
-    const lecturers = await this.prisma.lecturer.findMany({
+    const lecturers = await this.prisma.user.findMany({
       where: {
         email: { in: lecturerEmails, mode: 'insensitive' },
+        role: { in: [Role.LECTURER, Role.HOD] },
+        isActive: true,
       },
       select: { email: true, id: true },
     });
 
-    const emailToIdMap = new Map<string, string>();
-    lecturers.forEach((l) => emailToIdMap.set(l.email.toLowerCase(), l.id));
+    const emailToIdMap = new Map(
+      lecturers.map((l) => [l.email.toLowerCase(), l.id]),
+    );
 
     const rowsForRepo: Array<{
       code: string;
@@ -260,7 +252,7 @@ export class CoursesService extends BaseService<
           row: i + 2,
           field: 'lecturerEmail',
           value: row.lecturerEmail,
-          message: `Lecturer with email '${row.lecturerEmail}' not found. Please create the lecturer first.`,
+          message: `Lecturer with email '${row.lecturerEmail}' not found or is not a lecturer.`,
         });
       } else {
         rowsForRepo.push({
@@ -269,7 +261,7 @@ export class CoursesService extends BaseService<
           level: row.level,
           credits: row.credits,
           departmentCode: row.departmentCode,
-          lecturerId: lecturerId,
+          lecturerId,
         });
       }
     }
@@ -323,7 +315,6 @@ export class CoursesService extends BaseService<
       departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',
     };
-
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
 
@@ -331,12 +322,7 @@ export class CoursesService extends BaseService<
     return this.courseRepository.findWithoutSchedules();
   }
 
-  async getCourseStats(): Promise<{
-    totalCourses: number;
-    coursesByLevel: Record<string, number>;
-    coursesByDepartment: Record<string, number>;
-    averageCredits: number;
-  }> {
+  async getCourseStats() {
     return this.courseRepository.getCourseStats();
   }
 }
