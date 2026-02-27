@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,21 +13,6 @@ import {
   PaginatedResult,
 } from '../../common/interfaces/base-service.interface';
 import * as argon2 from 'argon2';
-
-const USER_PUBLIC_SELECT = {
-  id: true,
-  matricNO: true,
-  email: true,
-  name: true,
-  role: true,
-  phone: true,
-  departmentCode: true,
-  isActive: true,
-  lastLoginAt: true,
-  createdAt: true,
-  updatedAt: true,
-  department: { select: { name: true, code: true, college: true } },
-};
 
 @Injectable()
 export class UsersService extends BaseService<
@@ -73,7 +57,7 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    identifier: string,
+    _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
 
@@ -301,7 +285,7 @@ export class UsersService extends BaseService<
   // ─── Private helpers ─────────────────────────────────────────────────────────
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    const { password, ...rest } = user;
+    const { password: _password, ...rest } = user;
     return rest;
   }
 
