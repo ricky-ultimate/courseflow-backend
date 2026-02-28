@@ -37,14 +37,7 @@ export class DepartmentsService extends BaseService<
       softDelete: true,
       defaultOrderBy: { name: 'asc' },
       includeRelations: {
-        hod: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
+        hod: { select: { id: true, name: true, email: true, role: true } },
       },
     });
   }
@@ -60,18 +53,10 @@ export class DepartmentsService extends BaseService<
         { code: { contains: query.searchTerm, mode: 'insensitive' } },
       ];
     }
+    if (query.hasCourses) where.courses = { some: { isActive: true } };
+    if (query.withoutCourses) where.courses = { none: { isActive: true } };
 
-    if (query.hasCourses) {
-      where.courses = { some: { isActive: true } };
-    }
-
-    if (query.withoutCourses) {
-      where.courses = { none: { isActive: true } };
-    }
-
-    if (query.page && query.limit) {
-      return this.findPaginated(where, query);
-    }
+    if (query.page && query.limit) return this.findPaginated(where, query);
 
     return this.getModel().findMany({
       where,
@@ -84,13 +69,9 @@ export class DepartmentsService extends BaseService<
     dto: CreateDepartmentDto,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
-
-    if (dto.hodEmail) {
-      const hodId = await this.resolveHodEmailToId(dto.hodEmail);
-      data.hodId = hodId;
-      delete data.hodEmail;
+    if (dto.hodId) {
+      await this.resolveHodId(dto.hodId);
     }
-
     return data;
   }
 
@@ -99,44 +80,29 @@ export class DepartmentsService extends BaseService<
     identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
-
-    if (dto.hodEmail) {
-      const hodId = await this.resolveHodEmailToId(dto.hodEmail, identifier);
-      data.hodId = hodId;
-      delete data.hodEmail;
+    if (dto.hodId) {
+      await this.resolveHodId(dto.hodId, identifier);
     }
-
     return data;
   }
 
-  private async resolveHodEmailToId(
-    email: string,
+  private async resolveHodId(
+    hodId: string,
     currentDeptCode?: string,
-  ): Promise<string> {
+  ): Promise<void> {
     const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        managedDepartment: true,
-      },
+      where: { id: hodId },
+      include: { managedDepartment: true },
     });
 
-    if (!user) {
-      throw new NotFoundException(`User with email '${email}' not found`);
-    }
-
-    if (
-      user.role !== Role.HOD &&
-      user.role !== Role.LECTURER &&
-      user.role !== Role.ADMIN
-    ) {
+    if (!user) throw new NotFoundException(`User with id '${hodId}' not found`);
+    if (user.role === Role.STUDENT) {
       throw new BadRequestException(
-        `User with email '${email}' must have HOD, LECTURER, or ADMIN role to be assigned as department head`,
+        `User '${hodId}' must have HOD, LECTURER, or ADMIN role to be assigned as department head`,
       );
     }
-
-    if (!user.isActive) {
-      throw new BadRequestException(`User with email '${email}' is not active`);
-    }
+    if (!user.isActive)
+      throw new BadRequestException(`User '${hodId}' is not active`);
 
     if (
       user.managedDepartment &&
@@ -147,45 +113,36 @@ export class DepartmentsService extends BaseService<
       );
     }
 
-    if (user.role !== Role.HOD) {
+    // Promote to HOD role if not already HOD or ADMIN
+    if (user.role !== Role.HOD && user.role !== Role.ADMIN) {
       await this.prisma.user.update({
-        where: { id: user.id },
+        where: { id: hodId },
         data: { role: Role.HOD },
       });
     }
-
-    return user.id;
   }
 
   async bulkCreateFromCsv(
     buffer: Buffer,
   ): Promise<BulkOperationResult<Department>> {
-    const requiredHeaders = ['code', 'name'];
-
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
       DepartmentCsvRowDto,
-      requiredHeaders,
+      ['code', 'name'],
     );
-
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length === 0) {
+    if (data.length === 0)
       return this.csvService.createBulkResult([], allErrors, errors.length);
-    }
 
     const { created, errors: repositoryErrors } =
       await this.departmentRepository.bulkCreateWithValidation(
-        data.map((departmentData) => ({
-          code: departmentData.code,
-          name: departmentData.name,
-        })),
+        data.map((d) => ({ code: d.code, name: d.name })),
       );
 
     for (const repoError of repositoryErrors) {
-      const rowNumber = repoError.index + 2;
       allErrors.push({
-        row: rowNumber,
+        row: repoError.index + 2,
         field: 'general',
         value: data[repoError.index],
         message: repoError.error,
@@ -200,33 +157,21 @@ export class DepartmentsService extends BaseService<
   }
 
   generateCsvTemplate(): string {
-    const headers = ['code', 'name'];
-    const sampleData = {
+    return this.csvService.generateCsvTemplate(['code', 'name'], {
       code: 'CS',
       name: 'Computer Science',
-    };
-
-    return this.csvService.generateCsvTemplate(headers, sampleData);
+    });
   }
 
-  async getDepartmentStatistics(): Promise<{
-    totalDepartments: number;
-    departmentsWithCourses: number;
-    departmentsWithoutCourses: number;
-    averageCoursesPerDepartment: number;
-  }> {
+  async getDepartmentStatistics() {
     return this.departmentRepository.getDepartmentStats();
   }
 
-  async findWithFullDetails(code: string): Promise<Department | null> {
+  async findWithFullDetails(code: string) {
     return this.departmentRepository.findWithFullDetails(code);
   }
 
-  async safeDelete(code: string): Promise<{
-    success: boolean;
-    message: string;
-    department?: Department;
-  }> {
+  async safeDelete(code: string) {
     return this.departmentRepository.safeDelete(code);
   }
 
