@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 
 const CONFIG = {
   STUDENTS_TO_SEED: 20,
-  COURSES_PER_LEVEL_PER_DEPT: 3,
+  COURSES_PER_LEVEL_PER_DEPT: 5,
 };
 
 const DEPARTMENTS = [
