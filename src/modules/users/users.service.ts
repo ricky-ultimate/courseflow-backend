@@ -57,7 +57,8 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    identifier: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
 
@@ -70,10 +71,6 @@ export class UsersService extends BaseService<
           `Department '${dto.departmentCode}' not found`,
         );
       }
-    }
-
-    if (dto.password) {
-      data.password = await argon2.hash(dto.password);
     }
 
     return data;
@@ -285,7 +282,8 @@ export class UsersService extends BaseService<
   // ─── Private helpers ─────────────────────────────────────────────────────────
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    const { password, ...rest } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...rest } = user;
     return rest;
   }
 
