@@ -13,51 +13,42 @@ import { Role } from '../../../generated/prisma';
 
 export class RegisterDto {
   @ApiProperty({ example: 'CS/2023/001' })
-  @IsString({ message: 'Matric number must be a string' })
-  @IsNotEmpty({ message: 'Matric number is required' })
+  @IsString()
+  @IsNotEmpty()
   matricNO: string;
 
   @ApiProperty({ example: 'user@example.com' })
-  @IsEmail({}, { message: 'Please provide a valid email address' })
-  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty({ example: 'password123', minLength: 6 })
-  @IsString({ message: 'Password must be a string' })
-  @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
   password: string;
 
   @ApiProperty({ required: false, example: 'John Doe' })
-  @IsString({ message: 'Name must be a string' })
+  @IsString()
   @IsOptional()
   name?: string;
 
-  @ApiProperty({
-    enum: Role,
-    required: false,
-    default: Role.STUDENT,
-    example: Role.STUDENT,
-    description:
-      'User role - defaults to STUDENT. ADMIN/LECTURER requires verification code',
-  })
-  @IsEnum(Role, { message: 'Role must be STUDENT, LECTURER, or ADMIN' })
+  @ApiProperty({ enum: Role, required: false, default: Role.STUDENT })
+  @IsEnum(Role)
   @IsOptional()
   role?: Role;
 
   @ApiProperty({
     required: false,
     example: 'ADMIN-2025-ABC123',
-    description: 'Verification code required for ADMIN or LECTURER roles',
+    description: 'Required for ADMIN, LECTURER, or HOD roles',
   })
-  @IsString({ message: 'Verification code must be a string' })
+  @IsString()
   @ValidateIf(
     (o: RegisterDto) =>
       o.role === Role.ADMIN || o.role === Role.LECTURER || o.role === Role.HOD,
   )
-  @IsNotEmpty({
-    message: 'Verification code is required for ADMIN or LECTURER roles',
-  })
+  @IsNotEmpty()
   verificationCode?: string;
 
   @ApiProperty({
@@ -72,8 +63,11 @@ export class RegisterDto {
   @ValidateIf(
     (o: RegisterDto) => o.role === Role.LECTURER || o.role === Role.HOD,
   )
-  @IsNotEmpty({
-    message: 'Department code is required for LECTURER and HOD roles',
-  })
+  @IsNotEmpty()
   departmentCode?: string;
+
+  @ApiProperty({ required: false, example: '+1234567890' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }

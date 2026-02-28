@@ -18,46 +18,39 @@ export class CourseFilterDto extends PaginationDto {
   @IsString()
   departmentCode?: string;
 
-  @ApiPropertyOptional({ enum: Level, description: 'Filter by Course Level' })
+  @ApiPropertyOptional({ enum: Level })
   @IsOptional()
   @IsEnum(Level)
   level?: Level;
 
-  @ApiPropertyOptional({ enum: Semester, description: 'Filter by Semester' })
+  @ApiPropertyOptional({ enum: Semester })
   @IsOptional()
   @IsEnum(Semester)
   semester?: Semester;
 
-  @ApiPropertyOptional({
-    description: 'Filter strictly by General Course status (true/false)',
-    example: true,
-  })
+  @ApiPropertyOptional({ description: 'Filter by general course status' })
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   isGeneral?: boolean;
 
   @ApiPropertyOptional({
-    description:
-      'If true, includes General courses when filtering by Department (e.g., Fetch CSC courses + GST courses)',
-    example: true,
+    description: 'Include general courses when filtering by department',
   })
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   includeGeneral?: boolean;
 
-  @ApiPropertyOptional({
-    description: 'Search by name or code (partial match)',
-  })
+  @ApiPropertyOptional({ description: 'Search by name or code' })
   @IsOptional()
   @IsString()
   searchTerm?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by lecturer Email' })
+  @ApiPropertyOptional({ description: 'Filter by lecturer ID' })
   @IsOptional()
   @IsString()
-  lecturerEmail?: string;
+  lecturerId?: string;
 
   @ApiPropertyOptional({ description: 'Minimum credits', minimum: 1 })
   @IsOptional()

@@ -16,7 +16,6 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HodDepartmentGuard } from './common/guards/hod-department.guard';
-import { LecturersModule } from './modules/lecturers/lecturers.module';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { ExamsModule } from './modules/exams/exams.module';
 
@@ -26,10 +25,7 @@ import { ExamsModule } from './modules/exams/exams.module';
       isGlobal: true,
       load: [appConfig, databaseConfig],
       validationSchema,
-      validationOptions: {
-        allowUnknown: true,
-        abortEarly: true,
-      },
+      validationOptions: { allowUnknown: true, abortEarly: true },
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -44,7 +40,6 @@ import { ExamsModule } from './modules/exams/exams.module';
     AuthModule,
     UsersModule,
     DepartmentsModule,
-    LecturersModule,
     CoursesModule,
     PrismaModule,
     SchedulesModule,
@@ -56,22 +51,10 @@ import { ExamsModule } from './modules/exams/exams.module';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: HodDepartmentGuard,
-    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: HodDepartmentGuard },
   ],
 })
 export class AppModule {}
