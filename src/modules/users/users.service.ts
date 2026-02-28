@@ -57,7 +57,7 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    _identifier: string,
+    identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
 
@@ -72,9 +72,9 @@ export class UsersService extends BaseService<
       }
     }
 
-    // if (dto.password) {
-    //   data.password = await argon2.hash(dto.password);
-    // }
+    if (dto.password) {
+      data.password = await argon2.hash(dto.password);
+    }
 
     return data;
   }
@@ -285,7 +285,7 @@ export class UsersService extends BaseService<
   // ─── Private helpers ─────────────────────────────────────────────────────────
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    const { password: _password, ...rest } = user;
+    const { password, ...rest } = user;
     return rest;
   }
 
