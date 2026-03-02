@@ -20,7 +20,7 @@ import {
   LockedSlot,
   CourseInput,
 } from './scheduler/scheduler.engine';
-import { DayOfWeek, Role, Schedule, Semester } from '../../generated/prisma';
+import { DayOfWeek, Role, Schedule } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
