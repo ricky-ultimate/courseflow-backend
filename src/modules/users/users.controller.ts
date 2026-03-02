@@ -30,7 +30,6 @@ import { AuthenticatedRequest } from '../../common/types/auth.types';
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 @CrudRoles({
-  entity: 'user',
   create: [Role.ADMIN],
   read: [Role.ADMIN],
   update: [Role.ADMIN],

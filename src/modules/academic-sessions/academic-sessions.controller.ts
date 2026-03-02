@@ -32,7 +32,6 @@ import {
 @ApiBearerAuth('JWT-auth')
 @Controller('academic-sessions')
 @CrudRoles({
-  entity: 'academic-session',
   create: [Role.ADMIN],
   read: [],
   update: [Role.ADMIN],

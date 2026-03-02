@@ -34,7 +34,6 @@ import { AuthenticatedRequest } from 'src/common/types/auth.types';
 @ApiTags('Schedules')
 @Controller('schedules')
 @CrudRoles({
-  entity: 'schedule',
   create: [Role.ADMIN, Role.HOD],
   read: [],
   update: [Role.ADMIN, Role.HOD],
