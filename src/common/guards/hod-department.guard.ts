@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../modules/database/prisma.service';
 import { Role } from '../../generated/prisma';
+import { SKIP_HOD_GUARD_KEY } from '../decorators/skip-hod-guard.decorator';
 
 interface RequestWithUser {
   user?: { id: string; role: Role; email: string };
@@ -23,6 +24,13 @@ export class HodDepartmentGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const skip = this.reflector.getAllAndOverride<boolean>(SKIP_HOD_GUARD_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (skip) return true;
+
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const { user, method } = request;
 
@@ -41,7 +49,13 @@ export class HodDepartmentGuard implements CanActivate {
     const hodDeptCode = hodUser.managedDepartment.code;
     const resourceDeptCode = await this.getResourceDepartmentCode(request);
 
-    if (resourceDeptCode && resourceDeptCode !== hodDeptCode) {
+    if (resourceDeptCode === null) {
+      throw new ForbiddenException(
+        'HODs can only modify resources in their own department',
+      );
+    }
+
+    if (resourceDeptCode !== hodDeptCode) {
       throw new ForbiddenException(
         `HODs can only modify resources in their own department (${hodDeptCode})`,
       );
@@ -62,7 +76,7 @@ export class HodDepartmentGuard implements CanActivate {
         where: { code: body.courseCode },
         select: { departmentCode: true },
       });
-      return course?.departmentCode || null;
+      return course?.departmentCode ?? null;
     }
 
     if (params?.code) {
@@ -70,7 +84,7 @@ export class HodDepartmentGuard implements CanActivate {
         where: { code: params.code },
         select: { departmentCode: true },
       });
-      return course?.departmentCode || null;
+      return course?.departmentCode ?? null;
     }
 
     if (params?.id) {
@@ -78,7 +92,7 @@ export class HodDepartmentGuard implements CanActivate {
         where: { id: params.id },
         include: { course: { select: { departmentCode: true } } },
       });
-      return schedule?.course.departmentCode || null;
+      return schedule?.course.departmentCode ?? null;
     }
 
     return null;
