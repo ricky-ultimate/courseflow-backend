@@ -36,7 +36,6 @@ import { Course, Role } from '../../generated/prisma';
 @ApiTags('Courses')
 @Controller('courses')
 @CrudRoles({
-  entity: 'course',
   create: [Role.ADMIN, Role.HOD],
   read: [],
   update: [Role.ADMIN, Role.HOD],

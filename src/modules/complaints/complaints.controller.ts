@@ -31,7 +31,6 @@ import { PaginationOptions } from '../../common/interfaces/base-service.interfac
 @ApiBearerAuth('JWT-auth')
 @Controller('complaints')
 @CrudRoles({
-  entity: 'complaint',
   create: [Role.STUDENT, Role.ADMIN],
   read: [Role.ADMIN],
   update: [Role.ADMIN],
