@@ -6,7 +6,6 @@ export class GenerateScheduleDto {
   @ApiProperty({
     enum: Semester,
     example: Semester.FIRST,
-    description: 'The semester to generate schedules for',
   })
   @IsEnum(Semester)
   semester: Semester;
@@ -18,12 +17,22 @@ export class GenerateScheduleDto {
   @IsString()
   @IsOptional()
   sessionId?: string;
+
+  @ApiPropertyOptional({
+    example: 'CSC',
+    description:
+      'Department code to scope generation to. Required for HODs. Admins may omit to generate for all departments.',
+  })
+  @IsString()
+  @IsOptional()
+  departmentCode?: string;
 }
 
 export interface GenerateScheduleResult {
   sessionId: string;
   sessionName: string;
   semester: Semester;
+  departmentCode: string | null;
   totalCourses: number;
   scheduledCourses: number;
   preservedOverrides: number;
