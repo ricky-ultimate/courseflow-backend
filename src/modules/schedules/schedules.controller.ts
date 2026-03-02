@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -28,6 +29,7 @@ import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { Schedule, Role } from '../../generated/prisma';
+import { AuthenticatedRequest } from 'src/common/types/auth.types';
 
 @ApiTags('Schedules')
 @Controller('schedules')
@@ -48,11 +50,14 @@ export class SchedulesController extends BaseController<
   }
 
   @Post('generate')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.HOD)
   @SkipHodGuard()
   @ApiGenerateSchedules()
-  generate(@Body() dto: GenerateScheduleDto) {
-    return this.schedulesService.generateSchedules(dto);
+  async generate(
+    @Body() dto: GenerateScheduleDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.schedulesService.generateSchedules(dto, req.user);
   }
 
   @Get()
