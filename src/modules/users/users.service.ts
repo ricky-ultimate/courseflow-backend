@@ -118,36 +118,6 @@ export class UsersService extends BaseService<
     return this.excludePassword(user);
   }
 
-  // ─── Lecturer-specific helpers (used by courses/schedules) ──────────────────
-
-  async findLecturerById(id: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { id, isActive: true },
-      include: { department: true },
-    });
-    if (!user)
-      throw new NotFoundException(`Lecturer with id '${id}' not found`);
-    if (user.role !== Role.LECTURER && user.role !== Role.HOD) {
-      throw new BadRequestException(`User '${id}' is not a lecturer`);
-    }
-    return user;
-  }
-
-  async findLecturerByEmail(email: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { email, isActive: true },
-      include: { department: true },
-    });
-    if (!user)
-      throw new NotFoundException(`Lecturer with email '${email}' not found`);
-    if (user.role !== Role.LECTURER && user.role !== Role.HOD) {
-      throw new BadRequestException(
-        `User with email '${email}' is not a lecturer`,
-      );
-    }
-    return user;
-  }
-
   // ─── Dashboard (lecturer/HOD self-service) ──────────────────────────────────
 
   async getDashboardStats(userId: string) {
