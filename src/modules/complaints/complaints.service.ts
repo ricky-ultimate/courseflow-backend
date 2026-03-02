@@ -20,8 +20,8 @@ export class ComplaintsService extends BaseService<
     });
   }
 
-  async create(dto: CreateComplaintDto, userId?: string) {
-    const data = userId ? { ...dto, userId } : dto;
+  async create(dto: CreateComplaintDto) {
+    const data = dto;
     return super.create(data);
   }
 
