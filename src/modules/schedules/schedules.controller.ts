@@ -25,6 +25,8 @@ import { ScheduleFilterDto } from './dto/schedule-filter.dto';
 import { GenerateScheduleDto } from './dto/generate-schedule.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { Schedule, Role } from '../../generated/prisma';
 
 @ApiTags('Schedules')
@@ -46,6 +48,8 @@ export class SchedulesController extends BaseController<
   }
 
   @Post('generate')
+  @Roles(Role.ADMIN)
+  @SkipHodGuard()
   @ApiGenerateSchedules()
   generate(@Body() dto: GenerateScheduleDto) {
     return this.schedulesService.generateSchedules(dto);
@@ -58,6 +62,7 @@ export class SchedulesController extends BaseController<
   }
 
   @Get('statistics')
+  @SkipHodGuard()
   @ApiGetScheduleStatistics()
   getStatistics() {
     return this.schedulesService.getScheduleStatistics();
