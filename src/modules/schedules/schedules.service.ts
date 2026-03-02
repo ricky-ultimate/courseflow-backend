@@ -19,7 +19,7 @@ import {
   LockedSlot,
   CourseInput,
 } from './scheduler/scheduler.engine';
-import { Schedule, Semester } from '../../generated/prisma';
+import { DayOfWeek, Schedule, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class SchedulesService extends BaseService<
       throw new NotFoundException(`Course '${dto.courseCode}' not found`);
     }
 
-    this.validateTimeSlot(dto.startTime, dto.endTime);
+    this.validateTimeSlot(dto.startTime, dto.endTime, dto.dayOfWeek);
 
     const existing = await this.scheduleRepository.findConflict(
       dto.courseCode,
@@ -96,7 +96,7 @@ export class SchedulesService extends BaseService<
       });
       const startTime = dto.startTime ?? current?.startTime ?? '';
       const endTime = dto.endTime ?? current?.endTime ?? '';
-      this.validateTimeSlot(startTime, endTime);
+      this.validateTimeSlot(startTime, endTime, current?.dayOfWeek);
     }
 
     return {
@@ -253,7 +253,11 @@ export class SchedulesService extends BaseService<
     return this.scheduleRepository.getScheduleStats();
   }
 
-  private validateTimeSlot(startTime: string, endTime: string): void {
+  private validateTimeSlot(
+    startTime: string,
+    endTime: string,
+    dayOfWeek?: DayOfWeek,
+  ): void {
     const validStarts = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 
     if (!validStarts.includes(startTime)) {
@@ -271,6 +275,16 @@ export class SchedulesService extends BaseService<
 
     if (startHour < 9 || endHour > 19) {
       throw new BadRequestException('Classes must run between 09:00 and 19:00');
+    }
+
+    if (dayOfWeek === DayOfWeek.WEDNESDAY && startHour >= 15) {
+      throw new BadRequestException(
+        'Wednesday classes cannot start at or after 15:00 due to chapel',
+      );
+    }
+
+    if (dayOfWeek === DayOfWeek.SATURDAY || dayOfWeek === DayOfWeek.SUNDAY) {
+      throw new BadRequestException('Weekend classes are not allowed');
     }
   }
 }
