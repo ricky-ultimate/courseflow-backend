@@ -8,17 +8,10 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { ScheduleFilterDto } from './dto/schedule-filter.dto';
-import {
-  GenerateScheduleDto,
-  GenerateScheduleResult,
-} from './dto/generate-schedule.dto';
+import { GenerateScheduleDto, GenerateScheduleResult } from './dto/generate-schedule.dto';
 import { BaseService } from '../../common/services/base.service';
 import { ScheduleRepository } from './repositories/schedule.repository';
-import {
-  SchedulerEngine,
-  LockedSlot,
-  CourseInput,
-} from './scheduler/scheduler.engine';
+import { SchedulerEngine, LockedSlot, CourseInput } from './scheduler/scheduler.engine';
 import { DayOfWeek, Schedule, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
@@ -45,9 +38,7 @@ export class SchedulesService extends BaseService<
     });
   }
 
-  protected async beforeCreate(
-    dto: CreateScheduleDto,
-  ): Promise<Record<string, any>> {
+  protected async beforeCreate(dto: CreateScheduleDto): Promise<Record<string, any>> {
     const activeSession = await this.prisma.academicSession.findFirst({
       where: { isActive: true },
     });
@@ -71,6 +62,7 @@ export class SchedulesService extends BaseService<
       dto.courseCode,
       activeSession.id,
     );
+
     if (existing) {
       throw new ConflictException(
         `Course '${dto.courseCode}' already has a schedule this session. Update the existing one.`,
@@ -90,14 +82,19 @@ export class SchedulesService extends BaseService<
     dto: UpdateScheduleDto,
     identifier: string,
   ): Promise<Record<string, any>> {
-    if (dto.startTime || dto.endTime) {
-      const current = await this.prisma.schedule.findUnique({
-        where: { id: identifier },
-      });
-      const startTime = dto.startTime ?? current?.startTime ?? '';
-      const endTime = dto.endTime ?? current?.endTime ?? '';
-      this.validateTimeSlot(startTime, endTime, current?.dayOfWeek);
+    const current = await this.prisma.schedule.findUnique({
+      where: { id: identifier },
+    });
+
+    if (!current) {
+      throw new NotFoundException(`Schedule '${identifier}' not found`);
     }
+
+    const resolvedDay = dto.dayOfWeek ?? current.dayOfWeek;
+    const resolvedStart = dto.startTime ?? current.startTime;
+    const resolvedEnd = dto.endTime ?? current.endTime;
+
+    this.validateTimeSlot(resolvedStart, resolvedEnd, resolvedDay);
 
     return {
       ...dto,
@@ -126,8 +123,7 @@ export class SchedulesService extends BaseService<
     if (query.dayOfWeek) where.dayOfWeek = query.dayOfWeek;
 
     const courseFilter: Record<string, any> = {};
-    if (query.departmentCode)
-      courseFilter.departmentCode = query.departmentCode;
+    if (query.departmentCode) courseFilter.departmentCode = query.departmentCode;
     if (query.level) courseFilter.level = query.level;
     if (Object.keys(courseFilter).length > 0) where.course = courseFilter;
 
@@ -143,16 +139,10 @@ export class SchedulesService extends BaseService<
     }) as Promise<Schedule[]>;
   }
 
-  async generateSchedules(
-    dto: GenerateScheduleDto,
-  ): Promise<GenerateScheduleResult> {
+  async generateSchedules(dto: GenerateScheduleDto): Promise<GenerateScheduleResult> {
     const session = dto.sessionId
-      ? await this.prisma.academicSession.findUnique({
-          where: { id: dto.sessionId },
-        })
-      : await this.prisma.academicSession.findFirst({
-          where: { isActive: true },
-        });
+      ? await this.prisma.academicSession.findUnique({ where: { id: dto.sessionId } })
+      : await this.prisma.academicSession.findFirst({ where: { isActive: true } });
 
     if (!session) {
       throw new NotFoundException(
@@ -187,9 +177,7 @@ export class SchedulesService extends BaseService<
       include: { course: { include: { department: true } } },
     });
 
-    const overriddenCourseCodes = new Set(
-      manualOverrides.map((s) => s.courseCode),
-    );
+    const overriddenCourseCodes = new Set(manualOverrides.map((s) => s.courseCode));
 
     await this.prisma.schedule.deleteMany({
       where: {
@@ -219,10 +207,7 @@ export class SchedulesService extends BaseService<
       semester: s.semester,
     }));
 
-    const assignments = this.schedulerEngine.generate(
-      coursesToSchedule,
-      locked,
-    );
+    const assignments = this.schedulerEngine.generate(coursesToSchedule, locked);
 
     if (assignments.length > 0) {
       await this.prisma.schedule.createMany({
@@ -258,6 +243,10 @@ export class SchedulesService extends BaseService<
     endTime: string,
     dayOfWeek?: DayOfWeek,
   ): void {
+    if (dayOfWeek === DayOfWeek.SATURDAY || dayOfWeek === DayOfWeek.SUNDAY) {
+      throw new BadRequestException('Weekend classes are not allowed');
+    }
+
     const validStarts = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 
     if (!validStarts.includes(startTime)) {
@@ -281,10 +270,6 @@ export class SchedulesService extends BaseService<
       throw new BadRequestException(
         'Wednesday classes cannot start at or after 15:00 due to chapel',
       );
-    }
-
-    if (dayOfWeek === DayOfWeek.SATURDAY || dayOfWeek === DayOfWeek.SUNDAY) {
-      throw new BadRequestException('Weekend classes are not allowed');
     }
   }
 }
