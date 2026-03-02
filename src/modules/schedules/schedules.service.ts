@@ -314,16 +314,14 @@ export class SchedulesService extends BaseService<
       throw new BadRequestException('Weekend classes are not allowed');
     }
 
-    const validStarts = ['09:00', '11:00', '13:00', '15:00', '17:00'];
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
 
-    if (!validStarts.includes(startTime)) {
+    if (startMin !== 0 || endMin !== 0) {
       throw new BadRequestException(
-        `Start time must be one of: ${validStarts.join(', ')}`,
+        'Class times must be on the hour (e.g. 09:00, 10:00)',
       );
     }
-
-    const [startHour] = startTime.split(':').map(Number);
-    const [endHour] = endTime.split(':').map(Number);
 
     if (endHour - startHour !== 2) {
       throw new BadRequestException('Class duration must be exactly 2 hours');
@@ -333,10 +331,8 @@ export class SchedulesService extends BaseService<
       throw new BadRequestException('Classes must run between 09:00 and 19:00');
     }
 
-    if (dayOfWeek === DayOfWeek.WEDNESDAY && startHour >= 15) {
-      throw new BadRequestException(
-        'Wednesday classes cannot start at or after 15:00 due to chapel',
-      );
+    if (dayOfWeek === DayOfWeek.WEDNESDAY && endHour > 15) {
+      throw new BadRequestException('Wednesday classes must end by 15:00');
     }
   }
 }
