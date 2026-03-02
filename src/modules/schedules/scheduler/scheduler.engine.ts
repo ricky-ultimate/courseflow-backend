@@ -66,6 +66,17 @@ export class SchedulerEngine {
     return dayLoad;
   }
 
+  private buildInitialTimeSlotLoad(locked: LockedSlot[]): Map<string, number> {
+    const timeSlotLoad = new Map<string, number>();
+    for (const slot of locked) {
+      timeSlotLoad.set(
+        slot.startTime,
+        (timeSlotLoad.get(slot.startTime) ?? 0) + 1,
+      );
+    }
+    return timeSlotLoad;
+  }
+
   private availableSlots(
     course: CourseInput,
     occupied: Set<OccupancyKey>,
@@ -87,11 +98,17 @@ export class SchedulerEngine {
     course: CourseInput,
     occupied: Set<OccupancyKey>,
     dayLoad: Map<DayOfWeek, number>,
+    timeSlotLoad: Map<string, number>,
   ): DaySlot[] {
     const slots = this.availableSlots(course, occupied);
-    return slots.sort(
-      (a, b) => (dayLoad.get(a.day) ?? 0) - (dayLoad.get(b.day) ?? 0),
-    );
+    return slots.sort((a, b) => {
+      const dayDiff = (dayLoad.get(a.day) ?? 0) - (dayLoad.get(b.day) ?? 0);
+      if (dayDiff !== 0) return dayDiff;
+      return (
+        (timeSlotLoad.get(a.startTime) ?? 0) -
+        (timeSlotLoad.get(b.startTime) ?? 0)
+      );
+    });
   }
 
   private sortByMostConstrained(
@@ -111,11 +128,17 @@ export class SchedulerEngine {
     assignments: Map<string, ScheduleAssignment>,
     occupied: Set<OccupancyKey>,
     dayLoad: Map<DayOfWeek, number>,
+    timeSlotLoad: Map<string, number>,
   ): boolean {
     if (index === courses.length) return true;
 
     const course = courses[index];
-    const slots = this.availableSlotsOrdered(course, occupied, dayLoad);
+    const slots = this.availableSlotsOrdered(
+      course,
+      occupied,
+      dayLoad,
+      timeSlotLoad,
+    );
 
     for (const slot of slots) {
       const key = this.occupancyKey(
@@ -134,14 +157,31 @@ export class SchedulerEngine {
       });
       occupied.add(key);
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) + 1);
+      timeSlotLoad.set(
+        slot.startTime,
+        (timeSlotLoad.get(slot.startTime) ?? 0) + 1,
+      );
 
-      if (this.solve(courses, index + 1, assignments, occupied, dayLoad)) {
+      if (
+        this.solve(
+          courses,
+          index + 1,
+          assignments,
+          occupied,
+          dayLoad,
+          timeSlotLoad,
+        )
+      ) {
         return true;
       }
 
       assignments.delete(course.courseCode);
       occupied.delete(key);
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) - 1);
+      timeSlotLoad.set(
+        slot.startTime,
+        (timeSlotLoad.get(slot.startTime) ?? 0) - 1,
+      );
     }
 
     return false;
@@ -152,10 +192,18 @@ export class SchedulerEngine {
 
     const occupied = this.buildInitialOccupancy(locked);
     const dayLoad = this.buildInitialDayLoad(locked);
+    const timeSlotLoad = this.buildInitialTimeSlotLoad(locked);
     const sorted = this.sortByMostConstrained(courses, occupied);
     const assignments = new Map<string, ScheduleAssignment>();
 
-    const solved = this.solve(sorted, 0, assignments, occupied, dayLoad);
+    const solved = this.solve(
+      sorted,
+      0,
+      assignments,
+      occupied,
+      dayLoad,
+      timeSlotLoad,
+    );
 
     if (!solved) {
       const unscheduled = sorted
