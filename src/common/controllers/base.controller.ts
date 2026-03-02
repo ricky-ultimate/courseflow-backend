@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -15,7 +14,6 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { BaseService } from '../services/base.service';
-import { RolesGuard } from '../guards/roles.guard';
 import { PaginationOptions } from '../interfaces/base-service.interface';
 
 export abstract class BaseController<T, CreateDto, UpdateDto> {
@@ -24,7 +22,6 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
   ) {}
 
   @Post()
-  @UseGuards(RolesGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new entity' })
   @ApiResponse({
@@ -52,7 +49,6 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update entity' })
   async update(@Param('id') id: string, @Body() dto: UpdateDto) {
@@ -60,7 +56,6 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete entity' })
   async remove(@Param('id') id: string) {
