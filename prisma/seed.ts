@@ -3,7 +3,6 @@ import {
   Role,
   Level,
   Semester,
-  DayOfWeek,
   ComplaintStatus,
   College,
   VenueType,
@@ -87,8 +86,6 @@ const REGULAR_VENUES = [
   VenueType.SCIENCE_LAB_2,
 ];
 
-const ALL_VENUES = [...ICT_VENUES, ...REGULAR_VENUES];
-
 const LECTURER_NAMES = [
   'Dr. Alan Turing',
   'Prof. Ada Lovelace',
@@ -129,21 +126,12 @@ const COMPLAINT_SUBJECTS = [
 const getRandomItem = <T>(arr: T[]): T =>
   arr[Math.floor(Math.random() * arr.length)];
 
-const TIME_SLOTS = [
-  { start: '08:00', end: '10:00' },
-  { start: '10:00', end: '12:00' },
-  { start: '12:00', end: '14:00' },
-  { start: '14:00', end: '16:00' },
-  { start: '16:00', end: '18:00' },
-];
-
 async function main() {
-  console.log('🌱 Starting database seeding...');
+  console.log('Starting database seeding...');
 
   const password = await argon2.hash('password123');
   const adminPassword = await argon2.hash('admin123');
 
-  // 1. Create Admin
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@courseflow.edu' },
     update: { isActive: true },
@@ -155,9 +143,8 @@ async function main() {
       role: Role.ADMIN,
     },
   });
-  console.log('✅ Admin user ready');
+  console.log('Admin user ready');
 
-  // 2. Create Verification Codes
   const verificationCodes = [
     {
       code: 'ADMIN-2025-MASTER',
@@ -189,10 +176,8 @@ async function main() {
       create: codeData,
     });
   }
-  console.log('✅ Verification codes ready');
+  console.log('Verification codes ready');
 
-  // 3. Create Academic Session
-  console.log('📅 Creating Academic Session...');
   const currentSession = await prisma.academicSession.upsert({
     where: { name: '2024/2025' },
     update: { isActive: true },
@@ -203,9 +188,8 @@ async function main() {
       isActive: true,
     },
   });
+  console.log('Academic session ready');
 
-  // 4. Create Departments
-  console.log('🏗️  Seeding Departments...');
   for (const dept of DEPARTMENTS) {
     await prisma.department.upsert({
       where: { code: dept.code },
@@ -224,9 +208,8 @@ async function main() {
       },
     });
   }
+  console.log('Departments ready');
 
-  // 5. Create Lecturer Users (unified - no separate Lecturer table)
-  console.log('👨‍🏫 Seeding Lecturers...');
   const lecturerIds: string[] = [];
 
   for (let i = 0; i < LECTURER_NAMES.length; i++) {
@@ -255,10 +238,7 @@ async function main() {
     lecturerIds.push(lecturerUser.id);
   }
 
-  // 6. Assign HODs
-  console.log('👔 Assigning HODs...');
   for (let i = 0; i < DEPARTMENTS.length && i < lecturerIds.length; i++) {
-    // Promote first lecturer of each dept to HOD
     await prisma.user.update({
       where: { id: lecturerIds[i] },
       data: { role: Role.HOD },
@@ -268,9 +248,8 @@ async function main() {
       data: { hodId: lecturerIds[i] },
     });
   }
+  console.log('Lecturers and HODs ready');
 
-  // 7. Create Students
-  console.log('🎓 Seeding Students...');
   const studentIds: string[] = [];
   for (let i = 0; i < CONFIG.STUDENTS_TO_SEED; i++) {
     const name = getRandomItem(STUDENT_NAMES);
@@ -285,9 +264,8 @@ async function main() {
     });
     studentIds.push(student.id);
   }
+  console.log('Students ready');
 
-  // 8. Create General Studies Courses
-  console.log('📖 Creating General Studies Courses...');
   const generalCourses = [
     {
       code: 'GST101',
@@ -328,8 +306,6 @@ async function main() {
     });
   }
 
-  // 9. Create Departmental Courses
-  console.log('📚 Seeding Departmental Courses...');
   for (const dept of DEPARTMENTS) {
     for (const level of Object.values(Level)) {
       const levelNum = level.split('_')[1];
@@ -357,35 +333,12 @@ async function main() {
       }
     }
   }
+  console.log('Courses ready');
 
-  // 10. Create Schedules
-  console.log('📅 Seeding Schedules...');
-  const allCourses = await prisma.course.findMany();
-  await prisma.schedule.deleteMany();
-
-  for (const course of allCourses) {
-    if (!course.isActive) continue;
-    const timeSlot = getRandomItem(TIME_SLOTS);
-    const day = getRandomItem(Object.values(DayOfWeek));
-    const venue = getRandomItem(ALL_VENUES);
-
-    await prisma.schedule.create({
-      data: {
-        courseCode: course.code,
-        semester: course.semester,
-        sessionId: currentSession.id,
-        dayOfWeek: day,
-        startTime: timeSlot.start,
-        endTime: timeSlot.end,
-        venue,
-      },
-    });
-  }
-
-  // 11. Create Exam Schedules
-  console.log('📝 Seeding Exam Schedules...');
   await prisma.examSchedule.deleteMany();
-
+  const allCourses = await prisma.course.findMany({
+    where: { isActive: true },
+  });
   const startDate = new Date(currentSession.endDate);
   startDate.setDate(startDate.getDate() - 21);
 
@@ -397,14 +350,13 @@ async function main() {
     const venue = isCbt
       ? getRandomItem(ICT_VENUES)
       : getRandomItem(REGULAR_VENUES);
-    const timeSlot = getRandomItem(TIME_SLOTS);
 
     await prisma.examSchedule.create({
       data: {
         courseCode: course.code,
         date: examDate,
-        startTime: timeSlot.start,
-        endTime: timeSlot.end,
+        startTime: '09:00',
+        endTime: '11:00',
         venue,
         studentCount: Math.floor(Math.random() * 100) + 20,
         targetCollege: course.isGeneral ? College.CBAS : null,
@@ -414,11 +366,9 @@ async function main() {
       },
     });
   }
+  console.log('Exam schedules ready');
 
-  // 12. Create Complaints
-  console.log('🗣️ Seeding Complaints...');
   await prisma.complaint.deleteMany();
-
   for (let i = 0; i < 15; i++) {
     const studentId = getRandomItem(studentIds);
     const student = await prisma.user.findUnique({ where: { id: studentId } });
@@ -442,13 +392,16 @@ async function main() {
       },
     });
   }
+  console.log('Complaints ready');
 
-  console.log('🎉 Database seeding completed successfully!');
+  console.log(
+    'Database seeding completed. Generate schedules via POST /api/v1/schedules/generate',
+  );
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e);
+    console.error('Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {
