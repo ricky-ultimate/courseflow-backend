@@ -58,7 +58,10 @@ export const ApiGetScheduleById = () =>
   applyDecorators(
     ApiOperation({ summary: 'Get schedule by ID' }),
     ApiParam({ name: 'id', type: 'string', format: 'uuid' }),
-    ApiResponse({ status: 200, description: 'Schedule retrieved successfully' }),
+    ApiResponse({
+      status: 200,
+      description: 'Schedule retrieved successfully',
+    }),
     ApiNotFoundResponse('Schedule'),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -85,7 +88,8 @@ export const ApiUpdateSchedule = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Update a schedule',
-      description: 'Update a schedule entry. Automatically marks it as a manual override.',
+      description:
+        'Update a schedule entry. Automatically marks it as a manual override.',
     }),
     ApiParam({ name: 'id', type: 'string', format: 'uuid' }),
     ApiResponse({ status: 200, description: 'Schedule updated successfully' }),
