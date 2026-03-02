@@ -9,19 +9,17 @@ export class ScheduleFilterDto extends PaginationDto {
   @IsString()
   courseCode?: string;
 
-  @ApiPropertyOptional({
-    description: 'Filter by Department Code (via Course)',
-  })
+  @ApiPropertyOptional({ description: 'Filter by Department Code' })
   @IsOptional()
   @IsString()
   departmentCode?: string;
 
-  @ApiPropertyOptional({ enum: Level, description: 'Filter by Course Level' })
+  @ApiPropertyOptional({ enum: Level })
   @IsOptional()
   @IsEnum(Level)
   level?: Level;
 
-  @ApiPropertyOptional({ enum: Semester, description: 'Filter by Semester' })
+  @ApiPropertyOptional({ enum: Semester })
   @IsOptional()
   @IsEnum(Semester)
   semester?: Semester;
@@ -31,27 +29,17 @@ export class ScheduleFilterDto extends PaginationDto {
   @IsString()
   sessionId?: string;
 
-  @ApiPropertyOptional({
-    enum: DayOfWeek,
-    description: 'Filter by Day of Week',
-  })
+  @ApiPropertyOptional({ enum: DayOfWeek })
   @IsOptional()
   @IsEnum(DayOfWeek)
   dayOfWeek?: DayOfWeek;
 
-  @ApiPropertyOptional({ description: 'Filter by Venue (partial match)' })
-  @IsOptional()
-  @IsString()
-  venue?: string;
-
-  @ApiPropertyOptional({
-    description: 'Start time (HH:MM) for range filtering',
-  })
+  @ApiPropertyOptional({ description: 'Start time filter (HH:MM)' })
   @IsOptional()
   @IsString()
   startTime?: string;
 
-  @ApiPropertyOptional({ description: 'End time (HH:MM) for range filtering' })
+  @ApiPropertyOptional({ description: 'End time filter (HH:MM)' })
   @IsOptional()
   @IsString()
   endTime?: string;
