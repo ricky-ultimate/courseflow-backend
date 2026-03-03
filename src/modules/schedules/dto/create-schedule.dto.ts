@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEnum, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsBoolean, Matches } from 'class-validator';
 import { DayOfWeek } from '../../../generated/prisma';
 import {
   IsTimeFormat,
@@ -27,4 +27,15 @@ export class CreateScheduleDto {
   @IsTimeFormat({ message: 'End time must be in HH:MM format' })
   @IsEndTimeAfterStartTime('startTime')
   endTime: string;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description:
+      'Pin this schedule so auto-generation never moves or deletes it. ' +
+      'Automatically set to true for university-wide (general) courses.',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isFixed?: boolean;
 }
