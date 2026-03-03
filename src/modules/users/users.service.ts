@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -29,16 +33,12 @@ export class UsersService extends BaseService<
     });
   }
 
-protected async beforeCreate(
+  protected async beforeCreate(
     dto: CreateUserDto,
   ): Promise<Record<string, any>> {
     const role = dto.role ?? Role.STUDENT;
 
-    if (
-      role === Role.STUDENT ||
-      role === Role.LECTURER ||
-      role === Role.HOD
-    ) {
+    if (role === Role.STUDENT || role === Role.LECTURER || role === Role.HOD) {
       if (!dto.departmentCode) {
         throw new BadRequestException(
           `Department code is required for ${role} role`,
