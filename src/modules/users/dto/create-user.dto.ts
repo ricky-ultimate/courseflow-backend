@@ -7,6 +7,7 @@ import {
   IsNotEmpty,
   MinLength,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { Role } from '../../../generated/prisma';
 
@@ -43,14 +44,20 @@ export class CreateUserDto {
   phone?: string;
 
   @ApiProperty({
-    required: false,
     example: 'CSC',
-    description: 'Required for LECTURER and HOD roles',
+    description: 'Required for STUDENT, LECTURER, and HOD roles',
   })
   @IsString()
-  @IsOptional()
   @Matches(/^[A-Z]{2,4}$/, {
     message: 'Department code must be 2-4 uppercase letters',
   })
+  @ValidateIf(
+    (o: CreateUserDto) =>
+      o.role === Role.STUDENT ||
+      o.role === Role.LECTURER ||
+      o.role === Role.HOD ||
+      o.role === undefined,
+  )
+  @IsNotEmpty()
   departmentCode?: string;
 }
