@@ -43,6 +43,7 @@ export const ApiGetDepartments = () =>
               },
             },
             isActive: { type: 'boolean', example: true },
+            isScheduleLocked: { type: 'boolean', example: false },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -85,6 +86,7 @@ export const ApiGetDepartmentByCode = () =>
             },
           },
           isActive: { type: 'boolean', example: true },
+          isScheduleLocked: { type: 'boolean', example: false },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -111,6 +113,7 @@ export const ApiCreateDepartment = () =>
           code: { type: 'string', example: 'CS' },
           name: { type: 'string', example: 'Computer Science' },
           isActive: { type: 'boolean', example: true },
+          isScheduleLocked: { type: 'boolean', example: false },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
@@ -236,4 +239,96 @@ export const ApiDownloadDepartmentTemplate = () =>
     }),
     ApiCsvTemplateResponse(),
     ApiStandardResponses(),
+  );
+
+export const ApiLockDepartmentSchedule = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Lock department schedule',
+      description:
+        'Mark the department schedule as locked. Subsequent system-wide schedule generation by an admin will skip this department entirely, preserving all existing schedule assignments. HODs may only lock their own department; admins may lock any department.',
+    }),
+    ApiParam({
+      name: 'code',
+      type: 'string',
+      description: 'Department code',
+      example: 'CSC',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Department schedule locked successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          code: { type: 'string', example: 'CSC' },
+          name: { type: 'string', example: 'Computer Science' },
+          isScheduleLocked: { type: 'boolean', example: true },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Forbidden - HOD attempted to lock a department they do not manage',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 403 },
+          message: {
+            type: 'string',
+            example: 'HODs can only lock or unlock their own department schedule',
+          },
+          error: { type: 'string', example: 'Forbidden' },
+        },
+      },
+    }),
+    ApiNotFoundResponse('Department'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
+export const ApiUnlockDepartmentSchedule = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Unlock department schedule',
+      description:
+        'Remove the schedule lock from a department. Once unlocked, the department will be included in subsequent system-wide schedule generation runs. HODs may only unlock their own department; admins may unlock any department.',
+    }),
+    ApiParam({
+      name: 'code',
+      type: 'string',
+      description: 'Department code',
+      example: 'CSC',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Department schedule unlocked successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          code: { type: 'string', example: 'CSC' },
+          name: { type: 'string', example: 'Computer Science' },
+          isScheduleLocked: { type: 'boolean', example: false },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Forbidden - HOD attempted to unlock a department they do not manage',
+      schema: {
+        type: 'object',
+        properties: {
+          statusCode: { type: 'number', example: 403 },
+          message: {
+            type: 'string',
+            example: 'HODs can only lock or unlock their own department schedule',
+          },
+          error: { type: 'string', example: 'Forbidden' },
+        },
+      },
+    }),
+    ApiNotFoundResponse('Department'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
   );
