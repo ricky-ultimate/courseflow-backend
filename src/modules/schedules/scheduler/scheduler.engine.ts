@@ -50,7 +50,12 @@ export class SchedulerEngine {
       if (slot.isUniversityCourse) {
         for (const deptCode of allDepartmentCodes) {
           occupied.add(
-            this.occupancyKey(deptCode, slot.level, slot.dayOfWeek, slot.startTime),
+            this.occupancyKey(
+              deptCode,
+              slot.level,
+              slot.dayOfWeek,
+              slot.startTime,
+            ),
           );
         }
       } else {
