@@ -84,8 +84,11 @@ export class AuthService {
       });
     }
 
-    // Validate department for LECTURER / HOD
-    if (userRole === Role.LECTURER || userRole === Role.HOD) {
+    if (
+      userRole === Role.STUDENT ||
+      userRole === Role.LECTURER ||
+      userRole === Role.HOD
+    ) {
       if (!dto.departmentCode) {
         throw new BadRequestException(
           `Department code is required for ${userRole} role`,
@@ -112,7 +115,9 @@ export class AuthService {
         role: userRole,
         phone: dto.phone,
         departmentCode:
-          userRole === Role.LECTURER || userRole === Role.HOD
+          userRole === Role.STUDENT ||
+          userRole === Role.LECTURER ||
+          userRole === Role.HOD
             ? dto.departmentCode
             : null,
       },
