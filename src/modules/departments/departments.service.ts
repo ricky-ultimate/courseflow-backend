@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -113,12 +114,68 @@ export class DepartmentsService extends BaseService<
       );
     }
 
-    // Promote to HOD role if not already HOD or ADMIN
     if (user.role !== Role.HOD && user.role !== Role.ADMIN) {
       await this.prisma.user.update({
         where: { id: hodId },
         data: { role: Role.HOD },
       });
+    }
+  }
+
+  async lockSchedule(
+    code: string,
+    requestingUser: { id: string; role: string },
+  ): Promise<Department> {
+    await this.findOne(code);
+
+    if (requestingUser.role === Role.HOD) {
+      await this.assertHodOwnsDepartment(requestingUser.id, code);
+    }
+
+    return this.prisma.department.update({
+      where: { code },
+      data: { isScheduleLocked: true },
+      include: {
+        hod: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+  }
+
+  async unlockSchedule(
+    code: string,
+    requestingUser: { id: string; role: string },
+  ): Promise<Department> {
+    await this.findOne(code);
+
+    if (requestingUser.role === Role.HOD) {
+      await this.assertHodOwnsDepartment(requestingUser.id, code);
+    }
+
+    return this.prisma.department.update({
+      where: { code },
+      data: { isScheduleLocked: false },
+      include: {
+        hod: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+  }
+
+  private async assertHodOwnsDepartment(
+    hodUserId: string,
+    departmentCode: string,
+  ): Promise<void> {
+    const hodUser = await this.prisma.user.findUnique({
+      where: { id: hodUserId },
+      include: { managedDepartment: true },
+    });
+
+    if (
+      !hodUser?.managedDepartment ||
+      hodUser.managedDepartment.code !== departmentCode
+    ) {
+      throw new ForbiddenException(
+        'HODs can only lock or unlock their own department schedule',
+      );
     }
   }
 
