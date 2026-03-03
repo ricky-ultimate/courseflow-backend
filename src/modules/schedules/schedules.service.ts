@@ -217,9 +217,8 @@ export class SchedulesService extends BaseService<
       departmentCode = hodUser.managedDepartment.code;
     }
 
-    const lockedDepartmentCodes = await this.resolveLockedDepartmentCodes(
-      departmentCode,
-    );
+    const lockedDepartmentCodes =
+      await this.resolveLockedDepartmentCodes(departmentCode);
 
     const courseFilter: Record<string, any> = {
       isActive: true,
