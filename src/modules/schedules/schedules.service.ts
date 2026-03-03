@@ -20,7 +20,7 @@ import {
   LockedSlot,
   CourseInput,
 } from './scheduler/scheduler.engine';
-import { DayOfWeek, Role, Schedule } from '../../generated/prisma';
+import { DayOfWeek, Level, Role, Schedule } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -59,7 +59,7 @@ export class SchedulesService extends BaseService<
 
     const course = await this.prisma.course.findUnique({
       where: { code: dto.courseCode },
-      select: { semester: true, isGeneral: true },
+      select: { semester: true, isGeneral: true, level: true },
     });
 
     if (!course) {
@@ -76,6 +76,16 @@ export class SchedulesService extends BaseService<
     if (existing) {
       throw new ConflictException(
         `Course '${dto.courseCode}' already has a schedule this session. Update the existing one.`,
+      );
+    }
+
+    if (!course.isGeneral) {
+      await this.checkUniversityCourseClash(
+        course.level,
+        dto.dayOfWeek,
+        dto.startTime,
+        dto.endTime,
+        activeSession.id,
       );
     }
 
@@ -97,7 +107,9 @@ export class SchedulesService extends BaseService<
   ): Promise<Record<string, any>> {
     const current = await this.prisma.schedule.findUnique({
       where: { id: identifier },
-      include: { course: { select: { isGeneral: true } } },
+      include: {
+        course: { select: { isGeneral: true, level: true } },
+      },
     });
 
     if (!current) {
@@ -109,6 +121,17 @@ export class SchedulesService extends BaseService<
     const resolvedEnd = dto.endTime ?? current.endTime;
 
     this.validateTimeSlot(resolvedStart, resolvedEnd, resolvedDay);
+
+    if (!current.course.isGeneral) {
+      await this.checkUniversityCourseClash(
+        current.course.level,
+        resolvedDay,
+        resolvedStart,
+        resolvedEnd,
+        current.sessionId,
+        identifier,
+      );
+    }
 
     const isFixed = current.course.isGeneral
       ? true
@@ -322,6 +345,51 @@ export class SchedulesService extends BaseService<
 
   async getScheduleStatistics() {
     return this.scheduleRepository.getScheduleStats();
+  }
+
+  private async checkUniversityCourseClash(
+    courseLevel: Level,
+    dayOfWeek: DayOfWeek,
+    startTime: string,
+    endTime: string,
+    sessionId: string,
+    excludeScheduleId?: string,
+  ): Promise<void> {
+    const fixedUniversitySchedules = await this.prisma.schedule.findMany({
+      where: {
+        sessionId,
+        dayOfWeek,
+        isFixed: true,
+        ...(excludeScheduleId && { id: { not: excludeScheduleId } }),
+        course: {
+          isGeneral: true,
+          level: courseLevel,
+        },
+      },
+      include: {
+        course: { select: { code: true, name: true } },
+      },
+    });
+
+    if (fixedUniversitySchedules.length === 0) return;
+
+    const [startHour] = startTime.split(':').map(Number);
+    const [endHour] = endTime.split(':').map(Number);
+
+    for (const fixed of fixedUniversitySchedules) {
+      const [fixedStartHour] = fixed.startTime.split(':').map(Number);
+      const [fixedEndHour] = fixed.endTime.split(':').map(Number);
+
+      const overlaps = startHour < fixedEndHour && fixedStartHour < endHour;
+
+      if (overlaps) {
+        throw new ConflictException(
+          `Time slot ${startTime}–${endTime} on ${dayOfWeek} conflicts with university course ` +
+            `${fixed.course.code} (${fixed.course.name}) fixed at ${fixed.startTime}–${fixed.endTime}. ` +
+            `All LEVEL_${courseLevel.split('_')[1]} courses must avoid this window.`,
+        );
+      }
+    }
   }
 
   private validateTimeSlot(
