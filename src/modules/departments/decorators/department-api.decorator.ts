@@ -269,14 +269,16 @@ export const ApiLockDepartmentSchedule = () =>
     }),
     ApiResponse({
       status: 403,
-      description: 'Forbidden - HOD attempted to lock a department they do not manage',
+      description:
+        'Forbidden - HOD attempted to lock a department they do not manage',
       schema: {
         type: 'object',
         properties: {
           statusCode: { type: 'number', example: 403 },
           message: {
             type: 'string',
-            example: 'HODs can only lock or unlock their own department schedule',
+            example:
+              'HODs can only lock or unlock their own department schedule',
           },
           error: { type: 'string', example: 'Forbidden' },
         },
@@ -315,14 +317,16 @@ export const ApiUnlockDepartmentSchedule = () =>
     }),
     ApiResponse({
       status: 403,
-      description: 'Forbidden - HOD attempted to unlock a department they do not manage',
+      description:
+        'Forbidden - HOD attempted to unlock a department they do not manage',
       schema: {
         type: 'object',
         properties: {
           statusCode: { type: 'number', example: 403 },
           message: {
             type: 'string',
-            example: 'HODs can only lock or unlock their own department schedule',
+            example:
+              'HODs can only lock or unlock their own department schedule',
           },
           error: { type: 'string', example: 'Forbidden' },
         },

@@ -123,10 +123,7 @@ export class DepartmentsController extends BaseController<
   @Roles(Role.HOD, Role.ADMIN)
   @SkipHodGuard()
   @ApiLockDepartmentSchedule()
-  lockSchedule(
-    @Param('code') code: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
+  lockSchedule(@Param('code') code: string, @Req() req: AuthenticatedRequest) {
     return this.departmentsService.lockSchedule(code, req.user);
   }
 
