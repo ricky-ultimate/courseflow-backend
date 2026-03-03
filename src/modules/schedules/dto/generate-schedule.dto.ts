@@ -21,7 +21,7 @@ export class GenerateScheduleDto {
   @ApiPropertyOptional({
     example: 'CSC',
     description:
-      'Department code to scope generation to. Required for HODs. Admins may omit to generate for all departments.',
+      'Department code to scope generation to. Required for HODs. Admins may omit to generate for all unlocked departments.',
   })
   @IsString()
   @IsOptional()
@@ -36,4 +36,5 @@ export interface GenerateScheduleResult {
   totalCourses: number;
   scheduledCourses: number;
   preservedOverrides: number;
+  skippedLockedDepartments: number;
 }
