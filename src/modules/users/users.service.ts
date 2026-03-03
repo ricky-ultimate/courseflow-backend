@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -36,10 +36,14 @@ export class UsersService extends BaseService<
   protected async beforeCreate(
     dto: CreateUserDto,
   ): Promise<Record<string, any>> {
-    if (
-      (dto.role === Role.LECTURER || dto.role === Role.HOD) &&
-      dto.departmentCode
-    ) {
+    const role = dto.role ?? Role.STUDENT;
+
+    if (role === Role.STUDENT || role === Role.LECTURER || role === Role.HOD) {
+      if (!dto.departmentCode) {
+        throw new BadRequestException(
+          `Department code is required for ${role} role`,
+        );
+      }
       const dept = await this.prisma.department.findUnique({
         where: { code: dto.departmentCode },
       });
@@ -49,6 +53,7 @@ export class UsersService extends BaseService<
         );
       }
     }
+
     return {
       ...dto,
       password: await argon2.hash(dto.password),
@@ -116,36 +121,6 @@ export class UsersService extends BaseService<
   async findOneWithoutPassword(id: string): Promise<Omit<User, 'password'>> {
     const user = await super.findOne(id);
     return this.excludePassword(user);
-  }
-
-  // ─── Lecturer-specific helpers (used by courses/schedules) ──────────────────
-
-  async findLecturerById(id: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { id, isActive: true },
-      include: { department: true },
-    });
-    if (!user)
-      throw new NotFoundException(`Lecturer with id '${id}' not found`);
-    if (user.role !== Role.LECTURER && user.role !== Role.HOD) {
-      throw new BadRequestException(`User '${id}' is not a lecturer`);
-    }
-    return user;
-  }
-
-  async findLecturerByEmail(email: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { email, isActive: true },
-      include: { department: true },
-    });
-    if (!user)
-      throw new NotFoundException(`Lecturer with email '${email}' not found`);
-    if (user.role !== Role.LECTURER && user.role !== Role.HOD) {
-      throw new BadRequestException(
-        `User with email '${email}' is not a lecturer`,
-      );
-    }
-    return user;
   }
 
   // ─── Dashboard (lecturer/HOD self-service) ──────────────────────────────────

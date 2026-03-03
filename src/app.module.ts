@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { appConfig, databaseConfig, validationSchema } from './config';
@@ -48,9 +46,7 @@ import { ExamsModule } from './modules/exams/exams.module';
     AcademicSessionsModule,
     ExamsModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

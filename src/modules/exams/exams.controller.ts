@@ -27,7 +27,6 @@ import {
 @ApiTags('Exams')
 @Controller('exams')
 @CrudRoles({
-  entity: 'exam',
   create: [Role.ADMIN],
   read: [],
   update: [Role.ADMIN],

@@ -52,16 +52,19 @@ export class RegisterDto {
   verificationCode?: string;
 
   @ApiProperty({
-    required: false,
     example: 'CSC',
-    description: 'Required for HOD and LECTURER roles',
+    description: 'Required for STUDENT, LECTURER, and HOD roles',
   })
   @IsString()
   @Matches(/^[A-Z]{2,4}$/, {
     message: 'Department code must be 2-4 uppercase letters',
   })
   @ValidateIf(
-    (o: RegisterDto) => o.role === Role.LECTURER || o.role === Role.HOD,
+    (o: RegisterDto) =>
+      o.role === Role.STUDENT ||
+      o.role === Role.LECTURER ||
+      o.role === Role.HOD ||
+      o.role === undefined,
   )
   @IsNotEmpty()
   departmentCode?: string;
