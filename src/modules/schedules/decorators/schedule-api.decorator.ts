@@ -134,8 +134,10 @@ export const ApiGenerateSchedules = () =>
       summary: 'Auto-generate schedules',
       description:
         'Runs the scheduling algorithm for all active courses in the given semester. ' +
-        'Clears existing auto-generated schedules and re-assigns them while preserving any manual overrides. ' +
-        'Throws 422 if a valid schedule cannot be constructed for all courses.',
+        'Clears existing auto-generated schedules and re-assigns them while preserving manual overrides. ' +
+        'Departments with isScheduleLocked set to true are skipped entirely during system-wide generation, ' +
+        'but their existing schedules are still respected as occupied slots to prevent conflicts. ' +
+        'Throws 422 if a valid schedule cannot be constructed for all eligible courses.',
     }),
     ApiResponse({
       status: 201,
@@ -146,9 +148,21 @@ export const ApiGenerateSchedules = () =>
           sessionId: { type: 'string' },
           sessionName: { type: 'string', example: '2024/2025' },
           semester: { type: 'string', enum: Object.values(Semester) },
+          departmentCode: {
+            type: 'string',
+            nullable: true,
+            example: null,
+            description: 'null when generated system-wide',
+          },
           totalCourses: { type: 'number', example: 178 },
-          scheduledCourses: { type: 'number', example: 178 },
+          scheduledCourses: { type: 'number', example: 165 },
           preservedOverrides: { type: 'number', example: 3 },
+          skippedLockedDepartments: {
+            type: 'number',
+            example: 2,
+            description:
+              'Number of departments skipped because their schedule is locked',
+          },
         },
       },
     }),
