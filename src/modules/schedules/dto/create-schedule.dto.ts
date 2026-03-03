@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsBoolean, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  Matches,
+} from 'class-validator';
 import { DayOfWeek } from '../../../generated/prisma';
 import {
   IsTimeFormat,
