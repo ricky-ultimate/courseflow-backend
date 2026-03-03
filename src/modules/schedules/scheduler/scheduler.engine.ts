@@ -17,6 +17,7 @@ export interface LockedSlot {
   startTime: string;
   endTime: string;
   semester: Semester;
+  isUniversityCourse?: boolean;
 }
 
 export interface ScheduleAssignment {
@@ -40,17 +41,28 @@ export class SchedulerEngine {
     return `${departmentCode}|${level}|${day}|${startTime}`;
   }
 
-  private buildInitialOccupancy(locked: LockedSlot[]): Set<OccupancyKey> {
+  private buildInitialOccupancy(
+    locked: LockedSlot[],
+    allDepartmentCodes: string[],
+  ): Set<OccupancyKey> {
     const occupied = new Set<OccupancyKey>();
     for (const slot of locked) {
-      occupied.add(
-        this.occupancyKey(
-          slot.departmentCode,
-          slot.level,
-          slot.dayOfWeek,
-          slot.startTime,
-        ),
-      );
+      if (slot.isUniversityCourse) {
+        for (const deptCode of allDepartmentCodes) {
+          occupied.add(
+            this.occupancyKey(deptCode, slot.level, slot.dayOfWeek, slot.startTime),
+          );
+        }
+      } else {
+        occupied.add(
+          this.occupancyKey(
+            slot.departmentCode,
+            slot.level,
+            slot.dayOfWeek,
+            slot.startTime,
+          ),
+        );
+      }
     }
     return occupied;
   }
@@ -187,10 +199,14 @@ export class SchedulerEngine {
     return false;
   }
 
-  generate(courses: CourseInput[], locked: LockedSlot[]): ScheduleAssignment[] {
+  generate(
+    courses: CourseInput[],
+    locked: LockedSlot[],
+    allDepartmentCodes: string[],
+  ): ScheduleAssignment[] {
     if (courses.length === 0) return [];
 
-    const occupied = this.buildInitialOccupancy(locked);
+    const occupied = this.buildInitialOccupancy(locked, allDepartmentCodes);
     const dayLoad = this.buildInitialDayLoad(locked);
     const timeSlotLoad = this.buildInitialTimeSlotLoad(locked);
     const sorted = this.sortByMostConstrained(courses, occupied);
