@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
   Res,
@@ -23,6 +24,8 @@ import {
   ApiGetDepartmentStatistics,
   ApiBulkCreateDepartments,
   ApiDownloadDepartmentTemplate,
+  ApiLockDepartmentSchedule,
+  ApiUnlockDepartmentSchedule,
 } from './decorators/department-api.decorator';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -30,7 +33,10 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { DepartmentFilterDto } from './dto/department-filter.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { Department, Role } from '../../generated/prisma';
+import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Departments')
 @Controller('departments')
@@ -111,6 +117,28 @@ export class DepartmentsController extends BaseController<
   @ApiUpdateDepartment()
   update(@Param('code') code: string, @Body() updateDto: UpdateDepartmentDto) {
     return this.departmentsService.update(code, updateDto);
+  }
+
+  @Patch(':code/schedule/lock')
+  @Roles(Role.HOD, Role.ADMIN)
+  @SkipHodGuard()
+  @ApiLockDepartmentSchedule()
+  lockSchedule(
+    @Param('code') code: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.departmentsService.lockSchedule(code, req.user);
+  }
+
+  @Patch(':code/schedule/unlock')
+  @Roles(Role.HOD, Role.ADMIN)
+  @SkipHodGuard()
+  @ApiUnlockDepartmentSchedule()
+  unlockSchedule(
+    @Param('code') code: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.departmentsService.unlockSchedule(code, req.user);
   }
 
   @Delete(':code')
