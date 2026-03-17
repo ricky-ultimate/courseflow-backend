@@ -28,47 +28,64 @@ export interface ScheduleAssignment {
   semester: Semester;
 }
 
-type OccupancyKey = string;
+interface TimeInterval {
+  startTime: string;
+  endTime: string;
+}
+
+type BucketKey = string;
 
 @Injectable()
 export class SchedulerEngine {
-  private occupancyKey(
+  private bucketKey(
     departmentCode: string,
     level: Level,
     day: DayOfWeek,
-    startTime: string,
-  ): OccupancyKey {
-    return `${departmentCode}|${level}|${day}|${startTime}`;
+  ): BucketKey {
+    return `${departmentCode}|${level}|${day}`;
+  }
+
+  private timeToMinutes(time: string): number {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  private intervalsOverlap(a: TimeInterval, b: TimeInterval): boolean {
+    return (
+      this.timeToMinutes(a.startTime) < this.timeToMinutes(b.endTime) &&
+      this.timeToMinutes(b.startTime) < this.timeToMinutes(a.endTime)
+    );
   }
 
   private buildInitialOccupancy(
     locked: LockedSlot[],
     allDepartmentCodes: string[],
-  ): Set<OccupancyKey> {
-    const occupied = new Set<OccupancyKey>();
+  ): Map<BucketKey, TimeInterval[]> {
+    const occupied = new Map<BucketKey, TimeInterval[]>();
+
     for (const slot of locked) {
+      const interval: TimeInterval = {
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      };
+
       if (slot.isUniversityCourse) {
         for (const deptCode of allDepartmentCodes) {
-          occupied.add(
-            this.occupancyKey(
-              deptCode,
-              slot.level,
-              slot.dayOfWeek,
-              slot.startTime,
-            ),
-          );
+          const key = this.bucketKey(deptCode, slot.level, slot.dayOfWeek);
+          if (!occupied.has(key)) occupied.set(key, []);
+          occupied.get(key)!.push(interval);
         }
       } else {
-        occupied.add(
-          this.occupancyKey(
-            slot.departmentCode,
-            slot.level,
-            slot.dayOfWeek,
-            slot.startTime,
-          ),
+        const key = this.bucketKey(
+          slot.departmentCode,
+          slot.level,
+          slot.dayOfWeek,
         );
+        if (!occupied.has(key)) occupied.set(key, []);
+        occupied.get(key)!.push(interval);
       }
     }
+
     return occupied;
   }
 
@@ -94,26 +111,37 @@ export class SchedulerEngine {
     return timeSlotLoad;
   }
 
+  private isSlotAvailable(
+    course: CourseInput,
+    slot: DaySlot,
+    occupied: Map<BucketKey, TimeInterval[]>,
+  ): boolean {
+    const key = this.bucketKey(course.departmentCode, course.level, slot.day);
+    const intervals = occupied.get(key);
+    if (!intervals || intervals.length === 0) return true;
+
+    const candidate: TimeInterval = {
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    };
+
+    return !intervals.some((interval) =>
+      this.intervalsOverlap(candidate, interval),
+    );
+  }
+
   private availableSlots(
     course: CourseInput,
-    occupied: Set<OccupancyKey>,
+    occupied: Map<BucketKey, TimeInterval[]>,
   ): DaySlot[] {
-    return ALL_DAY_SLOTS.filter(
-      (slot) =>
-        !occupied.has(
-          this.occupancyKey(
-            course.departmentCode,
-            course.level,
-            slot.day,
-            slot.startTime,
-          ),
-        ),
+    return ALL_DAY_SLOTS.filter((slot) =>
+      this.isSlotAvailable(course, slot, occupied),
     );
   }
 
   private availableSlotsOrdered(
     course: CourseInput,
-    occupied: Set<OccupancyKey>,
+    occupied: Map<BucketKey, TimeInterval[]>,
     dayLoad: Map<DayOfWeek, number>,
     timeSlotLoad: Map<string, number>,
   ): DaySlot[] {
@@ -130,7 +158,7 @@ export class SchedulerEngine {
 
   private sortByMostConstrained(
     courses: CourseInput[],
-    occupied: Set<OccupancyKey>,
+    occupied: Map<BucketKey, TimeInterval[]>,
   ): CourseInput[] {
     return [...courses].sort(
       (a, b) =>
@@ -139,11 +167,40 @@ export class SchedulerEngine {
     );
   }
 
+  private addToOccupied(
+    occupied: Map<BucketKey, TimeInterval[]>,
+    departmentCode: string,
+    level: Level,
+    day: DayOfWeek,
+    interval: TimeInterval,
+  ): void {
+    const key = this.bucketKey(departmentCode, level, day);
+    if (!occupied.has(key)) occupied.set(key, []);
+    occupied.get(key)!.push(interval);
+  }
+
+  private removeFromOccupied(
+    occupied: Map<BucketKey, TimeInterval[]>,
+    departmentCode: string,
+    level: Level,
+    day: DayOfWeek,
+    interval: TimeInterval,
+  ): void {
+    const key = this.bucketKey(departmentCode, level, day);
+    const intervals = occupied.get(key);
+    if (!intervals) return;
+    const idx = intervals.findIndex(
+      (i) =>
+        i.startTime === interval.startTime && i.endTime === interval.endTime,
+    );
+    if (idx !== -1) intervals.splice(idx, 1);
+  }
+
   private solve(
     courses: CourseInput[],
     index: number,
     assignments: Map<string, ScheduleAssignment>,
-    occupied: Set<OccupancyKey>,
+    occupied: Map<BucketKey, TimeInterval[]>,
     dayLoad: Map<DayOfWeek, number>,
     timeSlotLoad: Map<string, number>,
   ): boolean {
@@ -158,12 +215,10 @@ export class SchedulerEngine {
     );
 
     for (const slot of slots) {
-      const key = this.occupancyKey(
-        course.departmentCode,
-        course.level,
-        slot.day,
-        slot.startTime,
-      );
+      const interval: TimeInterval = {
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      };
 
       assignments.set(course.courseCode, {
         courseCode: course.courseCode,
@@ -172,7 +227,14 @@ export class SchedulerEngine {
         endTime: slot.endTime,
         semester: course.semester,
       });
-      occupied.add(key);
+
+      this.addToOccupied(
+        occupied,
+        course.departmentCode,
+        course.level,
+        slot.day,
+        interval,
+      );
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) + 1);
       timeSlotLoad.set(
         slot.startTime,
@@ -193,7 +255,13 @@ export class SchedulerEngine {
       }
 
       assignments.delete(course.courseCode);
-      occupied.delete(key);
+      this.removeFromOccupied(
+        occupied,
+        course.departmentCode,
+        course.level,
+        slot.day,
+        interval,
+      );
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) - 1);
       timeSlotLoad.set(
         slot.startTime,
@@ -232,8 +300,7 @@ export class SchedulerEngine {
         .map((c) => c.courseCode);
 
       throw new UnprocessableEntityException(
-        `Scheduler could not find valid slots for: ${unscheduled.join(', ')}. ` +
-          `Try reducing the number of courses per department/level or contact an administrator.`,
+        `Scheduler could not find valid slots for: ${unscheduled.join(', ')}. Try reducing the number of courses per department/level or contact an administrator.`,
       );
     }
 

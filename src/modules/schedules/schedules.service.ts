@@ -379,6 +379,39 @@ export class SchedulesService extends BaseService<
     return lockedDepts.map((d) => d.code);
   }
 
+  private validateTimeSlot(
+    startTime: string,
+    endTime: string,
+    dayOfWeek?: DayOfWeek,
+  ): void {
+    if (dayOfWeek === DayOfWeek.SATURDAY || dayOfWeek === DayOfWeek.SUNDAY) {
+      throw new BadRequestException('Weekend classes are not allowed');
+    }
+
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+
+    if (startMin !== 0 || endMin !== 0) {
+      throw new BadRequestException(
+        'Class times must be on the hour (e.g. 09:00, 11:00)',
+      );
+    }
+
+    const duration = endHour - startHour;
+
+    if (duration < 1) {
+      throw new BadRequestException('End time must be after start time');
+    }
+
+    if (startHour < 9 || endHour > 19) {
+      throw new BadRequestException('Classes must run between 09:00 and 19:00');
+    }
+
+    if (dayOfWeek === DayOfWeek.WEDNESDAY && endHour > 15) {
+      throw new BadRequestException('Wednesday classes must end by 15:00');
+    }
+  }
+
   private async checkUniversityCourseClash(
     courseLevel: Level,
     dayOfWeek: DayOfWeek,
@@ -405,53 +438,27 @@ export class SchedulesService extends BaseService<
 
     if (fixedUniversitySchedules.length === 0) return;
 
-    const [startHour] = startTime.split(':').map(Number);
-    const [endHour] = endTime.split(':').map(Number);
+    const candidateStart = this.timeToMinutes(startTime);
+    const candidateEnd = this.timeToMinutes(endTime);
 
     for (const fixed of fixedUniversitySchedules) {
-      const [fixedStartHour] = fixed.startTime.split(':').map(Number);
-      const [fixedEndHour] = fixed.endTime.split(':').map(Number);
+      const fixedStart = this.timeToMinutes(fixed.startTime);
+      const fixedEnd = this.timeToMinutes(fixed.endTime);
 
-      const overlaps = startHour < fixedEndHour && fixedStartHour < endHour;
+      const overlaps = candidateStart < fixedEnd && fixedStart < candidateEnd;
 
       if (overlaps) {
         throw new ConflictException(
-          `Time slot ${startTime}–${endTime} on ${dayOfWeek} conflicts with university course ` +
-            `${fixed.course.code} (${fixed.course.name}) fixed at ${fixed.startTime}–${fixed.endTime}. ` +
-            `All LEVEL_${courseLevel.split('_')[1]} courses must avoid this window.`,
+          `Time slot ${startTime}-${endTime} on ${dayOfWeek} conflicts with university course ` +
+            `${fixed.course.code} (${fixed.course.name}) fixed at ${fixed.startTime}-${fixed.endTime}. ` +
+            `All ${courseLevel} courses must avoid this window.`,
         );
       }
     }
   }
 
-  private validateTimeSlot(
-    startTime: string,
-    endTime: string,
-    dayOfWeek?: DayOfWeek,
-  ): void {
-    if (dayOfWeek === DayOfWeek.SATURDAY || dayOfWeek === DayOfWeek.SUNDAY) {
-      throw new BadRequestException('Weekend classes are not allowed');
-    }
-
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-
-    if (startMin !== 0 || endMin !== 0) {
-      throw new BadRequestException(
-        'Class times must be on the hour (e.g. 09:00, 10:00)',
-      );
-    }
-
-    if (endHour - startHour !== 2) {
-      throw new BadRequestException('Class duration must be exactly 2 hours');
-    }
-
-    if (startHour < 9 || endHour > 19) {
-      throw new BadRequestException('Classes must run between 09:00 and 19:00');
-    }
-
-    if (dayOfWeek === DayOfWeek.WEDNESDAY && endHour > 15) {
-      throw new BadRequestException('Wednesday classes must end by 15:00');
-    }
+  private timeToMinutes(time: string): number {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
   }
 }
