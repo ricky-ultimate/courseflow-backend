@@ -81,8 +81,6 @@ export class UsersService extends BaseService<
     return data;
   }
 
-  // ─── Role-filtered queries ──────────────────────────────────────────────────
-
   async findAll(
     options?: PaginationOptions & {
       role?: Role;
@@ -107,8 +105,6 @@ export class UsersService extends BaseService<
     }) as Promise<User[]>;
   }
 
-  // ─── Password-stripped variants ─────────────────────────────────────────────
-
   async findAllWithoutPasswords(
     options?: PaginationOptions & { role?: Role; departmentCode?: string },
   ): Promise<
@@ -122,8 +118,6 @@ export class UsersService extends BaseService<
     const user = await super.findOne(id);
     return this.excludePassword(user);
   }
-
-  // ─── Dashboard (lecturer/HOD self-service) ──────────────────────────────────
 
   async getDashboardStats(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -167,9 +161,22 @@ export class UsersService extends BaseService<
       'FRIDAY',
       'SATURDAY',
     ][today.getDay()];
+    const DAY_ORDER: Record<string, number> = {
+      SUNDAY: 0,
+      MONDAY: 1,
+      TUESDAY: 2,
+      WEDNESDAY: 3,
+      THURSDAY: 4,
+      FRIDAY: 5,
+      SATURDAY: 6,
+    };
+
     const upcomingClasses = courses.reduce(
       (count, course) =>
-        count + course.schedules.filter((s) => s.dayOfWeek >= dayOfWeek).length,
+        count +
+        course.schedules.filter(
+          (s) => (DAY_ORDER[s.dayOfWeek] ?? 0) >= (DAY_ORDER[dayOfWeek] ?? 0),
+        ).length,
       0,
     );
 
@@ -253,8 +260,6 @@ export class UsersService extends BaseService<
       totalSchedules: schedules.length,
     };
   }
-
-  // ─── Private helpers ─────────────────────────────────────────────────────────
 
   private excludePassword(user: User): Omit<User, 'password'> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
