@@ -152,7 +152,7 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
     const validPageNum = Math.max(1, isNaN(pageNum) ? 1 : pageNum);
     const validLimitNum = Math.max(
       1,
-      Math.min(100, isNaN(limitNum) ? 10 : limitNum),
+      Math.min(1000, isNaN(limitNum) ? 10 : limitNum),
     );
     const skip = (validPageNum - 1) * validLimitNum;
 
