@@ -101,6 +101,15 @@ export class DepartmentRepository {
         courses: {
           where: { isActive: true },
           include: {
+            lecturer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                departmentCode: true,
+              },
+            },
             schedules: {
               orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
             },

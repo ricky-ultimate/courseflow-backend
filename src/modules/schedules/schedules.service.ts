@@ -39,7 +39,16 @@ export class SchedulesService extends BaseService<
       identifierField: 'id',
       includeRelations: {
         course: {
-          include: { department: true },
+          include: {
+            department: true,
+            lecturer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
         },
       },
       defaultOrderBy: { dayOfWeek: 'asc' },
