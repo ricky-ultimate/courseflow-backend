@@ -173,7 +173,7 @@ export const ApiDeleteExam = () =>
     ApiAuthRequired(),
   );
 
-  export const ApiGenerateExamTimetable = () =>
+export const ApiGenerateExamTimetable = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Auto-generate exam timetable',

@@ -7,7 +7,12 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { BaseService } from '../../common/services/base.service';
-import { College, ExamSchedule, Level, VenueType } from '../../generated/prisma';
+import {
+  College,
+  ExamSchedule,
+  Level,
+  VenueType,
+} from '../../generated/prisma';
 import {
   GenerateExamTimetableDto,
   GenerateExamTimetableResult,
@@ -203,8 +208,6 @@ export class ExamsService extends BaseService<
     const getDateKey = (date: Date, start: string) =>
       `${date.toISOString().slice(0, 10)}_${start}`;
 
-    let currentDate = new Date(examPeriodStart);
-
     for (const course of courses) {
       const isCBT = course.level === Level.LEVEL_100 || course.isGeneral;
       const venuePool = isCBT ? ICT_VENUES : REGULAR_VENUES;
@@ -224,16 +227,15 @@ export class ExamsService extends BaseService<
 
             if (slotsUsed < venuePool.length) {
               const venue = venuePool[slotsUsed % venuePool.length];
-              const targetCollege =
-                course.isGeneral
-                  ? (dto.college ?? course.department.college)
-                  : null;
+              const targetCollege = course.isGeneral
+                ? (dto.college ?? course.department.college)
+                : null;
 
               scheduledExams.push({
                 courseCode: course.code,
                 date: new Date(searchDate),
                 startTime,
-                endTime: EXAM_END_TIMES[startTime]!,
+                endTime: EXAM_END_TIMES[startTime],
                 venue,
                 studentCount: 50,
                 targetCollege,
