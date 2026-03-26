@@ -9,6 +9,7 @@ import { UpdateExamDto } from './dto/update-exam.dto';
 import { BaseService } from '../../common/services/base.service';
 import {
   College,
+  Course,
   ExamSchedule,
   Level,
   VenueType,
@@ -118,6 +119,40 @@ export class ExamsService extends BaseService<
       include: {
         course: { include: { department: true } },
       },
+    });
+  }
+
+  async getCoursesWithoutExams(): Promise<Course[]> {
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) {
+      return [];
+    }
+
+    return this.prisma.course.findMany({
+      where: {
+        isActive: true,
+        examSchedules: {
+          none: {
+            sessionId: activeSession.id,
+          },
+        },
+      },
+      include: {
+        department: true,
+        lecturer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            departmentCode: true,
+          },
+        },
+      },
+      orderBy: [{ level: 'asc' }, { code: 'asc' }],
     });
   }
 

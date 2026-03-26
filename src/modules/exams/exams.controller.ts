@@ -26,6 +26,7 @@ import {
   ApiUpdateExam,
   ApiDeleteExam,
   ApiGenerateExamTimetable,
+  ApiGetCoursesWithoutExams,
 } from './decorators/exam-api.decorator';
 
 @ApiTags('Exams')
@@ -51,6 +52,13 @@ export class ExamsController extends BaseController<
   @ApiGenerateExamTimetable()
   generate(@Body() dto: GenerateExamTimetableDto) {
     return this.examsService.generateExamTimetable(dto);
+  }
+
+  @Get('without-exams')
+  @SkipHodGuard()
+  @ApiGetCoursesWithoutExams()
+  getCoursesWithoutExams() {
+    return this.examsService.getCoursesWithoutExams();
   }
 
   @Post()

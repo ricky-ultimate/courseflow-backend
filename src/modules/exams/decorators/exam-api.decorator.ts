@@ -48,13 +48,6 @@ export const ApiGetExams = () =>
                 },
               },
             },
-            venue: {
-              type: 'object',
-              properties: {
-                name: { type: 'string', example: 'Lecture Hall 1' },
-                capacity: { type: 'number', example: 150 },
-              },
-            },
           },
         },
       },
@@ -114,27 +107,6 @@ export const ApiCreateExam = () =>
     ApiResponse({
       status: 409,
       description: 'Conflict - Venue occupied or Capacity exceeded',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 409 },
-          message: {
-            oneOf: [
-              {
-                type: 'string',
-                example:
-                  'College Conflict: Venue occupied by CBAS (CSC101). Cannot schedule CHMS exam here at the same time.',
-              },
-              {
-                type: 'string',
-                example:
-                  'Venue Capacity Exceeded: Current(140) + New(50) > Max(150)',
-              },
-            ],
-          },
-          error: { type: 'string', example: 'Conflict' },
-        },
-      },
     }),
     ApiNotFoundResponse('Course, Venue, or Active Session'),
     ApiStandardResponses(),
@@ -207,6 +179,25 @@ export const ApiGenerateExamTimetable = () =>
     ApiResponse({
       status: 404,
       description: 'No active session found',
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
+export const ApiGetCoursesWithoutExams = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get courses without exam schedules',
+      description:
+        'Retrieve courses that have no exam scheduled in the active academic session',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Courses without exams retrieved successfully',
+      schema: {
+        type: 'array',
+        items: { type: 'object' },
+      },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
