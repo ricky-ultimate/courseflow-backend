@@ -172,3 +172,42 @@ export const ApiDeleteExam = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
+  export const ApiGenerateExamTimetable = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Auto-generate exam timetable',
+      description:
+        'Generate exam schedules for all active courses in the given scope. ' +
+        'Deletes previously generated exams for the same scope then creates new ones spread ' +
+        'across the 3 weeks prior to session end. Supports filtering by department, level, and college.',
+    }),
+    ApiResponse({
+      status: 201,
+      description: 'Exam timetable generated successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'string' },
+          sessionName: { type: 'string', example: '2024/2025' },
+          semester: { type: 'string', enum: Object.values(Semester) },
+          departmentCode: { type: 'string', nullable: true },
+          level: { type: 'string', nullable: true },
+          college: { type: 'string', nullable: true },
+          totalCourses: { type: 'number', example: 60 },
+          scheduledExams: { type: 'number', example: 58 },
+          skippedCourses: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Course codes that could not be scheduled',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'No active session found',
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );

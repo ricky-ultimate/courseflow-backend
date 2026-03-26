@@ -12,8 +12,11 @@ import { ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
+import { GenerateExamTimetableDto } from './dto/generate-exam-timetable.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { ExamSchedule, Role } from '../../generated/prisma';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
 import {
@@ -22,6 +25,7 @@ import {
   ApiGetExamById,
   ApiUpdateExam,
   ApiDeleteExam,
+  ApiGenerateExamTimetable,
 } from './decorators/exam-api.decorator';
 
 @ApiTags('Exams')
@@ -39,6 +43,14 @@ export class ExamsController extends BaseController<
 > {
   constructor(private readonly examsService: ExamsService) {
     super(examsService);
+  }
+
+  @Post('generate')
+  @Roles(Role.ADMIN)
+  @SkipHodGuard()
+  @ApiGenerateExamTimetable()
+  generate(@Body() dto: GenerateExamTimetableDto) {
+    return this.examsService.generateExamTimetable(dto);
   }
 
   @Post()
