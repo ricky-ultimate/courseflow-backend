@@ -1,12 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { Semester } from '../../../generated/prisma';
+import { Level, Semester } from '../../../generated/prisma';
 
 export class GenerateScheduleDto {
-  @ApiProperty({
-    enum: Semester,
-    example: Semester.FIRST,
-  })
+  @ApiProperty({ enum: Semester, example: Semester.FIRST })
   @IsEnum(Semester)
   semester: Semester;
 
@@ -26,6 +23,16 @@ export class GenerateScheduleDto {
   @IsString()
   @IsOptional()
   departmentCode?: string;
+
+  @ApiPropertyOptional({
+    enum: Level,
+    example: Level.LEVEL_300,
+    description:
+      'Restrict generation to a single level within the selected department scope.',
+  })
+  @IsEnum(Level)
+  @IsOptional()
+  level?: Level;
 }
 
 export interface GenerateScheduleResult {
@@ -33,6 +40,7 @@ export interface GenerateScheduleResult {
   sessionName: string;
   semester: Semester;
   departmentCode: string | null;
+  level: Level | null;
   totalCourses: number;
   scheduledCourses: number;
   preservedOverrides: number;

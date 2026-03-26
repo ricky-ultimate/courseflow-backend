@@ -212,6 +212,7 @@ export class SchedulesService extends BaseService<
     }
 
     let departmentCode: string | null = dto.departmentCode ?? null;
+    const level: Level | null = dto.level ?? null;
 
     if (requestingUser.role === Role.HOD) {
       const hodUser = await this.prisma.user.findUnique({
@@ -232,12 +233,17 @@ export class SchedulesService extends BaseService<
     const courseFilter: Record<string, any> = {
       isActive: true,
       semester: dto.semester,
+      isGeneral: false,
     };
 
     if (departmentCode) {
       courseFilter.departmentCode = departmentCode;
     } else if (lockedDepartmentCodes.length > 0) {
       courseFilter.departmentCode = { notIn: lockedDepartmentCodes };
+    }
+
+    if (level) {
+      courseFilter.level = level;
     }
 
     const allCourses = await this.prisma.course.findMany({
@@ -251,6 +257,7 @@ export class SchedulesService extends BaseService<
         sessionName: session.name,
         semester: dto.semester,
         departmentCode,
+        level,
         totalCourses: 0,
         scheduledCourses: 0,
         preservedOverrides: 0,
@@ -270,10 +277,20 @@ export class SchedulesService extends BaseService<
       isManualOverride: true,
     };
     if (departmentCode) {
-      manualOverrideFilter.course = { departmentCode };
+      manualOverrideFilter.course = { departmentCode, isGeneral: false };
     } else if (lockedDepartmentCodes.length > 0) {
       manualOverrideFilter.course = {
         departmentCode: { notIn: lockedDepartmentCodes },
+        isGeneral: false,
+      };
+    } else {
+      manualOverrideFilter.course = { isGeneral: false };
+    }
+
+    if (level) {
+      manualOverrideFilter.course = {
+        ...(manualOverrideFilter.course as Record<string, any>),
+        level,
       };
     }
 
@@ -287,7 +304,7 @@ export class SchedulesService extends BaseService<
     );
 
     const coursesToSchedule: CourseInput[] = allCourses
-      .filter((c) => !overriddenCourseCodes.has(c.code) && !c.isGeneral)
+      .filter((c) => !overriddenCourseCodes.has(c.code))
       .map((c) => ({
         courseCode: c.code,
         departmentCode: c.departmentCode,
@@ -329,10 +346,20 @@ export class SchedulesService extends BaseService<
     };
 
     if (departmentCode) {
-      autoDeleteFilter.course = { departmentCode };
+      autoDeleteFilter.course = { departmentCode, isGeneral: false };
     } else if (lockedDepartmentCodes.length > 0) {
       autoDeleteFilter.course = {
         departmentCode: { notIn: lockedDepartmentCodes },
+        isGeneral: false,
+      };
+    } else {
+      autoDeleteFilter.course = { isGeneral: false };
+    }
+
+    if (level) {
+      autoDeleteFilter.course = {
+        ...(autoDeleteFilter.course as Record<string, any>),
+        level,
       };
     }
 
@@ -362,6 +389,7 @@ export class SchedulesService extends BaseService<
       sessionName: session.name,
       semester: dto.semester,
       departmentCode,
+      level,
       totalCourses: allCourses.length,
       scheduledCourses: assignments.length + manualOverrides.length,
       preservedOverrides: manualOverrides.length,
