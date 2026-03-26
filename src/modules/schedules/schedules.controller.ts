@@ -18,6 +18,7 @@ import {
   ApiDeleteSchedule,
   ApiGetScheduleStatistics,
   ApiGenerateSchedules,
+  ApiToggleScheduleFixed,
 } from './decorators/schedule-api.decorator';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
@@ -88,6 +89,14 @@ export class SchedulesController extends BaseController<
   @ApiUpdateSchedule()
   update(@Param('id') id: string, @Body() updateDto: UpdateScheduleDto) {
     return this.schedulesService.update(id, updateDto);
+  }
+
+  @Patch(':id/toggle-fixed')
+  @Roles(Role.ADMIN, Role.HOD)
+  @SkipHodGuard()
+  @ApiToggleScheduleFixed()
+  toggleFixed(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.schedulesService.toggleFixed(id, req.user);
   }
 
   @Delete(':id')

@@ -174,3 +174,37 @@ export const ApiGenerateSchedules = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
+export const ApiToggleScheduleFixed = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Toggle isFixed on a schedule',
+      description:
+        'Pins or unpins a schedule slot. Pinned slots are never moved or deleted by the auto-generation algorithm. ' +
+        'HODs may only pin/unpin schedules belonging to their own department.',
+    }),
+    ApiParam({ name: 'id', type: 'string', format: 'uuid' }),
+    ApiResponse({
+      status: 200,
+      description: 'Schedule fixed status toggled successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          courseCode: { type: 'string', example: 'CSC301' },
+          isFixed: { type: 'boolean', example: true },
+          dayOfWeek: { type: 'string' },
+          startTime: { type: 'string', example: '09:00' },
+          endTime: { type: 'string', example: '11:00' },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 403,
+      description:
+        'Forbidden — HOD attempted to pin a schedule outside their department',
+    }),
+    ApiNotFoundResponse('Schedule'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );

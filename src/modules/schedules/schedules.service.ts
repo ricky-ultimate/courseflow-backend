@@ -401,6 +401,57 @@ export class SchedulesService extends BaseService<
     return this.scheduleRepository.getScheduleStats();
   }
 
+  async toggleFixed(
+    id: string,
+    requestingUser: { id: string; role: string },
+  ): Promise<Schedule> {
+    const schedule = await this.prisma.schedule.findUnique({
+      where: { id },
+      include: {
+        course: {
+          include: {
+            department: true,
+            lecturer: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    if (!schedule) {
+      throw new NotFoundException(`Schedule '${id}' not found`);
+    }
+
+    if (requestingUser.role === Role.HOD) {
+      const hodUser = await this.prisma.user.findUnique({
+        where: { id: requestingUser.id },
+        include: { managedDepartment: true },
+      });
+
+      if (!hodUser?.managedDepartment) {
+        throw new ForbiddenException('HOD must be assigned to a department');
+      }
+
+      if (schedule.course.departmentCode !== hodUser.managedDepartment.code) {
+        throw new ForbiddenException(
+          'HODs can only pin or unpin schedules in their own department',
+        );
+      }
+    }
+
+    return this.prisma.schedule.update({
+      where: { id },
+      data: { isFixed: !schedule.isFixed },
+      include: {
+        course: {
+          include: {
+            department: true,
+            lecturer: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+  }
+
   private async resolveLockedDepartmentCodes(
     departmentCode: string | null,
   ): Promise<string[]> {
