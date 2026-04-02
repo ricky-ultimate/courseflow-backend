@@ -64,10 +64,6 @@ export const SLOTS_BY_DAY: Partial<Record<DayOfWeek, TimeSlot[]>> = {
   [DayOfWeek.FRIDAY]: BASE_TIME_SLOTS,
 };
 
-export const ALL_DAY_SLOTS: DaySlot[] = VALID_DAYS.flatMap((day) =>
-  (SLOTS_BY_DAY[day] ?? []).map((slot) => ({ day, ...slot })),
-);
-
 export const DEPARTMENTAL_DAY_SLOTS: DaySlot[] = WEEKDAYS_ONLY.flatMap((day) =>
   (SLOTS_BY_DAY[day] ?? []).map((slot) => ({ day, ...slot })),
 );

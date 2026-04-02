@@ -1,7 +1,6 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { DayOfWeek, Level, Semester } from '../../../generated/prisma';
 import {
-  ALL_DAY_SLOTS,
   DEPARTMENTAL_DAY_SLOTS,
   DaySlot,
   FRIDAY_UNIVERSITY_SLOTS,
