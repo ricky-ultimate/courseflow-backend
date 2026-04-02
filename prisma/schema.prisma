@@ -59,7 +59,7 @@ model Course {
     overview       String?  @db.Text
     level          Level
     credits        Int      @default(2)
-    semester       Semester @default(FIRST)
+    semester       Semester @default(SECOND)
     departmentCode String
     lecturerId     String?
     isGeneral      Boolean  @default(false)
@@ -94,7 +94,7 @@ model AcademicSession {
 model Schedule {
     id               String    @id @default(cuid())
     courseCode       String
-    semester         Semester  @default(FIRST)
+    semester         Semester  @default(SECOND)
     sessionId        String
     dayOfWeek        DayOfWeek
     startTime        String
@@ -210,6 +210,7 @@ enum ComplaintStatus {
 enum College {
     CBAS
     CHMS
+    CAHS
 }
 
 enum VenueType {
