@@ -1,12 +1,20 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { DayOfWeek, Level, Semester } from '../../../generated/prisma';
-import { ALL_DAY_SLOTS, DaySlot } from './scheduler.constants';
+import {
+  ALL_DAY_SLOTS,
+  DEPARTMENTAL_DAY_SLOTS,
+  DaySlot,
+  FRIDAY_UNIVERSITY_SLOTS,
+  ESM_COURSE_CODE_PATTERN,
+  GST_COURSE_CODE_PATTERN,
+} from './scheduler.constants';
 
 export interface CourseInput {
   courseCode: string;
   departmentCode: string;
   level: Level;
   semester: Semester;
+  isGeneral?: boolean;
 }
 
 export interface LockedSlot {
@@ -133,8 +141,9 @@ export class SchedulerEngine {
   private availableSlots(
     course: CourseInput,
     occupied: Map<BucketKey, TimeInterval[]>,
+    allowedSlots: DaySlot[],
   ): DaySlot[] {
-    return ALL_DAY_SLOTS.filter((slot) =>
+    return allowedSlots.filter((slot) =>
       this.isSlotAvailable(course, slot, occupied),
     );
   }
@@ -144,8 +153,9 @@ export class SchedulerEngine {
     occupied: Map<BucketKey, TimeInterval[]>,
     dayLoad: Map<DayOfWeek, number>,
     timeSlotLoad: Map<string, number>,
+    allowedSlots: DaySlot[],
   ): DaySlot[] {
-    const slots = this.availableSlots(course, occupied);
+    const slots = this.availableSlots(course, occupied, allowedSlots);
     return slots.sort((a, b) => {
       const dayDiff = (dayLoad.get(a.day) ?? 0) - (dayLoad.get(b.day) ?? 0);
       if (dayDiff !== 0) return dayDiff;
@@ -162,8 +172,8 @@ export class SchedulerEngine {
   ): CourseInput[] {
     return [...courses].sort(
       (a, b) =>
-        this.availableSlots(a, occupied).length -
-        this.availableSlots(b, occupied).length,
+        this.availableSlots(a, occupied, DEPARTMENTAL_DAY_SLOTS).length -
+        this.availableSlots(b, occupied, DEPARTMENTAL_DAY_SLOTS).length,
     );
   }
 
@@ -196,6 +206,24 @@ export class SchedulerEngine {
     if (idx !== -1) intervals.splice(idx, 1);
   }
 
+  private getFridaySlotForUniversityCourse(
+    courseCode: string,
+    level: Level,
+  ): DaySlot | null {
+    const levelSlots = FRIDAY_UNIVERSITY_SLOTS[level];
+    if (!levelSlots) return null;
+
+    if (ESM_COURSE_CODE_PATTERN.test(courseCode)) {
+      return { day: DayOfWeek.FRIDAY, ...levelSlots.esm };
+    }
+
+    if (GST_COURSE_CODE_PATTERN.test(courseCode)) {
+      return { day: DayOfWeek.FRIDAY, ...levelSlots.gst };
+    }
+
+    return null;
+  }
+
   private solve(
     courses: CourseInput[],
     index: number,
@@ -212,6 +240,7 @@ export class SchedulerEngine {
       occupied,
       dayLoad,
       timeSlotLoad,
+      DEPARTMENTAL_DAY_SLOTS,
     );
 
     for (const slot of slots) {
@@ -279,11 +308,77 @@ export class SchedulerEngine {
   ): ScheduleAssignment[] {
     if (courses.length === 0) return [];
 
-    const occupied = this.buildInitialOccupancy(locked, allDepartmentCodes);
-    const dayLoad = this.buildInitialDayLoad(locked);
-    const timeSlotLoad = this.buildInitialTimeSlotLoad(locked);
-    const sorted = this.sortByMostConstrained(courses, occupied);
+    const universityCourses = courses.filter(
+      (c) =>
+        c.isGeneral === true ||
+        ESM_COURSE_CODE_PATTERN.test(c.courseCode) ||
+        GST_COURSE_CODE_PATTERN.test(c.courseCode),
+    );
+
+    const departmentalCourses = courses.filter(
+      (c) =>
+        !c.isGeneral &&
+        !ESM_COURSE_CODE_PATTERN.test(c.courseCode) &&
+        !GST_COURSE_CODE_PATTERN.test(c.courseCode),
+    );
+
     const assignments = new Map<string, ScheduleAssignment>();
+    const unscheduledUniversity: string[] = [];
+
+    for (const course of universityCourses) {
+      const fridaySlot = this.getFridaySlotForUniversityCourse(
+        course.courseCode,
+        course.level,
+      );
+
+      if (!fridaySlot) {
+        unscheduledUniversity.push(course.courseCode);
+        continue;
+      }
+
+      assignments.set(course.courseCode, {
+        courseCode: course.courseCode,
+        dayOfWeek: fridaySlot.day,
+        startTime: fridaySlot.startTime,
+        endTime: fridaySlot.endTime,
+        semester: course.semester,
+      });
+    }
+
+    if (unscheduledUniversity.length > 0) {
+      throw new UnprocessableEntityException(
+        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM and GST prefixed courses are supported for Friday auto-scheduling.`,
+      );
+    }
+
+    const universityLockedSlots: LockedSlot[] = Array.from(
+      assignments.values(),
+    ).map((a) => {
+      const course = universityCourses.find(
+        (c) => c.courseCode === a.courseCode,
+      )!;
+      return {
+        courseCode: a.courseCode,
+        departmentCode: course.departmentCode,
+        level: course.level,
+        dayOfWeek: a.dayOfWeek,
+        startTime: a.startTime,
+        endTime: a.endTime,
+        semester: a.semester,
+        isUniversityCourse: true,
+      };
+    });
+
+    const allLocked = [...locked, ...universityLockedSlots];
+
+    if (departmentalCourses.length === 0) {
+      return Array.from(assignments.values());
+    }
+
+    const occupied = this.buildInitialOccupancy(allLocked, allDepartmentCodes);
+    const dayLoad = this.buildInitialDayLoad(allLocked);
+    const timeSlotLoad = this.buildInitialTimeSlotLoad(allLocked);
+    const sorted = this.sortByMostConstrained(departmentalCourses, occupied);
 
     const solved = this.solve(
       sorted,
