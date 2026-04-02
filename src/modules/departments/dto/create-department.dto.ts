@@ -5,7 +5,9 @@ import {
   IsOptional,
   MaxLength,
   Matches,
+  IsEnum,
 } from 'class-validator';
+import { College } from '../../../generated/prisma';
 
 export class CreateDepartmentDto {
   @ApiProperty({ example: 'Computer Science' })
@@ -28,6 +30,11 @@ export class CreateDepartmentDto {
   @IsOptional()
   @MaxLength(1000)
   description?: string;
+
+  @ApiProperty({ enum: College, required: false, default: College.CBAS })
+  @IsEnum(College)
+  @IsOptional()
+  college?: College;
 
   @ApiProperty({
     required: false,
