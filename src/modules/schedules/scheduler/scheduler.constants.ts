@@ -41,14 +41,6 @@ export const WEDNESDAY_TIME_SLOTS: TimeSlot[] = [
   { startTime: '12:00', endTime: '15:00' },
 ];
 
-export const VALID_DAYS: DayOfWeek[] = [
-  DayOfWeek.MONDAY,
-  DayOfWeek.TUESDAY,
-  DayOfWeek.WEDNESDAY,
-  DayOfWeek.THURSDAY,
-  DayOfWeek.FRIDAY,
-];
-
 export const WEEKDAYS_ONLY: DayOfWeek[] = [
   DayOfWeek.MONDAY,
   DayOfWeek.TUESDAY,
