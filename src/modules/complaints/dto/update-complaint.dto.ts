@@ -12,7 +12,8 @@ export class UpdateComplaintDto {
   @IsEnum(ComplaintStatus, {
     message: 'Status must be one of: PENDING, IN_PROGRESS, RESOLVED, CLOSED',
   })
-  status: ComplaintStatus;
+  @IsOptional()
+  status?: ComplaintStatus;
 
   @ApiProperty({
     required: false,

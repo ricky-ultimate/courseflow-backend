@@ -86,14 +86,7 @@ export class ExamsService extends BaseService<
       throw new NotFoundException(`Course ${dto.courseCode} not found`);
     }
 
-    const isCBT = course.level === Level.LEVEL_100 || course.isGeneral;
-    const isIctVenue = ICT_VENUES.includes(dto.venue);
-
-    if (isCBT && !isIctVenue) {
-      throw new BadRequestException(
-        `Course ${course.code} is CBT-based (100L/General). Must use an ICT venue: ${ICT_VENUES.join(', ')}`,
-      );
-    }
+    this.validateVenueForCourse(course, dto.venue);
 
     if (course.isGeneral && !dto.targetCollege) {
       throw new BadRequestException(
@@ -120,6 +113,63 @@ export class ExamsService extends BaseService<
         course: { include: { department: true } },
       },
     });
+  }
+
+  protected async beforeUpdate(
+    dto: UpdateExamDto,
+    identifier: string,
+  ): Promise<Record<string, any>> {
+    const existing = await this.prisma.examSchedule.findUnique({
+      where: { id: identifier },
+      include: { course: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Exam schedule '${identifier}' not found`);
+    }
+
+    const venue = dto.venue ?? existing.venue;
+    const courseCode = dto.courseCode ?? existing.courseCode;
+
+    const course = await this.prisma.course.findUnique({
+      where: { code: courseCode },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course '${courseCode}' not found`);
+    }
+
+    this.validateVenueForCourse(course, venue);
+
+    if (course.isGeneral) {
+      const targetCollege = dto.targetCollege ?? existing.targetCollege;
+      if (!targetCollege) {
+        throw new BadRequestException(
+          'Target College required for General Courses',
+        );
+      }
+    }
+
+    const data: Record<string, any> = { ...dto };
+    if (dto.date) {
+      data.date = new Date(dto.date);
+    }
+
+    return data;
+  }
+
+  private validateVenueForCourse(
+    course: { code: string; level: Level; isGeneral: boolean },
+    venue: VenueType,
+  ): void {
+    const isCBT = course.level === Level.LEVEL_100 || course.isGeneral;
+    const isIctVenue = ICT_VENUES.includes(venue);
+
+    if (isCBT && !isIctVenue) {
+      throw new BadRequestException(
+        `Course ${course.code} is CBT-based (100L/General). Must use an ICT venue: ${ICT_VENUES.join(', ')}`,
+      );
+    }
   }
 
   async getCoursesWithoutExams(): Promise<Course[]> {

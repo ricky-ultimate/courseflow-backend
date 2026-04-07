@@ -97,6 +97,52 @@ export const ApiGetDepartmentByCode = () =>
     ApiAuthRequired(),
   );
 
+export const ApiGetDepartmentWithFullDetails = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get department with full details',
+      description:
+        'Retrieve a department including all active courses, their lecturers, and schedules',
+    }),
+    ApiParam({
+      name: 'code',
+      type: 'string',
+      description: 'Department code',
+      example: 'CS',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Department with full details retrieved successfully',
+      schema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          code: { type: 'string', example: 'CS' },
+          name: { type: 'string', example: 'Computer Science' },
+          courses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                code: { type: 'string', example: 'CSC101' },
+                name: {
+                  type: 'string',
+                  example: 'Introduction to Programming',
+                },
+                level: { type: 'string', example: 'LEVEL_100' },
+                lecturer: { type: 'object' },
+                schedules: { type: 'array', items: { type: 'object' } },
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiNotFoundResponse('Department'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
 export const ApiCreateDepartment = () =>
   applyDecorators(
     ApiOperation({

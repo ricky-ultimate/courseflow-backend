@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response as ExpressResponse } from 'express';
@@ -86,11 +87,11 @@ export class CoursesController extends BaseController<
   @ApiBulkCreateCourses()
   async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
-      throw new Error('No file uploaded');
+      throw new BadRequestException('No file uploaded');
     }
 
     if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
-      throw new Error('File must be a CSV');
+      throw new BadRequestException('File must be a CSV');
     }
 
     return this.coursesService.bulkCreateFromCsv(file.buffer);

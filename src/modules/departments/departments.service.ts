@@ -122,6 +122,17 @@ export class DepartmentsService extends BaseService<
     }
   }
 
+  async remove(identifier: string): Promise<Department> {
+    const result = await this.departmentRepository.safeDelete(identifier);
+    if (!result.success) {
+      throw new ConflictException(result.message);
+    }
+    if (!result.department) {
+      throw new NotFoundException(`Department '${identifier}' not found`);
+    }
+    return result.department;
+  }
+
   async lockSchedule(
     code: string,
     requestingUser: { id: string; role: string },
@@ -226,10 +237,6 @@ export class DepartmentsService extends BaseService<
 
   async findWithFullDetails(code: string) {
     return this.departmentRepository.findWithFullDetails(code);
-  }
-
-  async safeDelete(code: string) {
-    return this.departmentRepository.safeDelete(code);
   }
 
   async existsByCode(code: string): Promise<boolean> {
