@@ -167,7 +167,10 @@ export class SchedulesService extends BaseService<
       const activeSession = await this.prisma.academicSession.findFirst({
         where: { isActive: true },
       });
-      if (activeSession) where.sessionId = activeSession.id;
+      if (!activeSession) {
+        return [];
+      }
+      where.sessionId = activeSession.id;
     }
 
     if (query.courseCode) where.courseCode = query.courseCode;
