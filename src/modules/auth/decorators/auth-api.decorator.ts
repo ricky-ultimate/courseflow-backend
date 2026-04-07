@@ -3,10 +3,8 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiParam,
   ApiBearerAuth,
   ApiUnauthorizedResponse,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiTooManyRequestsResponse,
@@ -50,22 +48,6 @@ const authRequiredResponses = () => [
         success: { type: 'boolean', example: false },
         error: { type: 'string', example: 'Invalid or expired token' },
         statusCode: { type: 'number', example: 401 },
-        timestamp: { type: 'string', format: 'date-time' },
-      },
-    },
-  }),
-];
-
-const adminOnlyResponses = () => [
-  ...authRequiredResponses(),
-  ApiForbiddenResponse({
-    description: 'Forbidden - Admin access required',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        error: { type: 'string', example: 'Insufficient permissions' },
-        statusCode: { type: 'number', example: 403 },
         timestamp: { type: 'string', format: 'date-time' },
       },
     },
