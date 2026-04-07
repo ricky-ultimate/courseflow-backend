@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -26,6 +27,7 @@ import {
   ApiDownloadDepartmentTemplate,
   ApiLockDepartmentSchedule,
   ApiUnlockDepartmentSchedule,
+  ApiGetDepartmentWithFullDetails,
 } from './decorators/department-api.decorator';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -91,11 +93,11 @@ export class DepartmentsController extends BaseController<
   @ApiBulkCreateDepartments()
   async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
-      throw new Error('No file uploaded');
+      throw new BadRequestException('No file uploaded');
     }
 
     if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
-      throw new Error('File must be a CSV');
+      throw new BadRequestException('File must be a CSV');
     }
 
     return this.departmentsService.bulkCreateFromCsv(file.buffer);
@@ -108,7 +110,7 @@ export class DepartmentsController extends BaseController<
   }
 
   @Get(':code/full-details')
-  @ApiGetDepartmentByCode()
+  @ApiGetDepartmentWithFullDetails()
   findWithFullDetails(@Param('code') code: string) {
     return this.departmentsService.findWithFullDetails(code);
   }
