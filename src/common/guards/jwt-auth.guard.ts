@@ -54,8 +54,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           break;
       }
 
-      if (requiredRoles && requiredRoles.length === 0) {
-        return true;
+      if (requiredRoles !== undefined && requiredRoles.length === 0) {
+        return super.canActivate(context);
       }
     }
 
