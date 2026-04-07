@@ -30,7 +30,7 @@ import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { Schedule, Role } from '../../generated/prisma';
-import { AuthenticatedRequest } from 'src/common/types/auth.types';
+import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Schedules')
 @Controller('schedules')
