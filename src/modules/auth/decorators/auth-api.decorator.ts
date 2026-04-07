@@ -3,10 +3,8 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiParam,
   ApiBearerAuth,
   ApiUnauthorizedResponse,
-  ApiForbiddenResponse,
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiTooManyRequestsResponse,
@@ -56,28 +54,11 @@ const authRequiredResponses = () => [
   }),
 ];
 
-const adminOnlyResponses = () => [
-  ...authRequiredResponses(),
-  ApiForbiddenResponse({
-    description: 'Forbidden - Admin access required',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: false },
-        error: { type: 'string', example: 'Insufficient permissions' },
-        statusCode: { type: 'number', example: 403 },
-        timestamp: { type: 'string', format: 'date-time' },
-      },
-    },
-  }),
-];
-
 export const ApiRegister = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Register a new user',
-      description:
-        'Register a new user account. ADMIN and LECTURER roles require verification code.',
+      description: 'Register a new user account.',
     }),
     ApiBody({
       schema: {
@@ -105,11 +86,6 @@ export const ApiRegister = () =>
             enum: Object.values(Role),
             default: 'STUDENT',
             example: 'STUDENT',
-          },
-          verificationCode: {
-            type: 'string',
-            example: 'ADMIN-2025-ABC123',
-            description: 'Required for ADMIN/LECTURER roles',
           },
         },
       },
@@ -302,138 +278,5 @@ export const ApiGetMe = () =>
       },
     }),
     ...authRequiredResponses(),
-    ...commonErrorResponses(),
-  );
-
-export const ApiCreateVerificationCode = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Create verification code (Admin only)',
-      description:
-        'Create a new verification code for ADMIN or LECTURER role assignment',
-    }),
-    ApiBody({
-      schema: {
-        type: 'object',
-        required: ['code', 'role'],
-        properties: {
-          code: { type: 'string', example: 'ADMIN-2025-ABC123' },
-          role: {
-            type: 'string',
-            enum: [Role.ADMIN, Role.LECTURER],
-            example: 'ADMIN',
-          },
-          description: {
-            type: 'string',
-            example: 'Admin verification code for 2025',
-          },
-          maxUsage: {
-            type: 'number',
-            example: 10,
-            description: 'Maximum number of uses',
-          },
-          expiresAt: {
-            type: 'string',
-            format: 'date-time',
-            description: 'Expiration date',
-          },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 201,
-      description: 'Verification code created successfully',
-    }),
-    ApiConflictResponse({
-      description: 'Verification code already exists',
-    }),
-    ...adminOnlyResponses(),
-    ...commonErrorResponses(),
-  );
-
-export const ApiGetVerificationCodes = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get all verification codes (Admin only)',
-      description: 'Retrieve all verification codes with usage statistics',
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Verification codes retrieved successfully',
-    }),
-    ...adminOnlyResponses(),
-    ...commonErrorResponses(),
-  );
-
-export const ApiGetVerificationCode = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Get verification code by ID (Admin only)',
-      description: 'Retrieve a specific verification code by its ID',
-    }),
-    ApiParam({ name: 'id', description: 'Verification code ID' }),
-    ApiResponse({
-      status: 200,
-      description: 'Verification code retrieved successfully',
-    }),
-    ApiResponse({
-      status: 404,
-      description: 'Verification code not found',
-    }),
-    ...adminOnlyResponses(),
-    ...commonErrorResponses(),
-  );
-
-export const ApiUpdateVerificationCode = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Update verification code (Admin only)',
-      description: 'Update an existing verification code',
-    }),
-    ApiParam({ name: 'id', description: 'Verification code ID' }),
-    ApiBody({
-      schema: {
-        type: 'object',
-        properties: {
-          code: { type: 'string', example: 'ADMIN-2025-ABC123' },
-          role: { type: 'string', enum: [Role.ADMIN, Role.LECTURER] },
-          description: { type: 'string' },
-          maxUsage: { type: 'number' },
-          expiresAt: { type: 'string', format: 'date-time' },
-          isActive: { type: 'boolean' },
-        },
-      },
-    }),
-    ApiResponse({
-      status: 200,
-      description: 'Verification code updated successfully',
-    }),
-    ApiResponse({
-      status: 404,
-      description: 'Verification code not found',
-    }),
-    ApiConflictResponse({
-      description: 'Verification code already exists',
-    }),
-    ...adminOnlyResponses(),
-    ...commonErrorResponses(),
-  );
-
-export const ApiDeleteVerificationCode = () =>
-  applyDecorators(
-    ApiOperation({
-      summary: 'Delete verification code (Admin only)',
-      description: 'Delete a verification code',
-    }),
-    ApiParam({ name: 'id', description: 'Verification code ID' }),
-    ApiResponse({
-      status: 200,
-      description: 'Verification code deleted successfully',
-    }),
-    ApiResponse({
-      status: 404,
-      description: 'Verification code not found',
-    }),
-    ...adminOnlyResponses(),
     ...commonErrorResponses(),
   );
