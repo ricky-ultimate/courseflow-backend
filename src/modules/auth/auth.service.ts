@@ -14,8 +14,6 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { CreateVerificationCodeDto } from './dto/create-verification-code.dto';
-import { UpdateVerificationCodeDto } from './dto/update-verification-code.dto';
 import { Role } from '../../generated/prisma';
 
 @Injectable()
@@ -40,49 +38,6 @@ export class AuthService {
     }
 
     const userRole = dto.role || Role.STUDENT;
-
-    if (
-      userRole === Role.ADMIN ||
-      userRole === Role.LECTURER ||
-      userRole === Role.HOD
-    ) {
-      if (!dto.verificationCode) {
-        throw new BadRequestException(
-          `Verification code is required for ${userRole} role`,
-        );
-      }
-
-      const verificationCode = await this.prisma.verificationCode.findUnique({
-        where: { code: dto.verificationCode },
-      });
-
-      if (!verificationCode)
-        throw new BadRequestException('Invalid verification code');
-      if (!verificationCode.isActive)
-        throw new BadRequestException('Verification code is inactive');
-      if (verificationCode.role !== userRole) {
-        throw new BadRequestException(
-          `Verification code is not valid for ${userRole} role`,
-        );
-      }
-      if (
-        verificationCode.expiresAt &&
-        verificationCode.expiresAt < new Date()
-      ) {
-        throw new BadRequestException('Verification code has expired');
-      }
-      if (
-        verificationCode.maxUsage &&
-        verificationCode.usageCount >= verificationCode.maxUsage
-      ) {
-        throw new BadRequestException('Verification code usage limit exceeded');
-      }
-
-      await this.prisma.verificationCode.update({
-        where: { id: verificationCode.id },
-        data: { usageCount: { increment: 1 } },
-      });
-    }
 
     if (
       userRole === Role.STUDENT ||
@@ -224,80 +179,6 @@ export class AuthService {
     });
 
     return { message: 'Password has been reset successfully' };
-  }
-
-  async createVerificationCode(
-    dto: CreateVerificationCodeDto,
-    createdBy: string,
-  ) {
-    const existingCode = await this.prisma.verificationCode.findUnique({
-      where: { code: dto.code },
-    });
-    if (existingCode)
-      throw new ConflictException('Verification code already exists');
-
-    return this.prisma.verificationCode.create({
-      data: {
-        code: dto.code,
-        role: dto.role,
-        description: dto.description,
-        maxUsage: dto.maxUsage,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
-        createdBy,
-      },
-      include: {
-        creator: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-  }
-
-  async getVerificationCodes() {
-    return this.prisma.verificationCode.findMany({
-      include: {
-        creator: { select: { id: true, name: true, email: true, role: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async getVerificationCode(id: string) {
-    const verificationCode = await this.prisma.verificationCode.findUnique({
-      where: { id },
-      include: {
-        creator: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-    if (!verificationCode)
-      throw new NotFoundException('Verification code not found');
-    return verificationCode;
-  }
-
-  async updateVerificationCode(id: string, dto: UpdateVerificationCodeDto) {
-    const existingCode = await this.getVerificationCode(id);
-
-    if (dto.code && dto.code !== existingCode.code) {
-      const codeExists = await this.prisma.verificationCode.findUnique({
-        where: { code: dto.code },
-      });
-      if (codeExists)
-        throw new ConflictException('Verification code already exists');
-    }
-
-    return this.prisma.verificationCode.update({
-      where: { id },
-      data: {
-        ...dto,
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
-      },
-      include: {
-        creator: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-  }
-
-  async deleteVerificationCode(id: string) {
-    await this.getVerificationCode(id);
-    return this.prisma.verificationCode.delete({ where: { id } });
   }
 
   async getMe(userId: string) {

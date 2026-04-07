@@ -39,19 +39,6 @@ export class RegisterDto {
   role?: Role;
 
   @ApiProperty({
-    required: false,
-    example: 'ADMIN-2025-ABC123',
-    description: 'Required for ADMIN, LECTURER, or HOD roles',
-  })
-  @IsString()
-  @ValidateIf(
-    (o: RegisterDto) =>
-      o.role === Role.ADMIN || o.role === Role.LECTURER || o.role === Role.HOD,
-  )
-  @IsNotEmpty()
-  verificationCode?: string;
-
-  @ApiProperty({
     example: 'CSC',
     description: 'Required for STUDENT, LECTURER, and HOD roles',
   })
