@@ -141,26 +141,35 @@ export class AuthService {
       };
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { resetToken, resetTokenExpiry },
+      data: { resetToken: hashedToken, resetTokenExpiry },
     });
 
-    console.log(`Password reset token for ${user.email}: ${resetToken}`);
+    console.log(`Password reset token for ${user.email}: ${rawToken}`);
 
     return {
       message:
         'If an account with that email exists, a password reset link has been sent.',
-      ...(process.env.NODE_ENV === 'development' && { resetToken }),
+      ...(process.env.NODE_ENV === 'development' && { resetToken: rawToken }),
     };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(dto.token)
+      .digest('hex');
+
     const user = await this.prisma.user.findUnique({
-      where: { resetToken: dto.token, isActive: true },
+      where: { resetToken: hashedToken, isActive: true },
     });
 
     if (!user) throw new BadRequestException('Invalid or expired reset token');
