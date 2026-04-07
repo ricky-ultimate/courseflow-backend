@@ -70,7 +70,6 @@ export class CoursesService extends BaseService<
     if (query.level) andConditions.push({ level: query.level });
     if (query.semester) andConditions.push({ semester: query.semester });
 
-    // lecturerId filter (by id)
     if (query.lecturerId) {
       andConditions.push({ lecturerId: query.lecturerId });
     }
@@ -119,7 +118,6 @@ export class CoursesService extends BaseService<
       );
     }
 
-    // lecturerId is passed directly
     if (dto.lecturerId) {
       const lecturer = await this.prisma.user.findUnique({
         where: { id: dto.lecturerId, isActive: true },
@@ -217,7 +215,6 @@ export class CoursesService extends BaseService<
     if (data.length === 0)
       return this.csvService.createBulkResult([], allErrors, errors.length);
 
-    // CSV uses email for human-readable lookup → resolve to id
     const lecturerEmails = [
       ...new Set(data.map((r) => r.lecturerEmail.toLowerCase())),
     ];
@@ -301,7 +298,6 @@ export class CoursesService extends BaseService<
       'code',
       'name',
       'level',
-      'semester',
       'credits',
       'departmentCode',
       'lecturerEmail',
@@ -310,7 +306,6 @@ export class CoursesService extends BaseService<
       code: 'CSC101',
       name: 'Introduction to Programming',
       level: 'LEVEL_100',
-      semester: 'FIRST',
       credits: '3',
       departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',

@@ -129,6 +129,7 @@ model ExamSchedule {
     course  Course          @relation(fields: [courseCode], references: [code], onDelete: Cascade)
     session AcademicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
+    @@unique([courseCode, sessionId])
     @@map("exam_schedules")
 }
 
