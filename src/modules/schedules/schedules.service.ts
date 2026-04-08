@@ -176,11 +176,23 @@ export class SchedulesService extends BaseService<
     if (query.courseCode) where.courseCode = query.courseCode;
     if (query.dayOfWeek) where.dayOfWeek = query.dayOfWeek;
 
-    const courseFilter: Record<string, any> = {};
-    if (query.departmentCode)
-      courseFilter.departmentCode = query.departmentCode;
-    if (query.level) courseFilter.level = query.level;
-    if (Object.keys(courseFilter).length > 0) where.course = courseFilter;
+    if (query.departmentCode || query.level) {
+      if (query.departmentCode) {
+        const deptCondition: Record<string, any> = {
+          departmentCode: query.departmentCode,
+        };
+        const generalCondition: Record<string, any> = { isGeneral: true };
+
+        if (query.level) {
+          deptCondition.level = query.level;
+          generalCondition.level = query.level;
+        }
+
+        where.course = { OR: [deptCondition, generalCondition] };
+      } else {
+        where.course = { level: query.level };
+      }
+    }
 
     if (query.startTime) where.startTime = { gte: query.startTime };
     if (query.endTime) where.endTime = { lte: query.endTime };
