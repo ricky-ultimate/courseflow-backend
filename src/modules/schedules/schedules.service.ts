@@ -306,38 +306,58 @@ export class SchedulesService extends BaseService<
     });
     const allDepartmentCodes = allDepartments.map((d) => d.code);
 
-    const manualOverrideFilter: Record<string, any> = {
+    const departmentalManualOverrideFilter: Record<string, any> = {
       sessionId: session.id,
       semester: dto.semester,
       isManualOverride: true,
+      course: { isGeneral: false },
     };
 
     if (departmentCode) {
-      manualOverrideFilter.course = { departmentCode, isGeneral: false };
+      departmentalManualOverrideFilter.course = {
+        departmentCode,
+        isGeneral: false,
+      };
     } else if (lockedDepartmentCodes.length > 0) {
-      manualOverrideFilter.course = {
+      departmentalManualOverrideFilter.course = {
         departmentCode: { notIn: lockedDepartmentCodes },
         isGeneral: false,
       };
-    } else {
-      manualOverrideFilter.course = { isGeneral: false };
     }
 
     if (level) {
-      manualOverrideFilter.course = {
-        ...(manualOverrideFilter.course as Record<string, any>),
+      departmentalManualOverrideFilter.course = {
+        ...(departmentalManualOverrideFilter.course as Record<string, any>),
         level,
       };
     }
 
-    const manualOverrides = await this.prisma.schedule.findMany({
-      where: manualOverrideFilter,
-      include: { course: { include: { department: true } } },
-    });
+    const generalScheduledFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      course: { isGeneral: true },
+    };
 
-    const overriddenCourseCodes = new Set(
-      manualOverrides.map((s) => s.courseCode),
-    );
+    if (level) {
+      generalScheduledFilter.course = { isGeneral: true, level };
+    }
+
+    const [departmentalManualOverrides, alreadyScheduledGeneral] =
+      await Promise.all([
+        this.prisma.schedule.findMany({
+          where: departmentalManualOverrideFilter,
+          include: { course: { include: { department: true } } },
+        }),
+        this.prisma.schedule.findMany({
+          where: generalScheduledFilter,
+          include: { course: { include: { department: true } } },
+        }),
+      ]);
+
+    const overriddenCourseCodes = new Set<string>([
+      ...departmentalManualOverrides.map((s) => s.courseCode),
+      ...alreadyScheduledGeneral.map((s) => s.courseCode),
+    ]);
 
     const coursesToSchedule: CourseInput[] = allCourses
       .filter((c) => !overriddenCourseCodes.has(c.code))
@@ -437,6 +457,9 @@ export class SchedulesService extends BaseService<
       }
     });
 
+    const totalPreserved =
+      departmentalManualOverrides.length + alreadyScheduledGeneral.length;
+
     return {
       sessionId: session.id,
       sessionName: session.name,
@@ -444,8 +467,8 @@ export class SchedulesService extends BaseService<
       departmentCode,
       level,
       totalCourses: allCourses.length,
-      scheduledCourses: assignments.length + manualOverrides.length,
-      preservedOverrides: manualOverrides.length,
+      scheduledCourses: assignments.length + totalPreserved,
+      preservedOverrides: totalPreserved,
       skippedLockedDepartments: lockedDepartmentCodes.length,
     };
   }
