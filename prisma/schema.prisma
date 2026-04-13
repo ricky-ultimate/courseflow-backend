@@ -67,12 +67,27 @@ model Course {
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 
-    department    Department     @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
-    lecturer      User?          @relation(fields: [lecturerId], references: [id], onDelete: SetNull)
-    schedules     Schedule[]
-    examSchedules ExamSchedule[]
+    department     Department     @relation(fields: [departmentCode], references: [code], onDelete: Cascade)
+    lecturer       User?          @relation(fields: [lecturerId], references: [id], onDelete: SetNull)
+    schedules      Schedule[]
+    examSchedules  ExamSchedule[]
+    primaryAliases CourseAlias[]  @relation("PrimaryAliases")
+    aliasOf        CourseAlias[]  @relation("AliasOf")
 
     @@map("courses")
+}
+
+model CourseAlias {
+    id          String   @id @default(cuid())
+    primaryCode String
+    aliasCode   String
+    createdAt   DateTime @default(now())
+
+    primaryCourse Course @relation("PrimaryAliases", fields: [primaryCode], references: [code], onDelete: Cascade)
+    aliasCourse   Course @relation("AliasOf", fields: [aliasCode], references: [code], onDelete: Cascade)
+
+    @@unique([primaryCode, aliasCode])
+    @@map("course_aliases")
 }
 
 model AcademicSession {
