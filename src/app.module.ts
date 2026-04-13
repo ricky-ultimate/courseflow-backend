@@ -16,6 +16,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { HodDepartmentGuard } from './common/guards/hod-department.guard';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { ExamsModule } from './modules/exams/exams.module';
+import { CourseAliasesModule } from './modules/course-aliases/course-aliases.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ExamsModule } from './modules/exams/exams.module';
     HealthModule,
     AcademicSessionsModule,
     ExamsModule,
+    CourseAliasesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
