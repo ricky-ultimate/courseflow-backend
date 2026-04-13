@@ -19,6 +19,7 @@ import {
   ApiGetScheduleStatistics,
   ApiGenerateSchedules,
   ApiToggleScheduleFixed,
+  ApiGenerateSchedulesBatch,
 } from './decorators/schedule-api.decorator';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
@@ -58,6 +59,17 @@ export class SchedulesController extends BaseController<
     @Req() req: AuthenticatedRequest,
   ) {
     return this.schedulesService.generateSchedules(dto, req.user);
+  }
+
+  @Post('generate/batch')
+  @Roles(Role.ADMIN, Role.HOD)
+  @SkipHodGuard()
+  @ApiGenerateSchedulesBatch()
+  async generateBatch(
+    @Body() dto: GenerateScheduleDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.schedulesService.generateSchedulesBatch(dto, req.user);
   }
 
   @Get()

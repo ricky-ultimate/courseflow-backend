@@ -208,3 +208,46 @@ export const ApiToggleScheduleFixed = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
+export const ApiGenerateSchedulesBatch = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Auto-generate schedules (batched by department)',
+      description:
+        'Generates schedules department-by-department to avoid timeouts on large datasets. ' +
+        'University courses are processed first, then each department independently. ' +
+        'Partial failures are returned in the errors array rather than aborting the whole run. ' +
+        'Recommended for system-wide generation with large course catalogs.',
+    }),
+    ApiResponse({
+      status: 201,
+      description: 'Batch schedule generation completed',
+      schema: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'string' },
+          sessionName: { type: 'string', example: '2024/2025' },
+          semester: { type: 'string', enum: Object.values(Semester) },
+          totalDepartments: { type: 'number', example: 58 },
+          processedDepartments: { type: 'number', example: 56 },
+          skippedLockedDepartments: { type: 'number', example: 2 },
+          totalCourses: { type: 'number', example: 718 },
+          scheduledCourses: { type: 'number', example: 712 },
+          preservedOverrides: { type: 'number', example: 6 },
+          errors: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                departmentCode: { type: 'string' },
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    }),
+    ApiNotFoundResponse('Active session'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );

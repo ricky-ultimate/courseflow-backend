@@ -46,3 +46,16 @@ export interface GenerateScheduleResult {
   preservedOverrides: number;
   skippedLockedDepartments: number;
 }
+
+export interface BatchGenerateScheduleResult {
+  sessionId: string;
+  sessionName: string;
+  semester: Semester;
+  totalDepartments: number;
+  processedDepartments: number;
+  skippedLockedDepartments: number;
+  totalCourses: number;
+  scheduledCourses: number;
+  preservedOverrides: number;
+  errors: Array<{ departmentCode: string; message: string }>;
+}
