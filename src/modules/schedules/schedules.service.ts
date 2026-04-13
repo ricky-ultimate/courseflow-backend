@@ -495,9 +495,6 @@ export class SchedulesService extends BaseService<
   ): Promise<BatchGenerateScheduleResult> {
     if (requestingUser.role === Role.HOD) {
       const result = await this.generateSchedules(dto, requestingUser);
-      const session = await this.prisma.academicSession.findUnique({
-        where: { id: result.sessionId },
-      });
       return {
         sessionId: result.sessionId,
         sessionName: result.sessionName,
@@ -637,10 +634,13 @@ export class SchedulesService extends BaseService<
             });
           }
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         errors.push({
           departmentCode: 'UNIVERSITY',
-          message: e.message ?? 'Failed to schedule university courses',
+          message:
+            e instanceof Error
+              ? e.message
+              : 'Failed to schedule university courses',
         });
       }
     }
@@ -819,10 +819,10 @@ export class SchedulesService extends BaseService<
 
         scheduledCourses += deptAssignments.length + overriddenDeptCodes.size;
         processedDepartments++;
-      } catch (e: any) {
+      } catch (e: unknown) {
         errors.push({
           departmentCode: dept.code,
-          message: e.message ?? 'Scheduling failed',
+          message: e instanceof Error ? e.message : 'Scheduling failed',
         });
         processedDepartments++;
       }
