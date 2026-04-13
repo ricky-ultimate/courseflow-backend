@@ -42,10 +42,20 @@ export class SchedulesService extends BaseService<
           include: {
             department: true,
             lecturer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+              select: { id: true, name: true, email: true },
+            },
+            primaryAliases: {
+              include: {
+                aliasCourse: {
+                  select: { code: true, name: true, departmentCode: true },
+                },
+              },
+            },
+            aliasOf: {
+              include: {
+                primaryCourse: {
+                  select: { code: true, name: true, departmentCode: true },
+                },
               },
             },
           },
@@ -306,6 +316,8 @@ export class SchedulesService extends BaseService<
     });
     const allDepartmentCodes = allDepartments.map((d) => d.code);
 
+    const aliasMap = await this.buildAliasMap(allCourses.map((c) => c.code));
+
     const departmentalManualOverrideFilter: Record<string, any> = {
       sessionId: session.id,
       semester: dto.semester,
@@ -367,6 +379,7 @@ export class SchedulesService extends BaseService<
         level: c.level,
         semester: c.semester,
         isGeneral: c.isGeneral,
+        aliasedCourseCodes: aliasMap.get(c.code) ?? [],
       }));
 
     const allExistingSchedules = await this.prisma.schedule.findMany({
@@ -386,6 +399,7 @@ export class SchedulesService extends BaseService<
       endTime: s.endTime,
       semester: s.semester,
       isUniversityCourse: s.course.isGeneral,
+      aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
     }));
 
     const assignments = this.schedulerEngine.generate(
@@ -471,6 +485,31 @@ export class SchedulesService extends BaseService<
       preservedOverrides: totalPreserved,
       skippedLockedDepartments: lockedDepartmentCodes.length,
     };
+  }
+
+  private async buildAliasMap(
+    courseCodes: string[],
+  ): Promise<Map<string, string[]>> {
+    if (courseCodes.length === 0) return new Map();
+
+    const aliases = await this.prisma.courseAlias.findMany({
+      where: {
+        OR: [
+          { primaryCode: { in: courseCodes } },
+          { aliasCode: { in: courseCodes } },
+        ],
+      },
+      select: { primaryCode: true, aliasCode: true },
+    });
+
+    const map = new Map<string, string[]>();
+    for (const a of aliases) {
+      if (!map.has(a.primaryCode)) map.set(a.primaryCode, []);
+      if (!map.has(a.aliasCode)) map.set(a.aliasCode, []);
+      map.get(a.primaryCode)!.push(a.aliasCode);
+      map.get(a.aliasCode)!.push(a.primaryCode);
+    }
+    return map;
   }
 
   async getScheduleStatistics() {
