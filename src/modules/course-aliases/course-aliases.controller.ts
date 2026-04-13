@@ -5,9 +5,13 @@ import {
   Delete,
   Body,
   Param,
-  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CourseAliasesService } from './course-aliases.service';
 import { CreateCourseAliasDto } from './dto/create-course-alias.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
