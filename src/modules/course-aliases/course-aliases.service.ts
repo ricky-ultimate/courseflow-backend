@@ -42,18 +42,6 @@ export class CourseAliasesService {
       throw new ConflictException('This alias relationship already exists');
     }
 
-    const circular = await this.prisma.courseAlias.findFirst({
-      where: {
-        OR: [{ primaryCode: dto.aliasCode }, { aliasCode: dto.primaryCode }],
-      },
-    });
-
-    if (circular) {
-      throw new BadRequestException(
-        'Creating this alias would create a circular reference',
-      );
-    }
-
     return this.prisma.courseAlias.create({
       data: {
         primaryCode: dto.primaryCode,
