@@ -22,6 +22,7 @@ import {
   ApiUpdateCourse,
   ApiDeleteCourse,
   ApiGetCoursesWithoutSchedules,
+  ApiGetUniversityCoursesWithoutSchedules,
   ApiGetCourseStatistics,
   ApiBulkCreateCourses,
   ApiDownloadCourseTemplate,
@@ -61,6 +62,12 @@ export class CoursesController extends BaseController<
   @ApiGetCoursesWithoutSchedules()
   findWithoutSchedules() {
     return this.coursesService.findWithoutSchedules();
+  }
+
+  @Get('without-schedules/university')
+  @ApiGetUniversityCoursesWithoutSchedules()
+  findUniversityCoursesWithoutSchedules() {
+    return this.coursesService.findUniversityCoursesWithoutSchedules();
   }
 
   @Get('statistics')

@@ -69,6 +69,39 @@ export class CourseRepository {
     });
   }
 
+  async findUniversityCoursesWithoutSchedules(): Promise<Course[]> {
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) return [];
+
+    return this.prisma.course.findMany({
+      where: {
+        isActive: true,
+        isGeneral: true,
+        schedules: {
+          none: {
+            sessionId: activeSession.id,
+          },
+        },
+      },
+      include: {
+        department: true,
+        lecturer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            departmentCode: true,
+          },
+        },
+      },
+      orderBy: [{ level: 'asc' }, { code: 'asc' }],
+    });
+  }
+
   async bulkCreateWithValidation(
     courses: Array<{
       code: string;

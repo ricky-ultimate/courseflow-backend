@@ -320,4 +320,8 @@ export class CoursesService extends BaseService<
   async getCourseStats() {
     return this.courseRepository.getCourseStats();
   }
+
+  async findUniversityCoursesWithoutSchedules(): Promise<Course[]> {
+    return this.courseRepository.findUniversityCoursesWithoutSchedules();
+  }
 }

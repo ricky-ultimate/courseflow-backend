@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
@@ -635,6 +636,9 @@ export class SchedulesService extends BaseService<
           }
         });
       } catch (e: unknown) {
+        if (e instanceof UnprocessableEntityException) {
+          throw e;
+        }
         errors.push({
           departmentCode: 'UNIVERSITY',
           message:

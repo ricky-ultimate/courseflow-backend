@@ -248,3 +248,23 @@ export const ApiDownloadCourseTemplate = () =>
     ApiCsvTemplateResponse(),
     ApiStandardResponses(),
   );
+
+export const ApiGetUniversityCoursesWithoutSchedules = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get university (general) courses without schedules',
+      description:
+        'Retrieve general/university-wide courses that have no schedule in the active academic session',
+    }),
+    ApiResponse({
+      status: 200,
+      description:
+        'University courses without schedules retrieved successfully',
+      schema: {
+        type: 'array',
+        items: { type: 'object' },
+      },
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
