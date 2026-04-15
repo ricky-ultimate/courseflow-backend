@@ -7,6 +7,7 @@ import {
   ESM_COURSE_CODE_PATTERN,
   GST_COURSE_CODE_PATTERN,
   ENT_COURSE_CODE_PATTERN,
+  TimeSlot,
 } from './scheduler.constants';
 
 export interface CourseInput {
