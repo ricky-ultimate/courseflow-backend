@@ -48,12 +48,18 @@ type BucketKey = string;
 
 @Injectable()
 export class SchedulerEngine {
+  private getCoursePrefix(courseCode: string): string {
+    const match = courseCode.match(/^([A-Z]+)/);
+    return match ? match[1] : courseCode;
+  }
+
   private bucketKey(
     departmentCode: string,
+    coursePrefix: string,
     level: Level,
     day: DayOfWeek,
   ): BucketKey {
-    return `${departmentCode}|${level}|${day}`;
+    return `${departmentCode}|${coursePrefix}|${level}|${day}`;
   }
 
   private timeToMinutes(time: string): number {
@@ -66,6 +72,53 @@ export class SchedulerEngine {
       this.timeToMinutes(a.startTime) < this.timeToMinutes(b.endTime) &&
       this.timeToMinutes(b.startTime) < this.timeToMinutes(a.endTime)
     );
+  }
+
+  private getAffectedBuckets(
+    courseCode: string,
+    departmentCode: string,
+    level: Level,
+    day: DayOfWeek,
+    isUniversityCourse: boolean,
+    aliasedCourseCodes: string[],
+    allDepartmentCodes: string[],
+    courseInputMap: Map<string, CourseInput>,
+  ): BucketKey[] {
+    const keys = new Set<BucketKey>();
+    const prefix = this.getCoursePrefix(courseCode);
+
+    if (isUniversityCourse) {
+      for (const dept of allDepartmentCodes) {
+        const deptCourses = Array.from(courseInputMap.values()).filter(
+          (c) => c.departmentCode === dept,
+        );
+        const prefixesInDept = new Set(
+          deptCourses.map((c) => this.getCoursePrefix(c.courseCode)),
+        );
+        if (prefixesInDept.size === 0) {
+          keys.add(this.bucketKey(dept, '*', level, day));
+        } else {
+          for (const p of prefixesInDept) {
+            keys.add(this.bucketKey(dept, p, level, day));
+          }
+        }
+        keys.add(this.bucketKey(dept, '*', level, day));
+      }
+    } else {
+      keys.add(this.bucketKey(departmentCode, prefix, level, day));
+
+      for (const aliasCode of aliasedCourseCodes) {
+        const aliasInput = courseInputMap.get(aliasCode);
+        if (aliasInput) {
+          const aliasPrefix = this.getCoursePrefix(aliasCode);
+          keys.add(
+            this.bucketKey(aliasInput.departmentCode, aliasPrefix, level, day),
+          );
+        }
+      }
+    }
+
+    return Array.from(keys);
   }
 
   private buildInitialOccupancy(
@@ -81,42 +134,24 @@ export class SchedulerEngine {
         endTime: slot.endTime,
       };
 
-      const affectedDepts = this.getAffectedDepartments(
-        slot,
+      const keys = this.getAffectedBuckets(
+        slot.courseCode,
+        slot.departmentCode,
+        slot.level,
+        slot.dayOfWeek,
+        slot.isUniversityCourse ?? false,
+        slot.aliasedCourseCodes ?? [],
         allDepartmentCodes,
         courseInputMap,
       );
 
-      for (const deptCode of affectedDepts) {
-        const key = this.bucketKey(deptCode, slot.level, slot.dayOfWeek);
+      for (const key of keys) {
         if (!occupied.has(key)) occupied.set(key, []);
         occupied.get(key)!.push(interval);
       }
     }
 
     return occupied;
-  }
-
-  private getAffectedDepartments(
-    slot: LockedSlot,
-    allDepartmentCodes: string[],
-    courseInputMap: Map<string, CourseInput>,
-  ): string[] {
-    if (slot.isUniversityCourse) {
-      return allDepartmentCodes;
-    }
-
-    const depts = new Set<string>([slot.departmentCode]);
-
-    const aliasCodes = slot.aliasedCourseCodes ?? [];
-    for (const aliasCode of aliasCodes) {
-      const aliasInput = courseInputMap.get(aliasCode);
-      if (aliasInput) {
-        depts.add(aliasInput.departmentCode);
-      }
-    }
-
-    return Array.from(depts);
   }
 
   private buildInitialDayLoad(locked: LockedSlot[]): Map<DayOfWeek, number> {
@@ -145,21 +180,26 @@ export class SchedulerEngine {
     course: CourseInput,
     slot: DaySlot,
     occupied: Map<BucketKey, TimeInterval[]>,
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): boolean {
-    const depts = new Set<string>([course.departmentCode]);
-    for (const aliasCode of course.aliasedCourseCodes ?? []) {
-      const aliasInput = allCourseInputMap.get(aliasCode);
-      if (aliasInput) depts.add(aliasInput.departmentCode);
-    }
-
     const candidate: TimeInterval = {
       startTime: slot.startTime,
       endTime: slot.endTime,
     };
 
-    for (const dept of depts) {
-      const key = this.bucketKey(dept, course.level, slot.day);
+    const keys = this.getAffectedBuckets(
+      course.courseCode,
+      course.departmentCode,
+      course.level,
+      slot.day,
+      course.isGeneral ?? false,
+      course.aliasedCourseCodes ?? [],
+      allDepartmentCodes,
+      allCourseInputMap,
+    );
+
+    for (const key of keys) {
       const intervals = occupied.get(key);
       if (
         intervals &&
@@ -169,6 +209,20 @@ export class SchedulerEngine {
       }
     }
 
+    const wildcardKey = this.bucketKey(
+      course.departmentCode,
+      '*',
+      course.level,
+      slot.day,
+    );
+    const wildcardIntervals = occupied.get(wildcardKey);
+    if (
+      wildcardIntervals &&
+      wildcardIntervals.some((i) => this.intervalsOverlap(candidate, i))
+    ) {
+      return false;
+    }
+
     return true;
   }
 
@@ -176,10 +230,17 @@ export class SchedulerEngine {
     course: CourseInput,
     occupied: Map<BucketKey, TimeInterval[]>,
     allowedSlots: DaySlot[],
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): DaySlot[] {
     return allowedSlots.filter((slot) =>
-      this.isSlotAvailable(course, slot, occupied, allCourseInputMap),
+      this.isSlotAvailable(
+        course,
+        slot,
+        occupied,
+        allDepartmentCodes,
+        allCourseInputMap,
+      ),
     );
   }
 
@@ -189,12 +250,14 @@ export class SchedulerEngine {
     dayLoad: Map<DayOfWeek, number>,
     timeSlotLoad: Map<string, number>,
     allowedSlots: DaySlot[],
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): DaySlot[] {
     const slots = this.availableSlots(
       course,
       occupied,
       allowedSlots,
+      allDepartmentCodes,
       allCourseInputMap,
     );
     return slots.sort((a, b) => {
@@ -210,6 +273,7 @@ export class SchedulerEngine {
   private sortByMostConstrained(
     courses: CourseInput[],
     occupied: Map<BucketKey, TimeInterval[]>,
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): CourseInput[] {
     return [...courses].sort(
@@ -218,12 +282,14 @@ export class SchedulerEngine {
           a,
           occupied,
           DEPARTMENTAL_DAY_SLOTS,
+          allDepartmentCodes,
           allCourseInputMap,
         ).length -
         this.availableSlots(
           b,
           occupied,
           DEPARTMENTAL_DAY_SLOTS,
+          allDepartmentCodes,
           allCourseInputMap,
         ).length,
     );
@@ -234,16 +300,21 @@ export class SchedulerEngine {
     course: CourseInput,
     day: DayOfWeek,
     interval: TimeInterval,
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): void {
-    const depts = new Set<string>([course.departmentCode]);
-    for (const aliasCode of course.aliasedCourseCodes ?? []) {
-      const aliasInput = allCourseInputMap.get(aliasCode);
-      if (aliasInput) depts.add(aliasInput.departmentCode);
-    }
+    const keys = this.getAffectedBuckets(
+      course.courseCode,
+      course.departmentCode,
+      course.level,
+      day,
+      course.isGeneral ?? false,
+      course.aliasedCourseCodes ?? [],
+      allDepartmentCodes,
+      allCourseInputMap,
+    );
 
-    for (const dept of depts) {
-      const key = this.bucketKey(dept, course.level, day);
+    for (const key of keys) {
       if (!occupied.has(key)) occupied.set(key, []);
       occupied.get(key)!.push(interval);
     }
@@ -254,16 +325,21 @@ export class SchedulerEngine {
     course: CourseInput,
     day: DayOfWeek,
     interval: TimeInterval,
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): void {
-    const depts = new Set<string>([course.departmentCode]);
-    for (const aliasCode of course.aliasedCourseCodes ?? []) {
-      const aliasInput = allCourseInputMap.get(aliasCode);
-      if (aliasInput) depts.add(aliasInput.departmentCode);
-    }
+    const keys = this.getAffectedBuckets(
+      course.courseCode,
+      course.departmentCode,
+      course.level,
+      day,
+      course.isGeneral ?? false,
+      course.aliasedCourseCodes ?? [],
+      allDepartmentCodes,
+      allCourseInputMap,
+    );
 
-    for (const dept of depts) {
-      const key = this.bucketKey(dept, course.level, day);
+    for (const key of keys) {
       const intervals = occupied.get(key);
       if (!intervals) continue;
       const idx = intervals.findIndex(
@@ -309,6 +385,7 @@ export class SchedulerEngine {
     occupied: Map<BucketKey, TimeInterval[]>,
     dayLoad: Map<DayOfWeek, number>,
     timeSlotLoad: Map<string, number>,
+    allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): boolean {
     if (index === courses.length) return true;
@@ -320,6 +397,7 @@ export class SchedulerEngine {
       dayLoad,
       timeSlotLoad,
       DEPARTMENTAL_DAY_SLOTS,
+      allDepartmentCodes,
       allCourseInputMap,
     );
 
@@ -342,6 +420,7 @@ export class SchedulerEngine {
         course,
         slot.day,
         interval,
+        allDepartmentCodes,
         allCourseInputMap,
       );
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) + 1);
@@ -358,6 +437,7 @@ export class SchedulerEngine {
           occupied,
           dayLoad,
           timeSlotLoad,
+          allDepartmentCodes,
           allCourseInputMap,
         )
       ) {
@@ -370,6 +450,7 @@ export class SchedulerEngine {
         course,
         slot.day,
         interval,
+        allDepartmentCodes,
         allCourseInputMap,
       );
       dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) - 1);
@@ -474,6 +555,7 @@ export class SchedulerEngine {
     const sorted = this.sortByMostConstrained(
       departmentalCourses,
       occupied,
+      allDepartmentCodes,
       allCourseInputMap,
     );
 
@@ -484,6 +566,7 @@ export class SchedulerEngine {
       occupied,
       dayLoad,
       timeSlotLoad,
+      allDepartmentCodes,
       allCourseInputMap,
     );
 
