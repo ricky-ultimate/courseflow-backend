@@ -6,6 +6,7 @@ import {
   FRIDAY_UNIVERSITY_SLOTS,
   ESM_COURSE_CODE_PATTERN,
   GST_COURSE_CODE_PATTERN,
+  ENT_COURSE_CODE_PATTERN,
 } from './scheduler.constants';
 
 export interface CourseInput {
@@ -279,15 +280,25 @@ export class SchedulerEngine {
     const levelSlots = FRIDAY_UNIVERSITY_SLOTS[level];
     if (!levelSlots) return null;
 
+    let timeSlot: TimeSlot | undefined;
+
     if (ESM_COURSE_CODE_PATTERN.test(courseCode)) {
-      return { day: DayOfWeek.FRIDAY, ...levelSlots.esm };
+      timeSlot = levelSlots.esm;
+    } else if (GST_COURSE_CODE_PATTERN.test(courseCode)) {
+      timeSlot = levelSlots.gst;
+    } else if (ENT_COURSE_CODE_PATTERN.test(courseCode)) {
+      timeSlot = levelSlots.ent;
     }
 
-    if (GST_COURSE_CODE_PATTERN.test(courseCode)) {
-      return { day: DayOfWeek.FRIDAY, ...levelSlots.gst };
+    if (!timeSlot || !timeSlot.startTime || !timeSlot.endTime) {
+      return null;
     }
 
-    return null;
+    return {
+      day: DayOfWeek.FRIDAY,
+      startTime: timeSlot.startTime,
+      endTime: timeSlot.endTime,
+    };
   }
 
   private solve(
@@ -386,14 +397,16 @@ export class SchedulerEngine {
       (c) =>
         c.isGeneral === true ||
         ESM_COURSE_CODE_PATTERN.test(c.courseCode) ||
-        GST_COURSE_CODE_PATTERN.test(c.courseCode),
+        GST_COURSE_CODE_PATTERN.test(c.courseCode) ||
+        ENT_COURSE_CODE_PATTERN.test(c.courseCode),
     );
 
     const departmentalCourses = courses.filter(
       (c) =>
         !c.isGeneral &&
         !ESM_COURSE_CODE_PATTERN.test(c.courseCode) &&
-        !GST_COURSE_CODE_PATTERN.test(c.courseCode),
+        !GST_COURSE_CODE_PATTERN.test(c.courseCode) &&
+        !ENT_COURSE_CODE_PATTERN.test(c.courseCode),
     );
 
     const assignments = new Map<string, ScheduleAssignment>();
@@ -421,7 +434,7 @@ export class SchedulerEngine {
 
     if (unscheduledUniversity.length > 0) {
       throw new UnprocessableEntityException(
-        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM and GST prefixed courses are supported for Friday auto-scheduling.`,
+        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM, GST, PIF, SDN, and ENT prefixed courses are supported for Friday auto-scheduling.`,
       );
     }
 

@@ -62,29 +62,33 @@ export const DEPARTMENTAL_DAY_SLOTS: DaySlot[] = WEEKDAYS_ONLY.flatMap((day) =>
 
 export const FRIDAY_UNIVERSITY_SLOTS: Record<
   string,
-  { esm: TimeSlot; gst: TimeSlot }
+  {
+    esm: TimeSlot;
+    gst?: TimeSlot;
+    ent?: TimeSlot;
+  }
 > = {
   LEVEL_100: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gst: { startTime: '12:00', endTime: '14:00' },
+    esm: { startTime: '09:00', endTime: '12:00' },
   },
   LEVEL_400: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gst: { startTime: '12:00', endTime: '14:00' },
+    esm: { startTime: '09:00', endTime: '12:00' },
+    ent: { startTime: '12:00', endTime: '16:00' },
   },
   LEVEL_500: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gst: { startTime: '12:00', endTime: '14:00' },
+    esm: { startTime: '09:00', endTime: '12:00' },
+    ent: { startTime: '12:00', endTime: '16:00' },
   },
   LEVEL_200: {
-    esm: { startTime: '12:00', endTime: '14:00' },
-    gst: { startTime: '09:00', endTime: '11:00' },
+    esm: { startTime: '13:00', endTime: '16:00' },
+    ent: { startTime: '09:00', endTime: '13:00' },
   },
   LEVEL_300: {
-    esm: { startTime: '12:00', endTime: '14:00' },
-    gst: { startTime: '09:00', endTime: '11:00' },
+    esm: { startTime: '13:00', endTime: '16:00' },
+    ent: { startTime: '09:00', endTime: '13:00' },
   },
 };
 
 export const ESM_COURSE_CODE_PATTERN = /^ESM/i;
 export const GST_COURSE_CODE_PATTERN = /^GST/i;
+export const ENT_COURSE_CODE_PATTERN = /^ENT/i;
