@@ -138,11 +138,9 @@ export class DepartmentsService extends BaseService<
     requestingUser: { id: string; role: string },
   ): Promise<Department> {
     await this.findOne(code);
-
     if (requestingUser.role === Role.HOD) {
       await this.assertHodOwnsDepartment(requestingUser.id, code);
     }
-
     return this.prisma.department.update({
       where: { code },
       data: { isScheduleLocked: true },
@@ -157,11 +155,9 @@ export class DepartmentsService extends BaseService<
     requestingUser: { id: string; role: string },
   ): Promise<Department> {
     await this.findOne(code);
-
     if (requestingUser.role === Role.HOD) {
       await this.assertHodOwnsDepartment(requestingUser.id, code);
     }
-
     return this.prisma.department.update({
       where: { code },
       data: { isScheduleLocked: false },
@@ -188,6 +184,33 @@ export class DepartmentsService extends BaseService<
         'HODs can only lock or unlock their own department schedule',
       );
     }
+  }
+
+  async getProgrammes(
+    code: string,
+  ): Promise<Array<{ programme: string; count: number }>> {
+    const dept = await this.prisma.department.findUnique({ where: { code } });
+    if (!dept) {
+      throw new NotFoundException(`Department '${code}' not found`);
+    }
+
+    const courses = await this.prisma.course.findMany({
+      where: { departmentCode: code, isActive: true, isGeneral: false },
+      select: { code: true },
+    });
+
+    const prefixMap = new Map<string, number>();
+    for (const course of courses) {
+      const match = /^([A-Z]+)/.exec(course.code);
+      if (match?.[1]) {
+        const prefix = match[1];
+        prefixMap.set(prefix, (prefixMap.get(prefix) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(prefixMap.entries())
+      .map(([programme, count]) => ({ programme, count }))
+      .sort((a, b) => a.programme.localeCompare(b.programme));
   }
 
   async bulkCreateFromCsv(

@@ -33,6 +33,15 @@ export class GenerateScheduleDto {
   @IsEnum(Level)
   @IsOptional()
   level?: Level;
+
+  @ApiPropertyOptional({
+    example: 'CSE',
+    description:
+      'Restrict generation to a specific programme (course code prefix) within the selected department. Only valid when departmentCode is also provided.',
+  })
+  @IsString()
+  @IsOptional()
+  programme?: string;
 }
 
 export interface GenerateScheduleResult {
@@ -40,6 +49,7 @@ export interface GenerateScheduleResult {
   sessionName: string;
   semester: Semester;
   departmentCode: string | null;
+  programme: string | null;
   level: Level | null;
   totalCourses: number;
   scheduledCourses: number;
@@ -51,6 +61,7 @@ export interface BatchGenerateScheduleResult {
   sessionId: string;
   sessionName: string;
   semester: Semester;
+  programme: string | null;
   totalDepartments: number;
   processedDepartments: number;
   skippedLockedDepartments: number;

@@ -19,6 +19,8 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   ApiGetDepartments,
   ApiGetDepartmentByCode,
+  ApiGetDepartmentWithFullDetails,
+  ApiGetDepartmentProgrammes,
   ApiCreateDepartment,
   ApiUpdateDepartment,
   ApiDeleteDepartment,
@@ -27,7 +29,6 @@ import {
   ApiDownloadDepartmentTemplate,
   ApiLockDepartmentSchedule,
   ApiUnlockDepartmentSchedule,
-  ApiGetDepartmentWithFullDetails,
 } from './decorators/department-api.decorator';
 import { DepartmentsService } from './departments.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -79,7 +80,6 @@ export class DepartmentsController extends BaseController<
   @ApiDownloadDepartmentTemplate()
   downloadCsvTemplate(@Res() res: Response) {
     const template = this.departmentsService.generateCsvTemplate();
-
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader(
       'Content-Disposition',
@@ -92,27 +92,29 @@ export class DepartmentsController extends BaseController<
   @UseInterceptors(FileInterceptor('file'))
   @ApiBulkCreateDepartments()
   async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
+    if (!file) throw new BadRequestException('No file uploaded');
     if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
       throw new BadRequestException('File must be a CSV');
     }
-
     return this.departmentsService.bulkCreateFromCsv(file.buffer);
   }
 
-  @Get(':code')
-  @ApiGetDepartmentByCode()
-  findOne(@Param('code') code: string) {
-    return this.departmentsService.findOne(code);
+  @Get(':code/programmes')
+  @ApiGetDepartmentProgrammes()
+  getProgrammes(@Param('code') code: string) {
+    return this.departmentsService.getProgrammes(code);
   }
 
   @Get(':code/full-details')
   @ApiGetDepartmentWithFullDetails()
   findWithFullDetails(@Param('code') code: string) {
     return this.departmentsService.findWithFullDetails(code);
+  }
+
+  @Get(':code')
+  @ApiGetDepartmentByCode()
+  findOne(@Param('code') code: string) {
+    return this.departmentsService.findOne(code);
   }
 
   @Patch(':code')

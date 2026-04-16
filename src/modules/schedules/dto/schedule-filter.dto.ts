@@ -14,6 +14,13 @@ export class ScheduleFilterDto extends PaginationDto {
   @IsString()
   departmentCode?: string;
 
+  @ApiPropertyOptional({
+    description: 'Filter by programme (course code prefix, e.g. CSE, MTH, CYB)',
+  })
+  @IsOptional()
+  @IsString()
+  programme?: string;
+
   @ApiPropertyOptional({ enum: Level })
   @IsOptional()
   @IsEnum(Level)

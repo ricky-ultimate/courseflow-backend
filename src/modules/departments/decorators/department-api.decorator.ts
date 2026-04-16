@@ -24,31 +24,6 @@ export const ApiGetDepartments = () =>
     ApiResponse({
       status: 200,
       description: 'Departments retrieved successfully',
-      schema: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            code: { type: 'string', example: 'CS' },
-            name: { type: 'string', example: 'Computer Science' },
-            description: { type: 'string', example: 'Study of computers...' },
-            hodId: { type: 'string', format: 'uuid' },
-            hod: {
-              type: 'object',
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-                name: { type: 'string', example: 'Dr. Smith' },
-                email: { type: 'string', example: 'smith@uni.edu' },
-              },
-            },
-            isActive: { type: 'boolean', example: true },
-            isScheduleLocked: { type: 'boolean', example: false },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-      },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -69,28 +44,6 @@ export const ApiGetDepartmentByCode = () =>
     ApiResponse({
       status: 200,
       description: 'Department retrieved successfully',
-      schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CS' },
-          name: { type: 'string', example: 'Computer Science' },
-          description: { type: 'string', example: 'Study of computers...' },
-          hodId: { type: 'string', format: 'uuid' },
-          hod: {
-            type: 'object',
-            properties: {
-              id: { type: 'string', format: 'uuid' },
-              name: { type: 'string', example: 'Dr. Smith' },
-              email: { type: 'string', example: 'smith@uni.edu' },
-            },
-          },
-          isActive: { type: 'boolean', example: true },
-          isScheduleLocked: { type: 'boolean', example: false },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
-        },
-      },
     }),
     ApiNotFoundResponse('Department'),
     ApiStandardResponses(),
@@ -102,7 +55,7 @@ export const ApiGetDepartmentWithFullDetails = () =>
     ApiOperation({
       summary: 'Get department with full details',
       description:
-        'Retrieve a department including all active courses, their lecturers, and schedules',
+        'Retrieve a department including all active courses, lecturers, and schedules',
     }),
     ApiParam({
       name: 'code',
@@ -113,27 +66,37 @@ export const ApiGetDepartmentWithFullDetails = () =>
     ApiResponse({
       status: 200,
       description: 'Department with full details retrieved successfully',
+    }),
+    ApiNotFoundResponse('Department'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
+
+export const ApiGetDepartmentProgrammes = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Get programmes for a department',
+      description:
+        'Returns the unique course code prefixes (programmes) active within a department, ' +
+        'along with the number of courses per programme. Useful for departments that host ' +
+        'multiple degree programmes sharing the same department code (e.g. CSC hosts CSC, CSE, CYB, MTH).',
+    }),
+    ApiParam({
+      name: 'code',
+      type: 'string',
+      description: 'Department code',
+      example: 'CSC',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Programmes retrieved successfully',
       schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CS' },
-          name: { type: 'string', example: 'Computer Science' },
-          courses: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', example: 'CSC101' },
-                name: {
-                  type: 'string',
-                  example: 'Introduction to Programming',
-                },
-                level: { type: 'string', example: 'LEVEL_100' },
-                lecturer: { type: 'object' },
-                schedules: { type: 'array', items: { type: 'object' } },
-              },
-            },
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            programme: { type: 'string', example: 'CSE' },
+            count: { type: 'number', example: 18 },
           },
         },
       },
@@ -145,25 +108,10 @@ export const ApiGetDepartmentWithFullDetails = () =>
 
 export const ApiCreateDepartment = () =>
   applyDecorators(
-    ApiOperation({
-      summary: 'Create a new department',
-      description: 'Create a new department with unique code',
-    }),
+    ApiOperation({ summary: 'Create a new department' }),
     ApiResponse({
       status: 201,
       description: 'Department created successfully',
-      schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CS' },
-          name: { type: 'string', example: 'Computer Science' },
-          isActive: { type: 'boolean', example: true },
-          isScheduleLocked: { type: 'boolean', example: false },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
-        },
-      },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -171,10 +119,7 @@ export const ApiCreateDepartment = () =>
 
 export const ApiUpdateDepartment = () =>
   applyDecorators(
-    ApiOperation({
-      summary: 'Update a department',
-      description: 'Update an existing department by code',
-    }),
+    ApiOperation({ summary: 'Update a department' }),
     ApiParam({
       name: 'code',
       type: 'string',
@@ -192,11 +137,7 @@ export const ApiUpdateDepartment = () =>
 
 export const ApiDeleteDepartment = () =>
   applyDecorators(
-    ApiOperation({
-      summary: 'Delete a department',
-      description:
-        'Soft delete a department by code (only if no active courses)',
-    }),
+    ApiOperation({ summary: 'Delete a department' }),
     ApiParam({
       name: 'code',
       type: 'string',
@@ -210,17 +151,6 @@ export const ApiDeleteDepartment = () =>
     ApiResponse({
       status: 409,
       description: 'Conflict - Department has active courses',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 409 },
-          message: {
-            type: 'string',
-            example: 'Cannot delete department. It has 15 active courses.',
-          },
-          error: { type: 'string', example: 'Conflict' },
-        },
-      },
     }),
     ApiNotFoundResponse('Department'),
     ApiStandardResponses(),
@@ -229,10 +159,7 @@ export const ApiDeleteDepartment = () =>
 
 export const ApiGetDepartmentStatistics = () =>
   applyDecorators(
-    ApiOperation({
-      summary: 'Get department statistics',
-      description: 'Retrieve comprehensive statistics about departments',
-    }),
+    ApiOperation({ summary: 'Get department statistics' }),
     ApiResponse({
       status: 200,
       description: 'Department statistics retrieved successfully',
@@ -249,22 +176,12 @@ export const ApiGetDepartmentStatistics = () =>
 
 export const ApiBulkCreateDepartments = () =>
   applyDecorators(
-    ApiOperation({
-      summary: 'Bulk create departments from CSV',
-      description:
-        'Upload a CSV file to create multiple departments at once. CSV must have columns: code, name',
-    }),
+    ApiOperation({ summary: 'Bulk create departments from CSV' }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
       schema: {
         type: 'object',
-        properties: {
-          file: {
-            type: 'string',
-            format: 'binary',
-            description: 'CSV file with departments data',
-          },
-        },
+        properties: { file: { type: 'string', format: 'binary' } },
       },
     }),
     ApiResponse({
@@ -280,8 +197,6 @@ export const ApiDownloadDepartmentTemplate = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Download CSV template for bulk department creation',
-      description:
-        'Download a CSV template file with the required headers and sample data',
     }),
     ApiCsvTemplateResponse(),
     ApiStandardResponses(),
@@ -292,7 +207,7 @@ export const ApiLockDepartmentSchedule = () =>
     ApiOperation({
       summary: 'Lock department schedule',
       description:
-        'Mark the department schedule as locked. Subsequent system-wide schedule generation by an admin will skip this department entirely, preserving all existing schedule assignments. HODs may only lock their own department; admins may lock any department.',
+        'Prevent auto-generation from modifying this department. HODs may only lock their own department.',
     }),
     ApiParam({
       name: 'code',
@@ -303,33 +218,8 @@ export const ApiLockDepartmentSchedule = () =>
     ApiResponse({
       status: 200,
       description: 'Department schedule locked successfully',
-      schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CSC' },
-          name: { type: 'string', example: 'Computer Science' },
-          isScheduleLocked: { type: 'boolean', example: true },
-        },
-      },
     }),
-    ApiResponse({
-      status: 403,
-      description:
-        'Forbidden - HOD attempted to lock a department they do not manage',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 403 },
-          message: {
-            type: 'string',
-            example:
-              'HODs can only lock or unlock their own department schedule',
-          },
-          error: { type: 'string', example: 'Forbidden' },
-        },
-      },
-    }),
+    ApiResponse({ status: 403, description: 'Forbidden' }),
     ApiNotFoundResponse('Department'),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -340,7 +230,7 @@ export const ApiUnlockDepartmentSchedule = () =>
     ApiOperation({
       summary: 'Unlock department schedule',
       description:
-        'Remove the schedule lock from a department. Once unlocked, the department will be included in subsequent system-wide schedule generation runs. HODs may only unlock their own department; admins may unlock any department.',
+        'Re-include this department in auto-generation runs. HODs may only unlock their own department.',
     }),
     ApiParam({
       name: 'code',
@@ -351,33 +241,8 @@ export const ApiUnlockDepartmentSchedule = () =>
     ApiResponse({
       status: 200,
       description: 'Department schedule unlocked successfully',
-      schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CSC' },
-          name: { type: 'string', example: 'Computer Science' },
-          isScheduleLocked: { type: 'boolean', example: false },
-        },
-      },
     }),
-    ApiResponse({
-      status: 403,
-      description:
-        'Forbidden - HOD attempted to unlock a department they do not manage',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: { type: 'number', example: 403 },
-          message: {
-            type: 'string',
-            example:
-              'HODs can only lock or unlock their own department schedule',
-          },
-          error: { type: 'string', example: 'Forbidden' },
-        },
-      },
-    }),
+    ApiResponse({ status: 403, description: 'Forbidden' }),
     ApiNotFoundResponse('Department'),
     ApiStandardResponses(),
     ApiAuthRequired(),
