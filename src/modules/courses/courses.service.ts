@@ -18,6 +18,10 @@ import {
 import { Course, Level, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
+interface CourseWithAliasWarnings extends Course {
+  aliasWarnings?: string[];
+}
+
 @Injectable()
 export class CoursesService extends BaseService<
   Course,
@@ -50,6 +54,17 @@ export class CoursesService extends BaseService<
     });
   }
 
+  async create(dto: CreateCourseDto): Promise<CourseWithAliasWarnings> {
+    const { aliasOf, ...courseData } = dto;
+    const course = await super.create(courseData as CreateCourseDto);
+
+    if (!aliasOf?.length) return course;
+
+    const warnings = await this.linkAliases(course.code, aliasOf);
+
+    return warnings.length ? { ...course, aliasWarnings: warnings } : course;
+  }
+
   async findAll(
     query: CourseFilterDto = {},
   ): Promise<Course[] | PaginatedResult<Course>> {
@@ -69,10 +84,7 @@ export class CoursesService extends BaseService<
     }
     if (query.level) andConditions.push({ level: query.level });
     if (query.semester) andConditions.push({ semester: query.semester });
-
-    if (query.lecturerId) {
-      andConditions.push({ lecturerId: query.lecturerId });
-    }
+    if (query.lecturerId) andConditions.push({ lecturerId: query.lecturerId });
 
     if (query.minCredits !== undefined || query.maxCredits !== undefined) {
       const creditFilter: Record<string, any> = {};
@@ -212,8 +224,20 @@ export class CoursesService extends BaseService<
     );
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length === 0)
+    if (data.length === 0) {
       return this.csvService.createBulkResult([], allErrors, errors.length);
+    }
+
+    const codeToAliasMap = new Map<string, string[]>();
+    for (const row of data) {
+      if (row.aliasOfCodes?.trim()) {
+        const codes = row.aliasOfCodes
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (codes.length) codeToAliasMap.set(row.code, codes);
+      }
+    }
 
     const lecturerEmails = [
       ...new Set(data.map((r) => r.lecturerEmail.toLowerCase())),
@@ -286,10 +310,20 @@ export class CoursesService extends BaseService<
       });
     }
 
+    const aliasWarnings: string[] = [];
+    for (const course of created) {
+      const targets = codeToAliasMap.get(course.code) ?? [];
+      if (targets.length) {
+        const warnings = await this.linkAliases(course.code, targets);
+        aliasWarnings.push(...warnings);
+      }
+    }
+
     return this.csvService.createBulkResult(
       created,
       allErrors,
       data.length + errors.length,
+      aliasWarnings,
     );
   }
 
@@ -301,6 +335,7 @@ export class CoursesService extends BaseService<
       'credits',
       'departmentCode',
       'lecturerEmail',
+      'aliasOfCodes',
     ];
     const sampleData = {
       code: 'CSC101',
@@ -309,6 +344,7 @@ export class CoursesService extends BaseService<
       credits: '3',
       departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',
+      aliasOfCodes: '',
     };
     return this.csvService.generateCsvTemplate(headers, sampleData);
   }
@@ -323,5 +359,48 @@ export class CoursesService extends BaseService<
 
   async findUniversityCoursesWithoutSchedules(): Promise<Course[]> {
     return this.courseRepository.findUniversityCoursesWithoutSchedules();
+  }
+
+  private async linkAliases(
+    courseCode: string,
+    targets: string[],
+  ): Promise<string[]> {
+    const warnings: string[] = [];
+
+    for (const targetCode of targets) {
+      if (targetCode === courseCode) {
+        warnings.push(`${targetCode}: a course cannot alias itself`);
+        continue;
+      }
+
+      const target = await this.prisma.course.findUnique({
+        where: { code: targetCode },
+      });
+
+      if (!target) {
+        warnings.push(`${targetCode}: course not found, link skipped`);
+        continue;
+      }
+
+      const existing = await this.prisma.courseAlias.findFirst({
+        where: {
+          OR: [
+            { primaryCode: courseCode, aliasCode: targetCode },
+            { primaryCode: targetCode, aliasCode: courseCode },
+          ],
+        },
+      });
+
+      if (existing) {
+        warnings.push(`${targetCode}: alias relationship already exists`);
+        continue;
+      }
+
+      await this.prisma.courseAlias.create({
+        data: { primaryCode: courseCode, aliasCode: targetCode },
+      });
+    }
+
+    return warnings;
   }
 }
