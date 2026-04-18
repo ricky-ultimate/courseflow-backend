@@ -11,48 +11,39 @@ import {
   ApiStandardResponses,
   ApiAuthRequired,
   ApiNotFoundResponse,
-  ApiBulkOperationResponse,
   ApiStatisticsResponse,
   ApiCsvTemplateResponse,
 } from '../../../common/decorators/base-api.decorator';
+
+const courseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    code: { type: 'string', example: 'CSC101' },
+    name: { type: 'string', example: 'Introduction to Programming' },
+    level: { type: 'string', enum: Object.values(Level), example: 'LEVEL_100' },
+    credits: { type: 'number', example: 3 },
+    departmentCode: { type: 'string', example: 'CSC' },
+    department: { type: 'object' },
+    lecturer: { type: 'object', nullable: true },
+    isGeneral: { type: 'boolean', example: false },
+    isLocked: { type: 'boolean', example: false },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
 
 export const ApiGetCourses = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Get all courses',
       description:
-        'Retrieve courses with optional filtering by department, level, credits, lecturer email, or search term.',
+        'Retrieve courses with optional filtering by department, level, credits, lecturer, or search term.',
     }),
     ApiResponse({
       status: 200,
       description: 'Courses retrieved successfully',
-      schema: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            code: { type: 'string', example: 'CS101' },
-            name: { type: 'string', example: 'Introduction to Programming' },
-            level: {
-              type: 'string',
-              enum: Object.values(Level),
-              example: 'LEVEL_100',
-            },
-            credits: { type: 'number', example: 3 },
-            departmentCode: { type: 'string', example: 'CS' },
-            department: {
-              type: 'object',
-              properties: {
-                code: { type: 'string', example: 'CS' },
-                name: { type: 'string', example: 'Computer Science' },
-              },
-            },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-      },
+      schema: { type: 'array', items: courseSchema },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -68,23 +59,12 @@ export const ApiGetCourseByCode = () =>
       name: 'code',
       type: 'string',
       description: 'Course code',
-      example: 'CS101',
+      example: 'CSC101',
     }),
     ApiResponse({
       status: 200,
       description: 'Course retrieved successfully',
-      schema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CS101' },
-          name: { type: 'string', example: 'Introduction to Programming' },
-          level: { type: 'string', enum: Object.values(Level) },
-          credits: { type: 'number', example: 3 },
-          departmentCode: { type: 'string', example: 'CS' },
-          department: { type: 'object' },
-        },
-      },
+      schema: courseSchema,
     }),
     ApiNotFoundResponse('Course'),
     ApiStandardResponses(),
@@ -95,20 +75,26 @@ export const ApiCreateCourse = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Create a new course',
-      description: 'Create a new course with department validation',
+      description:
+        'Create a new course with optional alias linking at creation time. ' +
+        'Alias codes that do not resolve to existing courses are skipped and reported in aliasWarnings.',
     }),
     ApiResponse({
       status: 201,
       description: 'Course created successfully',
       schema: {
         type: 'object',
+        allOf: [{ $ref: '#/components/schemas/Course' }],
         properties: {
-          id: { type: 'string', format: 'uuid' },
-          code: { type: 'string', example: 'CS101' },
-          name: { type: 'string', example: 'Introduction to Programming' },
-          level: { type: 'string', enum: Object.values(Level) },
-          credits: { type: 'number', example: 3 },
-          departmentCode: { type: 'string', example: 'CS' },
+          ...courseSchema.properties,
+          aliasWarnings: {
+            type: 'array',
+            items: { type: 'string' },
+            nullable: true,
+            description:
+              'Present only when one or more aliasOf codes could not be linked, with the reason per code.',
+            example: ['CSE409: course not found, link skipped'],
+          },
         },
       },
     }),
@@ -126,11 +112,12 @@ export const ApiUpdateCourse = () =>
       name: 'code',
       type: 'string',
       description: 'Course code',
-      example: 'CS101',
+      example: 'CSC101',
     }),
     ApiResponse({
       status: 200,
       description: 'Course updated successfully',
+      schema: courseSchema,
     }),
     ApiNotFoundResponse('Course'),
     ApiStandardResponses(),
@@ -147,7 +134,7 @@ export const ApiDeleteCourse = () =>
       name: 'code',
       type: 'string',
       description: 'Course code',
-      example: 'CS101',
+      example: 'CSC101',
     }),
     ApiResponse({
       status: 200,
@@ -167,10 +154,7 @@ export const ApiGetCoursesWithoutSchedules = () =>
     ApiResponse({
       status: 200,
       description: 'Courses without schedules retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
+      schema: { type: 'array', items: courseSchema },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -200,7 +184,7 @@ export const ApiGetCourseStatistics = () =>
         coursesByDepartment: {
           type: 'object',
           additionalProperties: { type: 'number' },
-          example: { CS: 45, MATH: 30, ENG: 25 },
+          example: { CSC: 45, MTH: 30 },
         },
         averageCredits: { type: 'number', example: 3.2 },
       }),
@@ -214,7 +198,10 @@ export const ApiBulkCreateCourses = () =>
     ApiOperation({
       summary: 'Bulk create courses from CSV',
       description:
-        'Upload a CSV file to create multiple courses at once. CSV must have columns: code, name, level, credits, departmentCode',
+        'Upload a CSV file to create multiple courses at once. ' +
+        'Required columns: code, name, level, credits, departmentCode, lecturerEmail. ' +
+        'Optional column: aliasOfCodes (comma-separated course codes to link as aliases). ' +
+        'Non-existent alias targets are skipped and returned in aliasWarnings.',
     }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
@@ -232,7 +219,44 @@ export const ApiBulkCreateCourses = () =>
     ApiResponse({
       status: 201,
       description: 'Bulk operation completed',
-      schema: ApiBulkOperationResponse('Course'),
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          created: {
+            type: 'array',
+            items: courseSchema,
+          },
+          errors: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                row: { type: 'number', example: 2 },
+                field: { type: 'string', example: 'code' },
+                value: { type: 'string', example: 'INVALID' },
+                message: { type: 'string', example: 'Code already exists' },
+              },
+            },
+          },
+          aliasWarnings: {
+            type: 'array',
+            items: { type: 'string' },
+            nullable: true,
+            description:
+              'Alias codes that could not be linked, with reasons. Absent when no aliasOfCodes were supplied.',
+            example: ['CSE409: course not found, link skipped'],
+          },
+          summary: {
+            type: 'object',
+            properties: {
+              totalRows: { type: 'number', example: 10 },
+              successCount: { type: 'number', example: 8 },
+              errorCount: { type: 'number', example: 2 },
+            },
+          },
+        },
+      },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
@@ -243,7 +267,7 @@ export const ApiDownloadCourseTemplate = () =>
     ApiOperation({
       summary: 'Download CSV template for bulk course creation',
       description:
-        'Download a CSV template file with the required headers and sample data',
+        'Returns a CSV template with all required and optional columns including aliasOfCodes.',
     }),
     ApiCsvTemplateResponse(),
     ApiStandardResponses(),
@@ -260,10 +284,7 @@ export const ApiGetUniversityCoursesWithoutSchedules = () =>
       status: 200,
       description:
         'University courses without schedules retrieved successfully',
-      schema: {
-        type: 'array',
-        items: { type: 'object' },
-      },
+      schema: { type: 'array', items: courseSchema },
     }),
     ApiStandardResponses(),
     ApiAuthRequired(),
