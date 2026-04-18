@@ -3,6 +3,19 @@ import { PrismaService } from '../database/prisma.service';
 import { DEPARTMENTS_SEED } from './seed-data/departments.seed';
 import { UNIVERSITY_COURSES_SEED } from './seed-data/university-courses.seed';
 import { DEPARTMENTAL_COURSES_SEED } from './seed-data/departmental-courses.seed';
+import { Level, Semester } from '../../generated/prisma';
+
+interface SeedCourse {
+  code: string;
+  name: string;
+  level: Level;
+  credits: number;
+  semester: Semester;
+  departmentCode: string;
+  isGeneral: boolean;
+  isLocked: boolean;
+  aliasOf?: string[];
+}
 
 @Injectable()
 export class AdminService {
@@ -84,7 +97,7 @@ export class AdminService {
     const allCourses = [
       ...UNIVERSITY_COURSES_SEED,
       ...DEPARTMENTAL_COURSES_SEED,
-    ];
+    ] as SeedCourse[];
 
     for (const course of allCourses) {
       const existing = await this.prisma.course.findUnique({
@@ -103,7 +116,33 @@ export class AdminService {
         continue;
       }
 
-      await this.prisma.course.create({ data: course });
+      const { aliasOf, ...courseData } = course;
+      await this.prisma.course.create({ data: courseData });
+
+      if (aliasOf?.length) {
+        for (const targetCode of aliasOf) {
+          const target = await this.prisma.course.findUnique({
+            where: { code: targetCode },
+          });
+          if (!target) continue;
+
+          const aliasExists = await this.prisma.courseAlias.findFirst({
+            where: {
+              OR: [
+                { primaryCode: course.code, aliasCode: targetCode },
+                { primaryCode: targetCode, aliasCode: course.code },
+              ],
+            },
+          });
+
+          if (!aliasExists) {
+            await this.prisma.courseAlias.create({
+              data: { primaryCode: course.code, aliasCode: targetCode },
+            });
+          }
+        }
+      }
+
       created++;
     }
 
