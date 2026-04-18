@@ -18,7 +18,7 @@ import {
 import { Course, Level, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
-interface CourseWithAliasWarnings extends Course {
+export interface CourseWithAliasWarnings extends Course {
   aliasWarnings?: string[];
 }
 
