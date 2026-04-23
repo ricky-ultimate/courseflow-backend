@@ -9,7 +9,7 @@ import {
   Matches,
   ValidateIf,
 } from 'class-validator';
-import { Role } from '../../../generated/prisma';
+import { College, Role } from '../../../generated/prisma';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'CS/2023/001' })
@@ -60,4 +60,15 @@ export class CreateUserDto {
   )
   @IsNotEmpty()
   departmentCode?: string;
+
+  @ApiProperty({
+    enum: College,
+    required: false,
+    description: 'Required when role is COLLEGE_ADMIN',
+  })
+  @IsEnum(College)
+  @ValidateIf((o: CreateUserDto) => o.role === Role.COLLEGE_ADMIN)
+  @IsNotEmpty()
+  @IsOptional()
+  collegeCode?: College;
 }

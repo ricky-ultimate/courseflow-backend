@@ -54,6 +54,12 @@ export class UsersService extends BaseService<
       }
     }
 
+    if (role === Role.COLLEGE_ADMIN && !dto.collegeCode) {
+      throw new BadRequestException(
+        'College code is required for COLLEGE_ADMIN role',
+      );
+    }
+
     return {
       ...dto,
       password: await argon2.hash(dto.password),
@@ -62,7 +68,6 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
@@ -262,7 +267,6 @@ export class UsersService extends BaseService<
   }
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...rest } = user;
     return rest;
   }
