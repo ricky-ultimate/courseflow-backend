@@ -3,7 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { DEPARTMENTS_SEED } from './seed-data/departments.seed';
 import { UNIVERSITY_COURSES_SEED } from './seed-data/university-courses.seed';
 import { DEPARTMENTAL_COURSES_SEED } from './seed-data/departmental-courses.seed';
-import { Level, Semester } from '../../generated/prisma';
+import { College, Level, Semester } from '../../generated/prisma';
 
 interface SeedCourse {
   code: string;
@@ -17,34 +17,105 @@ interface SeedCourse {
   aliasOf?: string[];
 }
 
+interface SeedDepartment {
+  name: string;
+  code: string;
+  college: College;
+  description?: string;
+}
+
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async deleteAllSchedules(): Promise<{ deleted: number }> {
-    const result = await this.prisma.schedule.deleteMany({});
+  async deleteAllSchedules(
+    collegeScope?: College,
+  ): Promise<{ deleted: number }> {
+    if (!collegeScope) {
+      const result = await this.prisma.schedule.deleteMany({});
+      return { deleted: result.count };
+    }
+
+    const result = await this.prisma.schedule.deleteMany({
+      where: { course: { department: { college: collegeScope } } },
+    });
     return { deleted: result.count };
   }
 
-  async deleteAllExamSchedules(): Promise<{ deleted: number }> {
-    const result = await this.prisma.examSchedule.deleteMany({});
+  async deleteAllExamSchedules(
+    collegeScope?: College,
+  ): Promise<{ deleted: number }> {
+    if (!collegeScope) {
+      const result = await this.prisma.examSchedule.deleteMany({});
+      return { deleted: result.count };
+    }
+
+    const result = await this.prisma.examSchedule.deleteMany({
+      where: { course: { department: { college: collegeScope } } },
+    });
     return { deleted: result.count };
   }
 
-  async deleteAllCourses(): Promise<{ deleted: number }> {
-    await this.prisma.schedule.deleteMany({});
-    await this.prisma.examSchedule.deleteMany({});
-    await this.prisma.courseAlias.deleteMany({});
-    const result = await this.prisma.course.deleteMany({});
+  async deleteAllCourses(collegeScope?: College): Promise<{ deleted: number }> {
+    if (!collegeScope) {
+      await this.prisma.schedule.deleteMany({});
+      await this.prisma.examSchedule.deleteMany({});
+      await this.prisma.courseAlias.deleteMany({});
+      const result = await this.prisma.course.deleteMany({});
+      return { deleted: result.count };
+    }
+
+    const depts = await this.prisma.department.findMany({
+      where: { college: collegeScope },
+      select: { code: true },
+    });
+    const deptCodes = depts.map((d) => d.code);
+
+    await this.prisma.schedule.deleteMany({
+      where: { course: { departmentCode: { in: deptCodes } } },
+    });
+    await this.prisma.examSchedule.deleteMany({
+      where: { course: { departmentCode: { in: deptCodes } } },
+    });
+
+    const courseCodes = (
+      await this.prisma.course.findMany({
+        where: { departmentCode: { in: deptCodes } },
+        select: { code: true },
+      })
+    ).map((c) => c.code);
+
+    await this.prisma.courseAlias.deleteMany({
+      where: {
+        OR: [
+          { primaryCode: { in: courseCodes } },
+          { aliasCode: { in: courseCodes } },
+        ],
+      },
+    });
+
+    const result = await this.prisma.course.deleteMany({
+      where: { departmentCode: { in: deptCodes } },
+    });
     return { deleted: result.count };
   }
 
-  async deleteAllDepartments(): Promise<{ deleted: number }> {
-    await this.prisma.schedule.deleteMany({});
-    await this.prisma.examSchedule.deleteMany({});
-    await this.prisma.courseAlias.deleteMany({});
-    await this.prisma.course.deleteMany({});
-    const result = await this.prisma.department.deleteMany({});
+  async deleteAllDepartments(
+    collegeScope?: College,
+  ): Promise<{ deleted: number }> {
+    if (!collegeScope) {
+      await this.prisma.schedule.deleteMany({});
+      await this.prisma.examSchedule.deleteMany({});
+      await this.prisma.courseAlias.deleteMany({});
+      await this.prisma.course.deleteMany({});
+      const result = await this.prisma.department.deleteMany({});
+      return { deleted: result.count };
+    }
+
+    await this.deleteAllCourses(collegeScope);
+    const result = await this.prisma.department.deleteMany({
+      where: { college: collegeScope },
+    });
     return { deleted: result.count };
   }
 
@@ -71,11 +142,17 @@ export class AdminService {
     };
   }
 
-  async seedDepartments(): Promise<{ created: number; skipped: number }> {
+  async seedDepartments(
+    collegeScope?: College,
+  ): Promise<{ created: number; skipped: number }> {
     let created = 0;
     let skipped = 0;
 
-    for (const dept of DEPARTMENTS_SEED) {
+    const depts: SeedDepartment[] = collegeScope
+      ? DEPARTMENTS_SEED.filter((d) => d.college === collegeScope)
+      : DEPARTMENTS_SEED;
+
+    for (const dept of depts) {
       const existing = await this.prisma.department.findUnique({
         where: { code: dept.code },
       });
@@ -90,14 +167,30 @@ export class AdminService {
     return { created, skipped };
   }
 
-  async seedCourses(): Promise<{ created: number; skipped: number }> {
+  async seedCourses(
+    collegeScope?: College,
+  ): Promise<{ created: number; skipped: number }> {
     let created = 0;
     let skipped = 0;
 
-    const allCourses = [
-      ...UNIVERSITY_COURSES_SEED,
-      ...DEPARTMENTAL_COURSES_SEED,
-    ] as SeedCourse[];
+    let allCourses: SeedCourse[];
+
+    if (collegeScope) {
+      const collegeDepts = await this.prisma.department.findMany({
+        where: { college: collegeScope },
+        select: { code: true },
+      });
+      const collegeDeptCodes = new Set(collegeDepts.map((d) => d.code));
+
+      allCourses = (DEPARTMENTAL_COURSES_SEED as SeedCourse[]).filter((c) =>
+        collegeDeptCodes.has(c.departmentCode),
+      );
+    } else {
+      allCourses = [
+        ...UNIVERSITY_COURSES_SEED,
+        ...DEPARTMENTAL_COURSES_SEED,
+      ] as SeedCourse[];
+    }
 
     for (const course of allCourses) {
       const existing = await this.prisma.course.findUnique({
@@ -149,12 +242,12 @@ export class AdminService {
     return { created, skipped };
   }
 
-  async seedAll(): Promise<{
+  async seedAll(collegeScope?: College): Promise<{
     departments: { created: number; skipped: number };
     courses: { created: number; skipped: number };
   }> {
-    const departments = await this.seedDepartments();
-    const courses = await this.seedCourses();
+    const departments = await this.seedDepartments(collegeScope);
+    const courses = await this.seedCourses(collegeScope);
     return { departments, courses };
   }
 }
