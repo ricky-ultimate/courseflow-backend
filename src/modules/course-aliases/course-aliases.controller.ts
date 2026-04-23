@@ -9,16 +9,18 @@ import { CourseAliasesService } from './course-aliases.service';
 import { CreateCourseAliasDto } from './dto/create-course-alias.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
+import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 import { Role } from '../../generated/prisma';
 
 @ApiTags('Course Aliases')
 @ApiBearerAuth('JWT-auth')
 @Controller('course-aliases')
+@SkipCollegeGuard()
 export class CourseAliasesController {
   constructor(private readonly courseAliasesService: CourseAliasesService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.HOD)
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiOperation({ summary: 'Link two courses as aliases of each other' })
   create(@Body() dto: CreateCourseAliasDto) {
@@ -39,7 +41,7 @@ export class CourseAliasesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.HOD)
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiOperation({ summary: 'Remove a course alias relationship' })
   @ApiParam({ name: 'id', type: 'string' })
