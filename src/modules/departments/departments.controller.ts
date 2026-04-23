@@ -44,10 +44,10 @@ import { AuthenticatedRequest } from '../../common/types/auth.types';
 @ApiTags('Departments')
 @Controller('departments')
 @CrudRoles({
-  create: [Role.ADMIN],
+  create: [Role.ADMIN, Role.COLLEGE_ADMIN],
   read: [],
-  update: [Role.ADMIN],
-  delete: [Role.ADMIN],
+  update: [Role.ADMIN, Role.COLLEGE_ADMIN],
+  delete: [Role.ADMIN, Role.COLLEGE_ADMIN],
 })
 export class DepartmentsController extends BaseController<
   Department,
@@ -91,12 +91,18 @@ export class DepartmentsController extends BaseController<
   @Post('bulk/upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiBulkCreateDepartments()
-  async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
+  async bulkCreateFromCsv(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: AuthenticatedRequest,
+  ) {
     if (!file) throw new BadRequestException('No file uploaded');
     if (file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv')) {
       throw new BadRequestException('File must be a CSV');
     }
-    return this.departmentsService.bulkCreateFromCsv(file.buffer);
+    return this.departmentsService.bulkCreateFromCsv(
+      file.buffer,
+      req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
+    );
   }
 
   @Get(':code/programmes')
@@ -124,7 +130,7 @@ export class DepartmentsController extends BaseController<
   }
 
   @Patch(':code/schedule/lock')
-  @Roles(Role.HOD, Role.ADMIN)
+  @Roles(Role.HOD, Role.ADMIN, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiLockDepartmentSchedule()
   lockSchedule(@Param('code') code: string, @Req() req: AuthenticatedRequest) {
@@ -132,7 +138,7 @@ export class DepartmentsController extends BaseController<
   }
 
   @Patch(':code/schedule/unlock')
-  @Roles(Role.HOD, Role.ADMIN)
+  @Roles(Role.HOD, Role.ADMIN, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiUnlockDepartmentSchedule()
   unlockSchedule(

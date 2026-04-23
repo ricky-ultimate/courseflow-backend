@@ -17,7 +17,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Department, Role } from '../../generated/prisma';
+import { College, Department, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -54,6 +54,7 @@ export class DepartmentsService extends BaseService<
         { code: { contains: query.searchTerm, mode: 'insensitive' } },
       ];
     }
+    if (query.college) where.college = query.college;
     if (query.hasCourses) where.courses = { some: { isActive: true } };
     if (query.withoutCourses) where.courses = { none: { isActive: true } };
 
@@ -135,11 +136,17 @@ export class DepartmentsService extends BaseService<
 
   async lockSchedule(
     code: string,
-    requestingUser: { id: string; role: string },
+    requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<Department> {
-    await this.findOne(code);
+    const dept = await this.findOne(code);
     if (requestingUser.role === Role.HOD) {
       await this.assertHodOwnsDepartment(requestingUser.id, code);
+    }
+    if (requestingUser.role === Role.COLLEGE_ADMIN) {
+      this.assertCollegeAdminOwnsDepartment(
+        requestingUser.collegeCode,
+        (dept as unknown as { college: College }).college,
+      );
     }
     return this.prisma.department.update({
       where: { code },
@@ -152,11 +159,17 @@ export class DepartmentsService extends BaseService<
 
   async unlockSchedule(
     code: string,
-    requestingUser: { id: string; role: string },
+    requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<Department> {
-    await this.findOne(code);
+    const dept = await this.findOne(code);
     if (requestingUser.role === Role.HOD) {
       await this.assertHodOwnsDepartment(requestingUser.id, code);
+    }
+    if (requestingUser.role === Role.COLLEGE_ADMIN) {
+      this.assertCollegeAdminOwnsDepartment(
+        requestingUser.collegeCode,
+        (dept as unknown as { college: College }).college,
+      );
     }
     return this.prisma.department.update({
       where: { code },
@@ -165,6 +178,17 @@ export class DepartmentsService extends BaseService<
         hod: { select: { id: true, name: true, email: true, role: true } },
       },
     });
+  }
+
+  private assertCollegeAdminOwnsDepartment(
+    adminCollege: College | undefined,
+    deptCollege: College,
+  ): void {
+    if (!adminCollege || adminCollege !== deptCollege) {
+      throw new ForbiddenException(
+        'College admins can only manage departments within their own college',
+      );
+    }
   }
 
   private async assertHodOwnsDepartment(
@@ -215,6 +239,7 @@ export class DepartmentsService extends BaseService<
 
   async bulkCreateFromCsv(
     buffer: Buffer,
+    collegeScope?: College,
   ): Promise<BulkOperationResult<Department>> {
     const { data, errors } = await this.csvService.parseCsvFile(
       buffer,
@@ -226,10 +251,14 @@ export class DepartmentsService extends BaseService<
     if (data.length === 0)
       return this.csvService.createBulkResult([], allErrors, errors.length);
 
+    const rows = data.map((d) => ({
+      code: d.code,
+      name: d.name,
+      ...(collegeScope ? { college: collegeScope } : {}),
+    }));
+
     const { created, errors: repositoryErrors } =
-      await this.departmentRepository.bulkCreateWithValidation(
-        data.map((d) => ({ code: d.code, name: d.name })),
-      );
+      await this.departmentRepository.bulkCreateWithValidation(rows);
 
     for (const repoError of repositoryErrors) {
       allErrors.push({
