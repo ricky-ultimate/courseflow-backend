@@ -23,7 +23,13 @@ import {
   CourseInput,
   ScheduleAssignment,
 } from './scheduler/scheduler.engine';
-import { DayOfWeek, Level, Role, Schedule } from '../../generated/prisma';
+import {
+  College,
+  DayOfWeek,
+  Level,
+  Role,
+  Schedule,
+} from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 @Injectable()
@@ -227,7 +233,7 @@ export class SchedulesService extends BaseService<
 
   async generateSchedules(
     dto: GenerateScheduleDto,
-    requestingUser: { id: string; role: string },
+    requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<GenerateScheduleResult> {
     const session = dto.sessionId
       ? await this.prisma.academicSession.findUnique({
@@ -262,6 +268,8 @@ export class SchedulesService extends BaseService<
       departmentCode = hodUser.managedDepartment.code;
     }
 
+    const collegeScope = this.resolveCollegeScope(requestingUser);
+
     const lockedDepartmentCodes =
       await this.resolveLockedDepartmentCodes(departmentCode);
 
@@ -273,10 +281,15 @@ export class SchedulesService extends BaseService<
 
     if (departmentCode) {
       departmentalCourseFilter.departmentCode = departmentCode;
-    } else if (lockedDepartmentCodes.length > 0) {
-      departmentalCourseFilter.departmentCode = {
-        notIn: lockedDepartmentCodes,
-      };
+    } else {
+      if (collegeScope) {
+        departmentalCourseFilter.department = { college: collegeScope };
+      }
+      if (lockedDepartmentCodes.length > 0) {
+        departmentalCourseFilter.departmentCode = {
+          notIn: lockedDepartmentCodes,
+        };
+      }
     }
 
     if (level) departmentalCourseFilter.level = level;
@@ -294,10 +307,12 @@ export class SchedulesService extends BaseService<
         where: departmentalCourseFilter,
         include: { department: true },
       }),
-      this.prisma.course.findMany({
-        where: universityCourseFilter,
-        include: { department: true },
-      }),
+      collegeScope
+        ? Promise.resolve([])
+        : this.prisma.course.findMany({
+            where: universityCourseFilter,
+            include: { department: true },
+          }),
     ]);
 
     const allCourses = [...departmentalCourses, ...universityCourses];
@@ -335,8 +350,13 @@ export class SchedulesService extends BaseService<
 
     if (departmentCode) {
       deptManualCourseCond.departmentCode = departmentCode;
-    } else if (lockedDepartmentCodes.length > 0) {
-      deptManualCourseCond.departmentCode = { notIn: lockedDepartmentCodes };
+    } else {
+      if (collegeScope) {
+        deptManualCourseCond.department = { college: collegeScope };
+      }
+      if (lockedDepartmentCodes.length > 0) {
+        deptManualCourseCond.departmentCode = { notIn: lockedDepartmentCodes };
+      }
     }
 
     if (level) deptManualCourseCond.level = level;
@@ -356,10 +376,12 @@ export class SchedulesService extends BaseService<
           where: departmentalManualOverrideFilter,
           include: { course: { include: { department: true } } },
         }),
-        this.prisma.schedule.findMany({
-          where: generalScheduledFilter,
-          include: { course: { include: { department: true } } },
-        }),
+        collegeScope
+          ? Promise.resolve([])
+          : this.prisma.schedule.findMany({
+              where: generalScheduledFilter,
+              include: { course: { include: { department: true } } },
+            }),
       ]);
 
     const overriddenCourseCodes = new Set<string>([
@@ -405,10 +427,15 @@ export class SchedulesService extends BaseService<
 
     if (departmentCode) {
       autoDeleteDeptCourseCond.departmentCode = departmentCode;
-    } else if (lockedDepartmentCodes.length > 0) {
-      autoDeleteDeptCourseCond.departmentCode = {
-        notIn: lockedDepartmentCodes,
-      };
+    } else {
+      if (collegeScope) {
+        autoDeleteDeptCourseCond.department = { college: collegeScope };
+      }
+      if (lockedDepartmentCodes.length > 0) {
+        autoDeleteDeptCourseCond.departmentCode = {
+          notIn: lockedDepartmentCodes,
+        };
+      }
     }
 
     if (level) autoDeleteDeptCourseCond.level = level;
@@ -434,7 +461,9 @@ export class SchedulesService extends BaseService<
 
     await this.prisma.$transaction(async (tx) => {
       await tx.schedule.deleteMany({ where: autoDeleteDepartmentalFilter });
-      await tx.schedule.deleteMany({ where: autoDeleteUniversityFilter });
+      if (!collegeScope) {
+        await tx.schedule.deleteMany({ where: autoDeleteUniversityFilter });
+      }
 
       if (assignments.length > 0) {
         await tx.schedule.createMany({
@@ -473,7 +502,7 @@ export class SchedulesService extends BaseService<
 
   async generateSchedulesBatch(
     dto: GenerateScheduleDto,
-    requestingUser: { id: string; role: string },
+    requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<BatchGenerateScheduleResult> {
     if (requestingUser.role === Role.HOD) {
       const result = await this.generateSchedules(dto, requestingUser);
@@ -491,6 +520,8 @@ export class SchedulesService extends BaseService<
         errors: [],
       };
     }
+
+    const collegeScope = this.resolveCollegeScope(requestingUser);
 
     const session = dto.sessionId
       ? await this.prisma.academicSession.findUnique({
@@ -517,10 +548,12 @@ export class SchedulesService extends BaseService<
     };
     if (dto.level) universityCourseFilter.level = dto.level;
 
-    const universityCourses = await this.prisma.course.findMany({
-      where: universityCourseFilter,
-      include: { department: true },
-    });
+    const universityCourses = collegeScope
+      ? []
+      : await this.prisma.course.findMany({
+          where: universityCourseFilter,
+          include: { department: true },
+        });
 
     const aliasMap = await this.buildAliasMap(
       universityCourses.map((c) => c.code),
@@ -543,14 +576,16 @@ export class SchedulesService extends BaseService<
       }),
     );
 
-    const existingUniversitySchedules = await this.prisma.schedule.findMany({
-      where: {
-        sessionId: session.id,
-        semester: dto.semester,
-        course: { isGeneral: true },
-      },
-      include: { course: { include: { department: true } } },
-    });
+    const existingUniversitySchedules = collegeScope
+      ? []
+      : await this.prisma.schedule.findMany({
+          where: {
+            sessionId: session.id,
+            semester: dto.semester,
+            course: { isGeneral: true },
+          },
+          include: { course: { include: { department: true } } },
+        });
 
     const overriddenUniversityCodes = new Set(
       existingUniversitySchedules
@@ -631,14 +666,16 @@ export class SchedulesService extends BaseService<
       }
     }
 
-    const allUniversitySchedules = await this.prisma.schedule.findMany({
-      where: {
-        sessionId: session.id,
-        semester: dto.semester,
-        course: { isGeneral: true },
-      },
-      include: { course: { include: { department: true } } },
-    });
+    const allUniversitySchedules = collegeScope
+      ? []
+      : await this.prisma.schedule.findMany({
+          where: {
+            sessionId: session.id,
+            semester: dto.semester,
+            course: { isGeneral: true },
+          },
+          include: { course: { include: { department: true } } },
+        });
 
     const globalUniversityLocked: LockedSlot[] = allUniversitySchedules.map(
       (s) => ({
@@ -654,13 +691,24 @@ export class SchedulesService extends BaseService<
       }),
     );
 
+    const departmentFilter: Record<string, any> = {
+      isActive: true,
+      code: { notIn: Array.from(lockedCodes) },
+    };
+
+    if (dto.departmentCode) {
+      departmentFilter.code = dto.departmentCode;
+    } else if (collegeScope) {
+      departmentFilter.college = collegeScope;
+      if (lockedCodes.size > 0) {
+        departmentFilter.code = { notIn: Array.from(lockedCodes) };
+      }
+    }
+
     const departments = dto.departmentCode
       ? [{ code: dto.departmentCode }]
       : await this.prisma.department.findMany({
-          where: {
-            isActive: true,
-            code: { notIn: Array.from(lockedCodes) },
-          },
+          where: departmentFilter,
           select: { code: true },
           orderBy: { code: 'asc' },
         });
@@ -834,6 +882,19 @@ export class SchedulesService extends BaseService<
     };
   }
 
+  private resolveCollegeScope(requestingUser: {
+    role: string;
+    collegeCode?: College;
+  }): College | null {
+    if (
+      requestingUser.role === Role.COLLEGE_ADMIN &&
+      requestingUser.collegeCode
+    ) {
+      return requestingUser.collegeCode;
+    }
+    return null;
+  }
+
   private async buildAliasMap(
     courseCodes: string[],
   ): Promise<Map<string, string[]>> {
@@ -865,7 +926,7 @@ export class SchedulesService extends BaseService<
 
   async toggleFixed(
     id: string,
-    requestingUser: { id: string; role: string },
+    requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<Schedule> {
     const schedule = await this.prisma.schedule.findUnique({
       where: { id },
@@ -896,6 +957,18 @@ export class SchedulesService extends BaseService<
       if (schedule.course.departmentCode !== hodUser.managedDepartment.code) {
         throw new ForbiddenException(
           'HODs can only pin or unpin schedules in their own department',
+        );
+      }
+    }
+
+    if (requestingUser.role === Role.COLLEGE_ADMIN) {
+      if (
+        !requestingUser.collegeCode ||
+        (schedule.course.department as unknown as { college: College })
+          .college !== requestingUser.collegeCode
+      ) {
+        throw new ForbiddenException(
+          'College admins can only pin or unpin schedules within their own college',
         );
       }
     }

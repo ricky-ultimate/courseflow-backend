@@ -36,10 +36,10 @@ import { AuthenticatedRequest } from '../../common/types/auth.types';
 @ApiTags('Schedules')
 @Controller('schedules')
 @CrudRoles({
-  create: [Role.ADMIN, Role.HOD],
+  create: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
   read: [],
-  update: [Role.ADMIN, Role.HOD],
-  delete: [Role.ADMIN, Role.HOD],
+  update: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
+  delete: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
 })
 export class SchedulesController extends BaseController<
   Schedule,
@@ -51,7 +51,7 @@ export class SchedulesController extends BaseController<
   }
 
   @Post('generate')
-  @Roles(Role.ADMIN, Role.HOD)
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiGenerateSchedules()
   async generate(
@@ -62,7 +62,7 @@ export class SchedulesController extends BaseController<
   }
 
   @Post('generate/batch')
-  @Roles(Role.ADMIN, Role.HOD)
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiGenerateSchedulesBatch()
   async generateBatch(
@@ -104,7 +104,7 @@ export class SchedulesController extends BaseController<
   }
 
   @Patch(':id/toggle-fixed')
-  @Roles(Role.ADMIN, Role.HOD)
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiToggleScheduleFixed()
   toggleFixed(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
