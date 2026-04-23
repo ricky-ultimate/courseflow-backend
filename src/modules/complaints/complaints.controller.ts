@@ -27,10 +27,12 @@ import { AuthenticatedRequest } from '../../common/types/auth.types';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
+import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 
 @ApiTags('Complaints')
 @ApiBearerAuth('JWT-auth')
 @Controller('complaints')
+@SkipCollegeGuard()
 @CrudRoles({
   create: [Role.STUDENT, Role.ADMIN],
   read: [Role.ADMIN],
@@ -57,7 +59,7 @@ export class ComplaintsController extends BaseController<
   }
 
   @Get('my-complaints')
-  @Roles(Role.STUDENT, Role.ADMIN, Role.HOD, Role.LECTURER)
+  @Roles(Role.STUDENT, Role.ADMIN, Role.HOD, Role.LECTURER, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
   @ApiOperation({ summary: 'Get my complaints' })
   findUserComplaints(@Req() req: AuthenticatedRequest) {
@@ -66,20 +68,12 @@ export class ComplaintsController extends BaseController<
 
   @Get('pending')
   @ApiOperation({ summary: 'Get pending complaints (Admin only)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'orderBy', required: false, type: String })
-  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
   findPending() {
     return this.complaintsService.findPending();
   }
 
   @Get('resolved')
   @ApiOperation({ summary: 'Get resolved complaints (Admin only)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'orderBy', required: false, type: String })
-  @ApiQuery({ name: 'orderDirection', required: false, enum: ['asc', 'desc'] })
   findResolved() {
     return this.complaintsService.findResolved();
   }
@@ -92,11 +86,7 @@ export class ComplaintsController extends BaseController<
   }
 
   @Patch(':id/status')
-  @ApiOperation({
-    summary: 'Update complaint status (Admin only)',
-    description:
-      'Update the status of a complaint. Available statuses: PENDING, IN_PROGRESS, RESOLVED, CLOSED',
-  })
+  @ApiOperation({ summary: 'Update complaint status (Admin only)' })
   @ApiParam({
     name: 'id',
     description: 'Complaint ID',
