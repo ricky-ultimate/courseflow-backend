@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
@@ -17,6 +18,7 @@ import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
+import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 import { ExamSchedule, Role } from '../../generated/prisma';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
 import {
@@ -28,14 +30,15 @@ import {
   ApiGenerateExamTimetable,
   ApiGetCoursesWithoutExams,
 } from './decorators/exam-api.decorator';
+import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Exams')
 @Controller('exams')
 @CrudRoles({
-  create: [Role.ADMIN],
+  create: [Role.ADMIN, Role.COLLEGE_ADMIN],
   read: [],
-  update: [Role.ADMIN],
-  delete: [Role.ADMIN],
+  update: [Role.ADMIN, Role.COLLEGE_ADMIN],
+  delete: [Role.ADMIN, Role.COLLEGE_ADMIN],
 })
 export class ExamsController extends BaseController<
   ExamSchedule,
@@ -47,15 +50,20 @@ export class ExamsController extends BaseController<
   }
 
   @Post('generate')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
+  @SkipCollegeGuard()
   @ApiGenerateExamTimetable()
-  generate(@Body() dto: GenerateExamTimetableDto) {
-    return this.examsService.generateExamTimetable(dto);
+  generate(
+    @Body() dto: GenerateExamTimetableDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.examsService.generateExamTimetable(dto, req.user);
   }
 
   @Get('without-exams')
   @SkipHodGuard()
+  @SkipCollegeGuard()
   @ApiGetCoursesWithoutExams()
   getCoursesWithoutExams() {
     return this.examsService.getCoursesWithoutExams();
