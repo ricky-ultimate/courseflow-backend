@@ -82,12 +82,18 @@ export class AuthService {
         email: true,
         name: true,
         role: true,
+        collegeCode: true,
         departmentCode: true,
         createdAt: true,
       },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.collegeCode ?? undefined,
+    );
     return { user, ...tokens };
   }
 
@@ -110,13 +116,19 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.collegeCode ?? undefined,
+    );
     return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
+        collegeCode: user.collegeCode,
       },
       ...tokens,
     };
@@ -125,7 +137,13 @@ export class AuthService {
   async validateUser(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId, isActive: true },
-      select: { id: true, email: true, name: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        collegeCode: true,
+      },
     });
   }
 
@@ -200,6 +218,7 @@ export class AuthService {
         name: true,
         role: true,
         phone: true,
+        collegeCode: true,
         departmentCode: true,
         department: { select: { name: true, code: true } },
         createdAt: true,
@@ -217,8 +236,16 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  private async generateTokens(
+    userId: string,
+    email: string,
+    role: string,
+    collegeCode?: string,
+  ) {
+    const payload: Record<string, unknown> = { sub: userId, email, role };
+    if (collegeCode) {
+      payload.collegeCode = collegeCode;
+    }
     const accessToken = await this.jwtService.signAsync(payload);
     return { access_token: accessToken, token_type: 'Bearer' };
   }
