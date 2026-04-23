@@ -15,7 +15,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { Course, Level, Role } from '../../generated/prisma';
+import { College, Course, Level, Role } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 export interface CourseWithAliasWarnings extends Course {
@@ -207,6 +207,7 @@ export class CoursesService extends BaseService<
 
   async bulkCreateFromCsv(
     buffer: Buffer,
+    collegeScope?: College,
   ): Promise<BulkOperationResult<Course>> {
     const requiredHeaders = [
       'code',
@@ -226,6 +227,39 @@ export class CoursesService extends BaseService<
 
     if (data.length === 0) {
       return this.csvService.createBulkResult([], allErrors, errors.length);
+    }
+
+    if (collegeScope) {
+      const deptCodes = [...new Set(data.map((r) => r.departmentCode))];
+      const depts = await this.prisma.department.findMany({
+        where: { code: { in: deptCodes } },
+        select: { code: true, college: true },
+      });
+      const deptCollegeMap = new Map(depts.map((d) => [d.code, d.college]));
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const deptCollege = deptCollegeMap.get(row.departmentCode);
+        if (deptCollege && deptCollege !== collegeScope) {
+          allErrors.push({
+            row: i + 2,
+            field: 'departmentCode',
+            value: row.departmentCode,
+            message: `Department '${row.departmentCode}' does not belong to your college (${collegeScope})`,
+          });
+        }
+      }
+
+      const errorRows = new Set(allErrors.map((e) => e.row));
+      const filteredData = data.filter((_, i) => !errorRows.has(i + 2));
+
+      if (filteredData.length === 0) {
+        return this.csvService.createBulkResult(
+          [],
+          allErrors,
+          data.length + errors.length,
+        );
+      }
     }
 
     const codeToAliasMap = new Map<string, string[]>();

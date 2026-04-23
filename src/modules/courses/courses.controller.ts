@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   Res,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response as ExpressResponse } from 'express';
@@ -34,14 +35,15 @@ import { CourseFilterDto } from './dto/course-filter.dto';
 import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Course, Role } from '../../generated/prisma';
+import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Courses')
 @Controller('courses')
 @CrudRoles({
-  create: [Role.ADMIN, Role.HOD],
+  create: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
   read: [],
-  update: [Role.ADMIN, Role.HOD],
-  delete: [Role.ADMIN],
+  update: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
+  delete: [Role.ADMIN, Role.COLLEGE_ADMIN],
 })
 export class CoursesController extends BaseController<
   Course,
@@ -92,7 +94,10 @@ export class CoursesController extends BaseController<
   @Post('bulk/upload')
   @UseInterceptors(FileInterceptor('file'))
   @ApiBulkCreateCourses()
-  async bulkCreateFromCsv(@UploadedFile() file: Express.Multer.File) {
+  async bulkCreateFromCsv(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: AuthenticatedRequest,
+  ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -101,7 +106,10 @@ export class CoursesController extends BaseController<
       throw new BadRequestException('File must be a CSV');
     }
 
-    return this.coursesService.bulkCreateFromCsv(file.buffer);
+    return this.coursesService.bulkCreateFromCsv(
+      file.buffer,
+      req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
+    );
   }
 
   @Get(':code')
