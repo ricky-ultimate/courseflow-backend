@@ -75,8 +75,8 @@ export class CollegeAdminGuard implements CanActivate {
   ): Promise<College | null> {
     const { params, body } = request;
 
-    if (body?.college) return body.college as College;
-    if (body?.collegeCode) return body.collegeCode as College;
+    if (body?.college) return body.college;
+    if (body?.collegeCode) return body.collegeCode;
 
     if (body?.departmentCode) {
       const dept = await this.prisma.department.findUnique({
