@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { College } from '../../../generated/prisma';
 
 interface JwtPayload {
   sub: string;
   matricNO?: string;
   email: string;
   role: string;
+  collegeCode?: College;
 }
 
 interface ValidatedUser {
@@ -15,6 +17,7 @@ interface ValidatedUser {
   matricNO?: string;
   email: string;
   role: string;
+  collegeCode?: College;
 }
 
 @Injectable()
@@ -33,6 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       matricNO: payload.matricNO,
       email: payload.email,
       role: payload.role,
+      collegeCode: payload.collegeCode,
     };
   }
 }

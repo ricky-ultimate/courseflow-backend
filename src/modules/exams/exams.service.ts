@@ -12,6 +12,7 @@ import {
   Course,
   ExamSchedule,
   Level,
+  Role,
   VenueType,
 } from '../../generated/prisma';
 import {
@@ -208,7 +209,13 @@ export class ExamsService extends BaseService<
 
   async generateExamTimetable(
     dto: GenerateExamTimetableDto,
+    requestingUser?: { role: string; collegeCode?: College },
   ): Promise<GenerateExamTimetableResult> {
+    const collegeScope =
+      requestingUser?.role === Role.COLLEGE_ADMIN
+        ? requestingUser.collegeCode
+        : undefined;
+
     const session = dto.sessionId
       ? await this.prisma.academicSession.findUnique({
           where: { id: dto.sessionId },
@@ -238,8 +245,14 @@ export class ExamsService extends BaseService<
       courseFilter.level = dto.level;
     }
 
-    if (dto.college) {
-      courseFilter.department = { college: dto.college };
+    const effectiveCollege = collegeScope ?? dto.college;
+
+    if (effectiveCollege) {
+      courseFilter.department = { college: effectiveCollege };
+    }
+
+    if (collegeScope) {
+      courseFilter.isGeneral = false;
     }
 
     const courses = await this.prisma.course.findMany({
@@ -255,7 +268,7 @@ export class ExamsService extends BaseService<
         semester: dto.semester,
         departmentCode: dto.departmentCode ?? null,
         level: dto.level ?? null,
-        college: dto.college ?? null,
+        college: effectiveCollege ?? null,
         totalCourses: 0,
         scheduledExams: 0,
         skippedCourses: [],
@@ -313,7 +326,7 @@ export class ExamsService extends BaseService<
             if (slotsUsed < venuePool.length) {
               const venue = venuePool[slotsUsed % venuePool.length];
               const targetCollege = course.isGeneral
-                ? (dto.college ?? course.department.college)
+                ? (effectiveCollege ?? course.department.college)
                 : null;
 
               scheduledExams.push({
@@ -359,7 +372,7 @@ export class ExamsService extends BaseService<
       semester: dto.semester,
       departmentCode: dto.departmentCode ?? null,
       level: dto.level ?? null,
-      college: dto.college ?? null,
+      college: effectiveCollege ?? null,
       totalCourses: courses.length,
       scheduledExams: scheduledExams.length,
       skippedCourses,

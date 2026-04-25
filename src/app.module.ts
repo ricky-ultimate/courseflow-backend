@@ -14,6 +14,7 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { HealthModule } from './modules/health/health.module';
 import { RolesGuard } from './common/guards/roles.guard';
 import { HodDepartmentGuard } from './common/guards/hod-department.guard';
+import { CollegeAdminGuard } from './common/guards/college-admin.guard';
 import { AcademicSessionsModule } from './modules/academic-sessions/academic-sessions.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { CourseAliasesModule } from './modules/course-aliases/course-aliases.module';
@@ -55,6 +56,7 @@ import { AdminModule } from './modules/admin/admin.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: HodDepartmentGuard },
+    { provide: APP_GUARD, useClass: CollegeAdminGuard },
   ],
 })
 export class AppModule {}

@@ -17,6 +17,7 @@ model User {
     role             Role      @default(STUDENT)
     phone            String?
     departmentCode   String?
+    collegeCode      College?
     isActive         Boolean   @default(true)
     lastLoginAt      DateTime?
     resetToken       String?   @unique
@@ -171,6 +172,7 @@ enum Role {
     STUDENT
     LECTURER
     HOD
+    COLLEGE_ADMIN
     ADMIN
 }
 

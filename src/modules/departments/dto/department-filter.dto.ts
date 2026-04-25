@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsEnum } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { College } from '../../../generated/prisma';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class DepartmentFilterDto extends PaginationDto {
@@ -10,6 +11,11 @@ export class DepartmentFilterDto extends PaginationDto {
   @IsOptional()
   @IsString()
   searchTerm?: string;
+
+  @ApiPropertyOptional({ enum: College, description: 'Filter by college' })
+  @IsOptional()
+  @IsEnum(College)
+  college?: College;
 
   @ApiPropertyOptional({
     description: 'Filter only departments with active courses',

@@ -16,6 +16,7 @@ import { BaseController } from '../../common/controllers/base.controller';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { AcademicSession, Role } from '../../generated/prisma';
 import { PaginationOptions } from '../../common/interfaces/base-service.interface';
+import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 import {
   ApiActivateSession,
   ApiArchiveSession,
@@ -31,6 +32,7 @@ import {
 @ApiTags('Academic Sessions')
 @ApiBearerAuth('JWT-auth')
 @Controller('academic-sessions')
+@SkipCollegeGuard()
 @CrudRoles({
   create: [Role.ADMIN],
   read: [],

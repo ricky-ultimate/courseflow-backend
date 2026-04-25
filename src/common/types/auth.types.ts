@@ -1,12 +1,13 @@
 import { Request } from 'express';
-import { User } from '../../generated/prisma';
+import { College, User } from '../../generated/prisma';
 
 export interface AuthenticatedRequest extends Request {
-  user: User;
+  user: User & { collegeCode?: College };
 }
 
 export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  collegeCode?: College;
 }
