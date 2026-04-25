@@ -276,23 +276,25 @@ export class SchedulerEngine {
     allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
   ): CourseInput[] {
-    return [...courses].sort(
-      (a, b) =>
-        this.availableSlots(
-          a,
-          occupied,
-          DEPARTMENTAL_DAY_SLOTS,
-          allDepartmentCodes,
-          allCourseInputMap,
-        ).length -
-        this.availableSlots(
-          b,
-          occupied,
-          DEPARTMENTAL_DAY_SLOTS,
-          allDepartmentCodes,
-          allCourseInputMap,
-        ).length,
-    );
+    const availableCountCache = new Map<string, number>();
+
+    const getCount = (course: CourseInput): number => {
+      if (!availableCountCache.has(course.courseCode)) {
+        availableCountCache.set(
+          course.courseCode,
+          this.availableSlots(
+            course,
+            occupied,
+            DEPARTMENTAL_DAY_SLOTS,
+            allDepartmentCodes,
+            allCourseInputMap,
+          ).length,
+        );
+      }
+      return availableCountCache.get(course.courseCode)!;
+    };
+
+    return [...courses].sort((a, b) => getCount(a) - getCount(b));
   }
 
   private addToOccupied(
