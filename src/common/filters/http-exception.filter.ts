@@ -7,11 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import {
-  PrismaClientKnownRequestError,
-  PrismaClientValidationError,
-} from '@prisma/client/runtime/library';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '../../generated/prisma';
 
 interface HttpExceptionResponse {
   message?: string | string[];
@@ -43,7 +40,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
-    let errorCode: string = 'INTERNAL_ERROR';
+    let errorCode = 'INTERNAL_ERROR';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -51,19 +48,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const responseObj = exceptionResponse as HttpExceptionResponse;
-        message = responseObj.message || responseObj.error || exception.message;
+        message = responseObj.message ?? responseObj.error ?? exception.message;
         errorCode =
-          responseObj.errorCode || this.getErrorCodeFromStatus(status);
+          responseObj.errorCode ?? this.getErrorCodeFromStatus(status);
       } else {
         message = String(exceptionResponse);
         errorCode = this.getErrorCodeFromStatus(status);
       }
-    } else if (exception instanceof PrismaClientKnownRequestError) {
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       const prismaError = this.handlePrismaError(exception);
       status = prismaError.status;
       message = prismaError.message;
       errorCode = prismaError.code;
-    } else if (exception instanceof PrismaClientValidationError) {
+    } else if (exception instanceof Prisma.PrismaClientValidationError) {
       status = HttpStatus.BAD_REQUEST;
       message = 'Invalid data provided';
       errorCode = 'VALIDATION_ERROR';
@@ -86,14 +83,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${JSON.stringify(message)}`,
+      `${request.method} ${request.url} - ${status}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
 
     response.status(status).json(errorResponse);
   }
 
-  private handlePrismaError(exception: PrismaClientKnownRequestError): {
+  private handlePrismaError(exception: Prisma.PrismaClientKnownRequestError): {
     status: number;
     message: string;
     code: string;
@@ -131,16 +128,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
   }
 
   private getErrorCodeFromStatus(status: number): string {
-    const statusCodes = {
+    const statusCodes: Record<number, string> = {
       [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
       [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
       [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
       [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
       [HttpStatus.CONFLICT]: 'CONFLICT',
-    } as const;
+      [HttpStatus.UNPROCESSABLE_ENTITY]: 'UNPROCESSABLE_ENTITY',
+    };
 
-    return (
-      statusCodes[status as keyof typeof statusCodes] || 'INTERNAL_SERVER_ERROR'
-    );
+    return statusCodes[status] ?? 'INTERNAL_SERVER_ERROR';
   }
 }
