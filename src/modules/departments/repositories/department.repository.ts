@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Department } from '../../../generated/prisma';
+import { College, Department } from '../../../generated/prisma';
 
 @Injectable()
 export class DepartmentRepository {
@@ -41,7 +41,7 @@ export class DepartmentRepository {
   }
 
   async bulkCreateWithValidation(
-    departments: Array<{ code: string; name: string; college?: string }>,
+    departments: Array<{ code: string; name: string; college?: College }>,
   ): Promise<{
     created: Department[];
     errors: Array<{ index: number; error: string }>;
@@ -69,14 +69,22 @@ export class DepartmentRepository {
 
       try {
         const newDepartment = await this.prisma.department.create({
-          data: departmentData,
+          data: {
+            code: departmentData.code,
+            name: departmentData.name,
+            ...(departmentData.college !== undefined
+              ? { college: departmentData.college }
+              : {}),
+          },
         });
         created.push(newDepartment);
         existingCodes.add(departmentData.code);
       } catch (error) {
         errors.push({
           index: i,
-          error: `Failed to create department: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: `Failed to create department: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
         });
       }
     }

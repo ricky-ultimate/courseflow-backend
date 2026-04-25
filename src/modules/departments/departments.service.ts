@@ -75,7 +75,7 @@ export class DepartmentsService extends BaseService<
     if (dto.hodId) {
       await this.resolveHodId(dto.hodId);
     }
-    return dto as Record<string, unknown>;
+    return dto as unknown as Record<string, unknown>;
   }
 
   protected async beforeUpdate(
@@ -85,7 +85,7 @@ export class DepartmentsService extends BaseService<
     if (dto.hodId) {
       await this.resolveHodId(dto.hodId, identifier);
     }
-    return dto as Record<string, unknown>;
+    return dto as unknown as Record<string, unknown>;
   }
 
   private async resolveHodId(
@@ -241,11 +241,12 @@ export class DepartmentsService extends BaseService<
       return this.csvService.createBulkResult([], allErrors, errors.length);
     }
 
-    const rows = data.map((d) => ({
-      code: d.code,
-      name: d.name,
-      ...(collegeScope ? { college: collegeScope } : {}),
-    }));
+    const rows: Array<{ code: string; name: string; college?: College }> =
+      data.map((d) => ({
+        code: d.code,
+        name: d.name,
+        ...(collegeScope !== undefined ? { college: collegeScope } : {}),
+      }));
 
     const { created, errors: repositoryErrors } =
       await this.departmentRepository.bulkCreateWithValidation(rows);
