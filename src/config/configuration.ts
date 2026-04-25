@@ -6,7 +6,7 @@ export const appConfig = registerAs('app', () => ({
   apiPrefix: process.env.API_PREFIX || 'api',
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-jwt-secret',
+    secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
   },
 
