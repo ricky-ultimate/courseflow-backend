@@ -375,13 +375,13 @@ export class SchedulesService extends BaseService<
         this.prisma.schedule.findMany({
           where: departmentalManualOverrideFilter,
           include: { course: { include: { department: true } } },
-        }),
+        }) as Promise<Schedule[]>,
         collegeScope
           ? Promise.resolve([])
-          : this.prisma.schedule.findMany({
+          : (this.prisma.schedule.findMany({
               where: generalScheduledFilter,
               include: { course: { include: { department: true } } },
-            }),
+            }) as Promise<Schedule[]>),
       ]);
 
     const overriddenCourseCodes = new Set<string>([

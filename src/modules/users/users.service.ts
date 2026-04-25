@@ -68,6 +68,7 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
@@ -267,7 +268,8 @@ export class UsersService extends BaseService<
   }
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    const { password: _password, ...rest } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...rest } = user;
     return rest;
   }
 
