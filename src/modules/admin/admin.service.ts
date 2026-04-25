@@ -120,7 +120,7 @@ export class AdminService {
   }
 
   async deleteAllData(): Promise<{ deleted: Record<string, number> }> {
-    const [schedules, exams, aliases, courses, departments, complaints] =
+    const [schedules, exams, aliases, courses, departments, complaints, users] =
       await this.prisma.$transaction([
         this.prisma.schedule.deleteMany({}),
         this.prisma.examSchedule.deleteMany({}),
@@ -128,6 +128,13 @@ export class AdminService {
         this.prisma.course.deleteMany({}),
         this.prisma.department.deleteMany({}),
         this.prisma.complaint.deleteMany({}),
+        this.prisma.user.deleteMany({
+          where: {
+            role: {
+              notIn: ['ADMIN', 'COLLEGE_ADMIN'],
+            },
+          },
+        }),
       ]);
 
     return {
@@ -138,6 +145,7 @@ export class AdminService {
         courses: courses.count,
         departments: departments.count,
         complaints: complaints.count,
+        nonAdminUsers: users.count,
       },
     };
   }
