@@ -84,15 +84,29 @@ export class HodDepartmentGuard implements CanActivate {
         where: { code: params.code },
         select: { departmentCode: true },
       });
-      return course?.departmentCode ?? null;
+      if (course) return course.departmentCode;
+
+      const department = await this.prisma.department.findUnique({
+        where: { code: params.code },
+        select: { code: true },
+      });
+      if (department) return department.code;
+
+      return null;
     }
 
     if (params?.id) {
       const schedule = await this.prisma.schedule.findUnique({
         where: { id: params.id },
-        include: { course: { select: { departmentCode: true } } },
+        select: { course: { select: { departmentCode: true } } },
       });
-      return schedule?.course.departmentCode ?? null;
+      if (schedule) return schedule.course.departmentCode;
+
+      const examSchedule = await this.prisma.examSchedule.findUnique({
+        where: { id: params.id },
+        select: { course: { select: { departmentCode: true } } },
+      });
+      if (examSchedule) return examSchedule.course.departmentCode;
     }
 
     return null;
