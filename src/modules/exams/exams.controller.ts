@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
@@ -33,6 +33,7 @@ import {
 import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Exams')
+@ApiBearerAuth('JWT-auth')
 @Controller('exams')
 @CrudRoles({
   create: [Role.ADMIN, Role.COLLEGE_ADMIN],

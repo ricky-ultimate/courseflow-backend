@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiGetDepartments,
   ApiGetDepartmentByCode,
@@ -42,6 +42,7 @@ import { Department, Role } from '../../generated/prisma';
 import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Departments')
+@ApiBearerAuth('JWT-auth')
 @Controller('departments')
 @CrudRoles({
   create: [Role.ADMIN, Role.COLLEGE_ADMIN],

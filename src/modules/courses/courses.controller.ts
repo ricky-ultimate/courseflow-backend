@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response as ExpressResponse } from 'express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiGetCourses,
   ApiGetCourseByCode,
@@ -38,6 +38,7 @@ import { Course, Role } from '../../generated/prisma';
 import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Courses')
+@ApiBearerAuth('JWT-auth')
 @Controller('courses')
 @CrudRoles({
   create: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],
