@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Department } from '../../../generated/prisma';
 
@@ -8,10 +8,7 @@ export class DepartmentRepository {
 
   async existsByCode(code: string): Promise<boolean> {
     const count = await this.prisma.department.count({
-      where: {
-        isActive: true,
-        code,
-      },
+      where: { isActive: true, code },
     });
     return count > 0;
   }
@@ -22,43 +19,29 @@ export class DepartmentRepository {
     departmentsWithoutCourses: number;
     averageCoursesPerDepartment: number;
   }> {
-    const totalDepartments = await this.prisma.department.count({
-      where: { isActive: true },
-    });
-
-    const departmentsWithCourses = await this.prisma.department.count({
-      where: {
-        isActive: true,
-        courses: {
-          some: {
+    const [totalDepartments, departmentsWithCourses, allCourses] =
+      await Promise.all([
+        this.prisma.department.count({ where: { isActive: true } }),
+        this.prisma.department.count({
+          where: {
             isActive: true,
+            courses: { some: { isActive: true } },
           },
-        },
-      },
-    });
-
-    const departmentsWithoutCourses = totalDepartments - departmentsWithCourses;
-
-    const allCourses = await this.prisma.course.count({
-      where: { isActive: true },
-    });
-
-    const averageCoursesPerDepartment =
-      totalDepartments > 0 ? allCourses / totalDepartments : 0;
+        }),
+        this.prisma.course.count({ where: { isActive: true } }),
+      ]);
 
     return {
       totalDepartments,
       departmentsWithCourses,
-      departmentsWithoutCourses,
-      averageCoursesPerDepartment,
+      departmentsWithoutCourses: totalDepartments - departmentsWithCourses,
+      averageCoursesPerDepartment:
+        totalDepartments > 0 ? allCourses / totalDepartments : 0,
     };
   }
 
   async bulkCreateWithValidation(
-    departments: Array<{
-      code: string;
-      name: string;
-    }>,
+    departments: Array<{ code: string; name: string; college?: string }>,
   ): Promise<{
     created: Department[];
     errors: Array<{ index: number; error: string }>;
@@ -66,23 +49,30 @@ export class DepartmentRepository {
     const created: Department[] = [];
     const errors: Array<{ index: number; error: string }> = [];
 
+    const existingCodes = await this.prisma.department
+      .findMany({
+        where: { code: { in: departments.map((d) => d.code) } },
+        select: { code: true },
+      })
+      .then((rows) => new Set(rows.map((r) => r.code)));
+
     for (let i = 0; i < departments.length; i++) {
       const departmentData = departments[i];
 
-      try {
-        const existingDepartment = await this.existsByCode(departmentData.code);
-        if (existingDepartment) {
-          errors.push({
-            index: i,
-            error: `Department with code '${departmentData.code}' already exists`,
-          });
-          continue;
-        }
+      if (existingCodes.has(departmentData.code)) {
+        errors.push({
+          index: i,
+          error: `Department with code '${departmentData.code}' already exists`,
+        });
+        continue;
+      }
 
+      try {
         const newDepartment = await this.prisma.department.create({
           data: departmentData,
         });
         created.push(newDepartment);
+        existingCodes.add(departmentData.code);
       } catch (error) {
         errors.push({
           index: i,
@@ -94,8 +84,8 @@ export class DepartmentRepository {
     return { created, errors };
   }
 
-  async findWithFullDetails(code: string): Promise<Department | null> {
-    return this.prisma.department.findUnique({
+  async findWithFullDetails(code: string): Promise<Department> {
+    const department = await this.prisma.department.findUnique({
       where: { code },
       include: {
         courses: {
@@ -118,6 +108,12 @@ export class DepartmentRepository {
         },
       },
     });
+
+    if (!department) {
+      throw new NotFoundException(`Department '${code}' not found`);
+    }
+
+    return department;
   }
 
   async safeDelete(code: string): Promise<{
@@ -125,12 +121,18 @@ export class DepartmentRepository {
     message: string;
     department?: Department;
   }> {
-    const coursesCount = await this.prisma.course.count({
-      where: {
-        departmentCode: code,
-        isActive: true,
+    const department = await this.prisma.department.findUnique({
+      where: { code },
+      include: {
+        _count: { select: { courses: { where: { isActive: true } } } },
       },
     });
+
+    if (!department) {
+      return { success: false, message: `Department '${code}' not found` };
+    }
+
+    const coursesCount = department._count.courses;
 
     if (coursesCount > 0) {
       return {
@@ -139,14 +141,15 @@ export class DepartmentRepository {
       };
     }
 
-    const deletedDepartment = await this.prisma.department.update({
+    const deleted = await this.prisma.department.update({
       where: { code },
       data: { isActive: false },
     });
+
     return {
       success: true,
       message: 'Department deleted successfully',
-      department: deletedDepartment,
+      department: deleted,
     };
   }
 }
