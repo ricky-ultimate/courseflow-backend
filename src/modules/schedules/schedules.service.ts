@@ -785,7 +785,7 @@ export class SchedulesService extends BaseService<
           where: {
             sessionId: session.id,
             semester: dto.semester,
-            course: { isGeneral: false },
+            course: { isGeneral: false, departmentCode: dept.code },
           },
           include: { course: { include: { department: true } } },
         });
