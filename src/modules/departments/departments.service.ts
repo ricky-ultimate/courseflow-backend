@@ -46,7 +46,7 @@ export class DepartmentsService extends BaseService<
   async findAll(
     query: DepartmentFilterDto = {},
   ): Promise<Department[] | PaginatedResult<Department>> {
-    const where: Record<string, any> = { ...this.getActiveFilter() };
+    const where: Record<string, unknown> = { ...this.getActiveFilter() };
 
     if (query.searchTerm) {
       where.OR = [
@@ -58,7 +58,9 @@ export class DepartmentsService extends BaseService<
     if (query.hasCourses) where.courses = { some: { isActive: true } };
     if (query.withoutCourses) where.courses = { none: { isActive: true } };
 
-    if (query.page && query.limit) return this.findPaginated(where, query);
+    if (query.page !== undefined && query.limit !== undefined) {
+      return this.findPaginated(where, query);
+    }
 
     return this.getModel().findMany({
       where,
@@ -69,23 +71,21 @@ export class DepartmentsService extends BaseService<
 
   protected async beforeCreate(
     dto: CreateDepartmentDto,
-  ): Promise<Record<string, any>> {
-    const data: Record<string, any> = { ...dto };
+  ): Promise<Record<string, unknown>> {
     if (dto.hodId) {
       await this.resolveHodId(dto.hodId);
     }
-    return data;
+    return dto as unknown as Record<string, unknown>;
   }
 
   protected async beforeUpdate(
     dto: UpdateDepartmentDto,
     identifier: string,
-  ): Promise<Record<string, any>> {
-    const data: Record<string, any> = { ...dto };
+  ): Promise<Record<string, unknown>> {
     if (dto.hodId) {
       await this.resolveHodId(dto.hodId, identifier);
     }
-    return data;
+    return dto as unknown as Record<string, unknown>;
   }
 
   private async resolveHodId(
@@ -98,13 +98,16 @@ export class DepartmentsService extends BaseService<
     });
 
     if (!user) throw new NotFoundException(`User with id '${hodId}' not found`);
+
     if (user.role === Role.STUDENT) {
       throw new BadRequestException(
         `User '${hodId}' must have HOD, LECTURER, or ADMIN role to be assigned as department head`,
       );
     }
-    if (!user.isActive)
+
+    if (!user.isActive) {
       throw new BadRequestException(`User '${hodId}' is not active`);
+    }
 
     if (
       user.managedDepartment &&
@@ -125,12 +128,18 @@ export class DepartmentsService extends BaseService<
 
   async remove(identifier: string): Promise<Department> {
     const result = await this.departmentRepository.safeDelete(identifier);
+
     if (!result.success) {
+      if (!result.department) {
+        throw new NotFoundException(`Department '${identifier}' not found`);
+      }
       throw new ConflictException(result.message);
     }
+
     if (!result.department) {
       throw new NotFoundException(`Department '${identifier}' not found`);
     }
+
     return result.department;
   }
 
@@ -139,15 +148,11 @@ export class DepartmentsService extends BaseService<
     requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<Department> {
     const dept = await this.findOne(code);
-    if (requestingUser.role === Role.HOD) {
-      await this.assertHodOwnsDepartment(requestingUser.id, code);
-    }
-    if (requestingUser.role === Role.COLLEGE_ADMIN) {
-      this.assertCollegeAdminOwnsDepartment(
-        requestingUser.collegeCode,
-        (dept as unknown as { college: College }).college,
-      );
-    }
+    this.assertScheduleAccess(
+      requestingUser,
+      dept as unknown as { college: College },
+    );
+
     return this.prisma.department.update({
       where: { code },
       data: { isScheduleLocked: true },
@@ -162,15 +167,11 @@ export class DepartmentsService extends BaseService<
     requestingUser: { id: string; role: string; collegeCode?: College },
   ): Promise<Department> {
     const dept = await this.findOne(code);
-    if (requestingUser.role === Role.HOD) {
-      await this.assertHodOwnsDepartment(requestingUser.id, code);
-    }
-    if (requestingUser.role === Role.COLLEGE_ADMIN) {
-      this.assertCollegeAdminOwnsDepartment(
-        requestingUser.collegeCode,
-        (dept as unknown as { college: College }).college,
-      );
-    }
+    this.assertScheduleAccess(
+      requestingUser,
+      dept as unknown as { college: College },
+    );
+
     return this.prisma.department.update({
       where: { code },
       data: { isScheduleLocked: false },
@@ -180,33 +181,19 @@ export class DepartmentsService extends BaseService<
     });
   }
 
-  private assertCollegeAdminOwnsDepartment(
-    adminCollege: College | undefined,
-    deptCollege: College,
+  private assertScheduleAccess(
+    requestingUser: { id: string; role: string; collegeCode?: College },
+    dept: { college: College },
   ): void {
-    if (!adminCollege || adminCollege !== deptCollege) {
-      throw new ForbiddenException(
-        'College admins can only manage departments within their own college',
-      );
-    }
-  }
-
-  private async assertHodOwnsDepartment(
-    hodUserId: string,
-    departmentCode: string,
-  ): Promise<void> {
-    const hodUser = await this.prisma.user.findUnique({
-      where: { id: hodUserId },
-      include: { managedDepartment: true },
-    });
-
-    if (
-      !hodUser?.managedDepartment ||
-      hodUser.managedDepartment.code !== departmentCode
-    ) {
-      throw new ForbiddenException(
-        'HODs can only lock or unlock their own department schedule',
-      );
+    if (requestingUser.role === Role.COLLEGE_ADMIN) {
+      if (
+        !requestingUser.collegeCode ||
+        requestingUser.collegeCode !== dept.college
+      ) {
+        throw new ForbiddenException(
+          'College admins can only manage departments within their own college',
+        );
+      }
     }
   }
 
@@ -214,6 +201,7 @@ export class DepartmentsService extends BaseService<
     code: string,
   ): Promise<Array<{ programme: string; count: number }>> {
     const dept = await this.prisma.department.findUnique({ where: { code } });
+
     if (!dept) {
       throw new NotFoundException(`Department '${code}' not found`);
     }
@@ -224,6 +212,7 @@ export class DepartmentsService extends BaseService<
     });
 
     const prefixMap = new Map<string, number>();
+
     for (const course of courses) {
       const match = /^([A-Z]+)/.exec(course.code);
       if (match?.[1]) {
@@ -248,14 +237,16 @@ export class DepartmentsService extends BaseService<
     );
     const allErrors: CsvValidationError[] = [...errors];
 
-    if (data.length === 0)
+    if (data.length === 0) {
       return this.csvService.createBulkResult([], allErrors, errors.length);
+    }
 
-    const rows = data.map((d) => ({
-      code: d.code,
-      name: d.name,
-      ...(collegeScope ? { college: collegeScope } : {}),
-    }));
+    const rows: Array<{ code: string; name: string; college?: College }> =
+      data.map((d) => ({
+        code: d.code,
+        name: d.name,
+        ...(collegeScope !== undefined ? { college: collegeScope } : {}),
+      }));
 
     const { created, errors: repositoryErrors } =
       await this.departmentRepository.bulkCreateWithValidation(rows);
@@ -287,7 +278,7 @@ export class DepartmentsService extends BaseService<
     return this.departmentRepository.getDepartmentStats();
   }
 
-  async findWithFullDetails(code: string) {
+  async findWithFullDetails(code: string): Promise<Department> {
     return this.departmentRepository.findWithFullDetails(code);
   }
 

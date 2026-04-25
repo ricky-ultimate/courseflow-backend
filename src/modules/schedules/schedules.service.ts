@@ -176,7 +176,7 @@ export class SchedulesService extends BaseService<
   async findAll(
     query: ScheduleFilterDto = {},
   ): Promise<Schedule[] | PaginatedResult<Schedule>> {
-    const where: Record<string, any> = {};
+    const where: Record<string, unknown> = {};
 
     if (query.semester) where.semester = query.semester;
 
@@ -186,21 +186,23 @@ export class SchedulesService extends BaseService<
       const activeSession = await this.prisma.academicSession.findFirst({
         where: { isActive: true },
       });
+
       if (!activeSession) {
-        return [];
+        return [] as Schedule[];
       }
+
       where.sessionId = activeSession.id;
     }
 
     if (query.courseCode) where.courseCode = query.courseCode;
     if (query.dayOfWeek) where.dayOfWeek = query.dayOfWeek;
 
-    if (query.departmentCode || query.level) {
+    if (query.departmentCode ?? query.level) {
       if (query.departmentCode) {
-        const deptCondition: Record<string, any> = {
+        const deptCondition: Record<string, unknown> = {
           departmentCode: query.departmentCode,
         };
-        const generalCondition: Record<string, any> = { isGeneral: true };
+        const generalCondition: Record<string, unknown> = { isGeneral: true };
 
         if (query.level) {
           deptCondition.level = query.level;
@@ -222,7 +224,9 @@ export class SchedulesService extends BaseService<
     if (query.startTime) where.startTime = { gte: query.startTime };
     if (query.endTime) where.endTime = { lte: query.endTime };
 
-    if (query.page && query.limit) return this.findPaginated(where, query);
+    if (query.page !== undefined && query.limit !== undefined) {
+      return this.findPaginated(where, query);
+    }
 
     return this.getModel().findMany({
       where,
@@ -785,7 +789,7 @@ export class SchedulesService extends BaseService<
           where: {
             sessionId: session.id,
             semester: dto.semester,
-            course: { isGeneral: false },
+            course: { isGeneral: false, departmentCode: dept.code },
           },
           include: { course: { include: { department: true } } },
         });

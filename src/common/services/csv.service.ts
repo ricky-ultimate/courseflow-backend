@@ -1,64 +1,70 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { validate } from 'class-validator';
-import { plainToClass } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
 import { CsvValidationError, BulkOperationResult } from '../dto/csv-bulk.dto';
 
 @Injectable()
 export class CsvService {
-  async parseCsvFile<T>(
+  async parseCsvFile<T extends object>(
     buffer: Buffer,
     dtoClass: new () => T,
     requiredHeaders: string[],
   ): Promise<{ data: T[]; errors: CsvValidationError[] }> {
     const results: Record<string, unknown>[] = [];
     const errors: CsvValidationError[] = [];
+    let headersValidated = false;
 
-    return new Promise<{ data: T[]; errors: CsvValidationError[] }>(
-      (resolve, reject) => {
-        const stream = Readable.from(buffer.toString());
+    await new Promise<void>((resolve, reject) => {
+      const stream = Readable.from(buffer.toString());
 
-        stream
-          .pipe(csv())
-          .on('headers', (headers: string[]) => {
-            const missingHeaders = requiredHeaders.filter(
-              (header) => !headers.includes(header),
-            );
+      stream
+        .pipe(csv())
+        .on('headers', (headers: string[]) => {
+          const missingHeaders = requiredHeaders.filter(
+            (h) => !headers.includes(h),
+          );
 
-            if (missingHeaders.length > 0) {
-              reject(
-                new BadRequestException(
-                  `Missing required CSV headers: ${missingHeaders.join(', ')}`,
-                ),
-              );
-              return;
-            }
-          })
-          .on('data', (data: Record<string, unknown>) => {
-            results.push(data);
-          })
-          .on('end', () => {
-            void this.processValidation(results, dtoClass, errors)
-              .then((validatedData: T[]) => {
-                resolve({ data: validatedData, errors });
-              })
-              .catch((error: unknown) => {
-                reject(
-                  error instanceof Error ? error : new Error(String(error)),
-                );
-              });
-          })
-          .on('error', (error: Error) => {
+          if (missingHeaders.length > 0) {
             reject(
-              new BadRequestException(`CSV parsing error: ${error.message}`),
+              new BadRequestException(
+                `Missing required CSV headers: ${missingHeaders.join(', ')}`,
+              ),
             );
-          });
-      },
+            return;
+          }
+
+          headersValidated = true;
+        })
+        .on('data', (data: Record<string, unknown>) => {
+          results.push(data);
+        })
+        .on('end', () => {
+          if (!headersValidated && results.length === 0) {
+            reject(
+              new BadRequestException('CSV file is empty or has no headers'),
+            );
+            return;
+          }
+          resolve();
+        })
+        .on('error', (error: Error) => {
+          reject(
+            new BadRequestException(`CSV parsing error: ${error.message}`),
+          );
+        });
+    });
+
+    const validatedData = await this.processValidation(
+      results,
+      dtoClass,
+      errors,
     );
+    return { data: validatedData, errors };
   }
 
-  private async processValidation<T>(
+  private async processValidation<T extends object>(
     results: Record<string, unknown>[],
     dtoClass: new () => T,
     errors: CsvValidationError[],
@@ -69,8 +75,11 @@ export class CsvService {
       const rowData = results[i];
       const rowNumber = i + 2;
 
-      const dto = plainToClass(dtoClass, rowData);
-      const validationErrors = await validate(dto as object);
+      const dto = plainToInstance(dtoClass, rowData);
+      const validationErrors = await validate(dto as object, {
+        whitelist: true,
+        forbidNonWhitelisted: false,
+      });
 
       if (validationErrors.length > 0) {
         for (const error of validationErrors) {
@@ -97,27 +106,22 @@ export class CsvService {
     headers: string[],
     sampleData?: Record<string, unknown>,
   ): string {
-    let csv = headers.join(',') + '\n';
+    let content = headers.join(',') + '\n';
 
     if (sampleData) {
       const values = headers.map((header) => {
         const value = sampleData[header];
-        if (value === undefined || value === null) {
-          return '';
-        }
-        if (
-          typeof value === 'string' ||
-          typeof value === 'number' ||
-          typeof value === 'boolean'
-        ) {
-          return String(value);
-        }
-        return '';
+        if (value === undefined || value === null) return '';
+        const str =
+          typeof value === 'object'
+            ? JSON.stringify(value)
+            : String(value as string | number | boolean | bigint);
+        return str.includes(',') ? `"${str}"` : str;
       });
-      csv += values.join(',') + '\n';
+      content += values.join(',') + '\n';
     }
 
-    return csv;
+    return content;
   }
 
   createBulkResult<T>(

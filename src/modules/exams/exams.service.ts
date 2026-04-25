@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateExamDto } from './dto/create-exam.dto';
@@ -95,24 +96,30 @@ export class ExamsService extends BaseService<
       );
     }
 
-    const data = {
-      courseCode: dto.courseCode,
-      date: new Date(dto.date),
-      startTime: dto.startTime,
-      endTime: dto.endTime,
-      venue: dto.venue,
-      studentCount: dto.studentCount,
-      targetCollege: course.isGeneral ? dto.targetCollege : null,
-      invigilators: dto.invigilators,
-      semester: course.semester,
-      sessionId: activeSession.id,
-    };
+    const existingExam = await this.prisma.examSchedule.findFirst({
+      where: { courseCode: dto.courseCode, sessionId: activeSession.id },
+    });
+
+    if (existingExam) {
+      throw new ConflictException(
+        `Course '${dto.courseCode}' already has an exam scheduled for this session`,
+      );
+    }
 
     return this.prisma.examSchedule.create({
-      data,
-      include: {
-        course: { include: { department: true } },
+      data: {
+        courseCode: dto.courseCode,
+        date: new Date(dto.date),
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        venue: dto.venue,
+        studentCount: dto.studentCount,
+        targetCollege: course.isGeneral ? (dto.targetCollege ?? null) : null,
+        invigilators: dto.invigilators,
+        semester: course.semester,
+        sessionId: activeSession.id,
       },
+      include: { course: { include: { department: true } } },
     });
   }
 

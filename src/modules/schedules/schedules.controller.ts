@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApiGetSchedules,
   ApiGetScheduleById,
@@ -34,6 +34,7 @@ import { Schedule, Role } from '../../generated/prisma';
 import { AuthenticatedRequest } from '../../common/types/auth.types';
 
 @ApiTags('Schedules')
+@ApiBearerAuth('JWT-auth')
 @Controller('schedules')
 @CrudRoles({
   create: [Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN],

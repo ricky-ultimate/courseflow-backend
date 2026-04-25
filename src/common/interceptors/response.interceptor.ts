@@ -7,47 +7,40 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-export interface Response<T> {
+export interface ApiResponse<T> {
   success: boolean;
-  data: T;
+  data?: T;
   message?: string;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
+export class ResponseInterceptor<T>
+  implements NestInterceptor<T, ApiResponse<T>>
+{
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<ApiResponse<T>> {
     return next.handle().pipe(
-      map((data: unknown) => {
-        if (
-          data &&
-          typeof data === 'object' &&
-          'data' in data &&
-          'total' in data
-        ) {
-          return {
-            success: true,
-            ...(data as object),
-          } as unknown as Response<T>;
+      map((data: unknown): ApiResponse<T> => {
+        if (data === null || data === undefined) {
+          return { success: true, message: 'Request processed successfully' };
         }
 
-        if (
-          data &&
-          typeof data === 'object' &&
-          'user' in data &&
-          'access_token' in data
-        ) {
-          return data as unknown as Response<T>;
-        }
+        if (typeof data === 'object' && !Array.isArray(data)) {
+          const obj = data as Record<string, unknown>;
 
-        if (Array.isArray(data)) {
-          return {
-            success: true,
-            data: data as unknown as T,
-            message: 'Request processed successfully',
-          };
+          if ('data' in obj && 'total' in obj && 'page' in obj) {
+            return { success: true, ...(obj as object) } as ApiResponse<T>;
+          }
+
+          if ('success' in obj && ('data' in obj || 'message' in obj)) {
+            return data as ApiResponse<T>;
+          }
         }
 
         return {

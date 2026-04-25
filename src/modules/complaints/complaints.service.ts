@@ -1,3 +1,4 @@
+// src/modules/complaints/complaints.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
@@ -15,48 +16,62 @@ export class ComplaintsService extends BaseService<
     super(prisma, {
       modelName: 'complaint',
       identifierField: 'id',
-      includeRelations: { user: true },
+      includeRelations: {
+        user: { select: { id: true, name: true, email: true } },
+      },
       defaultOrderBy: { createdAt: 'desc' },
     });
   }
 
-  async create(dto: CreateComplaintDto) {
-    const data = dto;
-    return super.create(data);
+  async createForUser(
+    dto: CreateComplaintDto,
+    userId: string,
+  ): Promise<Complaint> {
+    return this.prisma.complaint.create({
+      data: { ...dto, userId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
   }
 
-  async findUserComplaints(userId: string) {
+  async updateByAdmin(
+    id: string,
+    dto: UpdateComplaintDto,
+    adminUserId: string,
+  ): Promise<Complaint> {
+    await this.findOne(id);
+
+    const data: Record<string, unknown> = { ...dto };
+
+    if (dto.status === 'RESOLVED') {
+      data.resolvedBy = adminUserId;
+      data.resolvedAt = new Date();
+    }
+
+    return this.prisma.complaint.update({
+      where: { id },
+      data,
+      include: { user: { select: { id: true, name: true, email: true } } },
+    }) as Promise<Complaint>;
+  }
+
+  async findUserComplaints(userId: string): Promise<Complaint[]> {
     return this.prisma.complaint.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findPending() {
+  async findPending(): Promise<Complaint[]> {
     return this.prisma.complaint.findMany({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findResolved() {
+  async findResolved(): Promise<Complaint[]> {
     return this.prisma.complaint.findMany({
       where: { status: 'RESOLVED' },
       orderBy: { resolvedAt: 'desc' },
     });
-  }
-
-  protected async beforeUpdate(
-    dto: UpdateComplaintDto,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _id: string,
-  ) {
-    const data: Record<string, any> = { ...dto };
-
-    if (dto.status === 'RESOLVED' && !data.resolvedBy) {
-      data.resolvedAt = new Date();
-    }
-
-    return Promise.resolve(data);
   }
 }
