@@ -132,6 +132,7 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
     dto: UpdateDto,
     _identifier: string,
   ): Promise<Record<string, unknown>> {
+    void _identifier;
     return Promise.resolve(dto as Record<string, unknown>);
   }
 
