@@ -112,7 +112,10 @@ export class CsvService {
       const values = headers.map((header) => {
         const value = sampleData[header];
         if (value === undefined || value === null) return '';
-        const str = String(value);
+        const str =
+          typeof value === 'object'
+            ? JSON.stringify(value)
+            : String(value as string | number | boolean | bigint);
         return str.includes(',') ? `"${str}"` : str;
       });
       content += values.join(',') + '\n';
