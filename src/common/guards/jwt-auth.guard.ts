@@ -1,20 +1,16 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import {
   CRUD_ROLES_KEY,
   CrudRolesConfig,
-} from '../../common/decorators/crud-roles.decorator';
+} from '../decorators/crud-roles.decorator';
 import { Role } from '../../generated/prisma';
-
-interface RequestWithMethod {
-  method: string;
-}
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(private reflector: Reflector) {
+  constructor(private readonly reflector: Reflector) {
     super();
   }
 
@@ -24,9 +20,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    if (isPublic) {
-      return true;
-    }
+    if (isPublic) return true;
 
     const crudRoles = this.reflector.get<CrudRolesConfig>(
       CRUD_ROLES_KEY,
@@ -34,25 +28,19 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     );
 
     if (crudRoles) {
-      const request = context.switchToHttp().getRequest<RequestWithMethod>();
-      const httpMethod = request.method;
+      const method = context
+        .switchToHttp()
+        .getRequest<{ method: string }>().method;
 
-      let requiredRoles: Role[] | undefined;
-      switch (httpMethod) {
-        case 'POST':
-          requiredRoles = crudRoles.create;
-          break;
-        case 'GET':
-          requiredRoles = crudRoles.read;
-          break;
-        case 'PUT':
-        case 'PATCH':
-          requiredRoles = crudRoles.update;
-          break;
-        case 'DELETE':
-          requiredRoles = crudRoles.delete;
-          break;
-      }
+      const roleMap: Record<string, Role[] | undefined> = {
+        POST: crudRoles.create,
+        GET: crudRoles.read,
+        PUT: crudRoles.update,
+        PATCH: crudRoles.update,
+        DELETE: crudRoles.delete,
+      };
+
+      const requiredRoles = roleMap[method];
 
       if (requiredRoles !== undefined && requiredRoles.length === 0) {
         return true;
