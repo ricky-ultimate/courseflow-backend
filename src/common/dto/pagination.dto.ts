@@ -3,16 +3,12 @@ import { Type } from 'class-transformer';
 import { IsOptional, IsPositive, IsInt, Max, IsIn } from 'class-validator';
 
 export class PaginationDto {
-  @ApiPropertyOptional({
-    description: 'Page number',
-    example: 1,
-    minimum: 1,
-  })
+  @ApiPropertyOptional({ description: 'Page number', example: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @IsPositive()
-  page?: number = 1;
+  page?: number;
 
   @ApiPropertyOptional({
     description: 'Number of items per page',
@@ -25,7 +21,7 @@ export class PaginationDto {
   @IsInt()
   @IsPositive()
   @Max(10000)
-  limit?: number = 10;
+  limit?: number;
 
   @ApiPropertyOptional({
     description: 'Field to order by',
@@ -41,5 +37,5 @@ export class PaginationDto {
   })
   @IsOptional()
   @IsIn(['asc', 'desc'])
-  orderDirection?: 'asc' | 'desc' = 'asc';
+  orderDirection?: 'asc' | 'desc';
 }
