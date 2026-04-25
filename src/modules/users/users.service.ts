@@ -129,11 +129,13 @@ export class UsersService extends BaseService<
     const user = await this.prisma.user.findUnique({
       where: { id: userId, isActive: true },
     });
+
     if (!user) throw new NotFoundException('User not found');
 
     const activeSession = await this.prisma.academicSession.findFirst({
       where: { isActive: true },
     });
+
     const sessionFilter = activeSession ? { sessionId: activeSession.id } : {};
 
     const courses = await this.prisma.course.findMany({
@@ -141,32 +143,6 @@ export class UsersService extends BaseService<
       include: { schedules: { where: sessionFilter } },
     });
 
-    const coursesByLevel: Record<string, number> = {};
-    const schedulesByDay: Record<string, number> = {};
-
-    courses.forEach((course) => {
-      coursesByLevel[course.level] = (coursesByLevel[course.level] || 0) + 1;
-      course.schedules.forEach((schedule) => {
-        schedulesByDay[schedule.dayOfWeek] =
-          (schedulesByDay[schedule.dayOfWeek] || 0) + 1;
-      });
-    });
-
-    const totalSchedules = courses.reduce(
-      (sum, c) => sum + c.schedules.length,
-      0,
-    );
-
-    const today = new Date();
-    const dayOfWeek = [
-      'SUNDAY',
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-    ][today.getDay()];
     const DAY_ORDER: Record<string, number> = {
       SUNDAY: 0,
       MONDAY: 1,
@@ -177,14 +153,39 @@ export class UsersService extends BaseService<
       SATURDAY: 6,
     };
 
-    const upcomingClasses = courses.reduce(
-      (count, course) =>
-        count +
-        course.schedules.filter(
-          (s) => (DAY_ORDER[s.dayOfWeek] ?? 0) >= (DAY_ORDER[dayOfWeek] ?? 0),
-        ).length,
-      0,
-    );
+    const DAY_NAMES = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+    ];
+
+    const todayUtcDay = new Date().getUTCDay();
+    const todayDayName = DAY_NAMES[todayUtcDay];
+
+    const coursesByLevel: Record<string, number> = {};
+    const schedulesByDay: Record<string, number> = {};
+    let totalSchedules = 0;
+    let upcomingClasses = 0;
+
+    for (const course of courses) {
+      coursesByLevel[course.level] = (coursesByLevel[course.level] ?? 0) + 1;
+
+      for (const schedule of course.schedules) {
+        schedulesByDay[schedule.dayOfWeek] =
+          (schedulesByDay[schedule.dayOfWeek] ?? 0) + 1;
+        totalSchedules++;
+
+        if (
+          (DAY_ORDER[schedule.dayOfWeek] ?? 0) >= (DAY_ORDER[todayDayName] ?? 0)
+        ) {
+          upcomingClasses++;
+        }
+      }
+    }
 
     return {
       totalCourses: courses.length,
