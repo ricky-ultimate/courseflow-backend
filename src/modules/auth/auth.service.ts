@@ -4,26 +4,40 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
+import { Logger } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { Role } from '../../generated/prisma';
+import { College, Role } from '../../generated/prisma';
+
+const PUBLIC_REGISTRATION_ROLES: Role[] = [Role.STUDENT, Role.LECTURER];
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto) {
+    const requestedRole = dto.role ?? Role.STUDENT;
+
+    if (!PUBLIC_REGISTRATION_ROLES.includes(requestedRole)) {
+      throw new ForbiddenException(
+        `Role '${requestedRole}' cannot be self-assigned during registration`,
+      );
+    }
+
     const existingUser = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email }, { matricNO: dto.matricNO }] },
     });
@@ -37,26 +51,20 @@ export class AuthService {
       );
     }
 
-    const userRole = dto.role || Role.STUDENT;
+    if (!dto.departmentCode) {
+      throw new BadRequestException(
+        `Department code is required for ${requestedRole} role`,
+      );
+    }
 
-    if (
-      userRole === Role.STUDENT ||
-      userRole === Role.LECTURER ||
-      userRole === Role.HOD
-    ) {
-      if (!dto.departmentCode) {
-        throw new BadRequestException(
-          `Department code is required for ${userRole} role`,
-        );
-      }
-      const department = await this.prisma.department.findUnique({
-        where: { code: dto.departmentCode },
-      });
-      if (!department) {
-        throw new NotFoundException(
-          `Department with code '${dto.departmentCode}' not found`,
-        );
-      }
+    const department = await this.prisma.department.findUnique({
+      where: { code: dto.departmentCode },
+    });
+
+    if (!department) {
+      throw new NotFoundException(
+        `Department with code '${dto.departmentCode}' not found`,
+      );
     }
 
     const hashedPassword = await argon2.hash(dto.password);
@@ -67,14 +75,9 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
-        role: userRole,
+        role: requestedRole,
         phone: dto.phone,
-        departmentCode:
-          userRole === Role.STUDENT ||
-          userRole === Role.LECTURER ||
-          userRole === Role.HOD
-            ? dto.departmentCode
-            : null,
+        departmentCode: dto.departmentCode,
       },
       select: {
         id: true,
@@ -88,12 +91,13 @@ export class AuthService {
       },
     });
 
-    const tokens = await this.generateTokens(
+    const tokens = this.generateTokens(
       user.id,
       user.email,
       user.role,
       user.collegeCode ?? undefined,
     );
+
     return { user, ...tokens };
   }
 
@@ -116,12 +120,13 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const tokens = await this.generateTokens(
+    const tokens = this.generateTokens(
       user.id,
       user.email,
       user.role,
       user.collegeCode ?? undefined,
     );
+
     return {
       user: {
         id: user.id,
@@ -171,12 +176,13 @@ export class AuthService {
       data: { resetToken: hashedToken, resetTokenExpiry },
     });
 
-    console.log(`Password reset token for ${user.email}: ${rawToken}`);
+    this.logger.log(
+      `Password reset requested for user ${user.id}. Token delivery should be handled by a mail service.`,
+    );
 
     return {
       message:
         'If an account with that email exists, a password reset link has been sent.',
-      ...(process.env.NODE_ENV === 'development' && { resetToken: rawToken }),
     };
   }
 
@@ -191,11 +197,13 @@ export class AuthService {
     });
 
     if (!user) throw new BadRequestException('Invalid or expired reset token');
+
     if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
       throw new BadRequestException('Reset token has expired');
     }
 
     const hashedPassword = await argon2.hash(dto.newPassword);
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -228,25 +236,21 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('User not found or inactive');
 
-    return {
-      success: true,
-      data: user,
-      message: 'User retrieved successfully',
-      timestamp: new Date().toISOString(),
-    };
+    return user;
   }
 
-  private async generateTokens(
+  private generateTokens(
     userId: string,
     email: string,
     role: string,
-    collegeCode?: string,
+    collegeCode?: College,
   ) {
     const payload: Record<string, unknown> = { sub: userId, email, role };
-    if (collegeCode) {
-      payload.collegeCode = collegeCode;
-    }
-    const accessToken = await this.jwtService.signAsync(payload);
+
+    if (collegeCode) payload.collegeCode = collegeCode;
+
+    const accessToken = this.jwtService.sign(payload);
+
     return { access_token: accessToken, token_type: 'Bearer' };
   }
 }
