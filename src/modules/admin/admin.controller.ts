@@ -60,6 +60,18 @@ export class AdminController {
     return this.adminService.deleteAllData();
   }
 
+  @Delete('schedules-except-general')
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
+  @ApiOperation({
+    summary:
+      'Delete all schedules except general courses (Admin / College Admin)',
+  })
+  deleteAllSchedulesExceptGeneral(@Req() req: AuthenticatedRequest) {
+    return this.adminService.deleteAllSchedulesExceptGeneral(
+      req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
+    );
+  }
+
   @Post('seed/departments')
   @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
   @ApiOperation({ summary: 'Seed departments (Admin / College Admin)' })

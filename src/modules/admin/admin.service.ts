@@ -150,6 +150,31 @@ export class AdminService {
     };
   }
 
+  async deleteAllSchedulesExceptGeneral(
+    collegeScope?: College,
+  ): Promise<{ deleted: number }> {
+    if (!collegeScope) {
+      const result = await this.prisma.schedule.deleteMany({
+        where: {
+          course: {
+            isGeneral: false,
+          },
+        },
+      });
+      return { deleted: result.count };
+    }
+
+    const result = await this.prisma.schedule.deleteMany({
+      where: {
+        course: {
+          department: { college: collegeScope },
+          isGeneral: false,
+        },
+      },
+    });
+    return { deleted: result.count };
+  }
+
   async seedDepartments(
     collegeScope?: College,
   ): Promise<{ created: number; skipped: number }> {
