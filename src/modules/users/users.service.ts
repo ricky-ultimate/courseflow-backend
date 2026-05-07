@@ -7,7 +7,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { BaseService } from '../../common/services/base.service';
-import { User, Role } from '../../generated/prisma';
+import { College, User, Role } from '../../generated/prisma';
 import {
   PaginationOptions,
   PaginatedResult,
@@ -68,7 +68,6 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
@@ -92,13 +91,21 @@ export class UsersService extends BaseService<
       role?: Role;
       departmentCode?: string;
       isActive?: boolean;
+      collegeScope?: College;
     },
   ): Promise<User[] | PaginatedResult<User>> {
     const where: Record<string, any> = { ...this.getActiveFilter() };
 
-    if (options?.role) where.role = options.role;
-    if (options?.departmentCode) where.departmentCode = options.departmentCode;
     if (options?.isActive !== undefined) where.isActive = options.isActive;
+
+    if (options?.collegeScope) {
+      where.role = { in: [Role.LECTURER, Role.HOD] };
+      where.department = { college: options.collegeScope };
+    } else {
+      if (options?.role) where.role = options.role;
+      if (options?.departmentCode)
+        where.departmentCode = options.departmentCode;
+    }
 
     if (options?.page && options?.limit) {
       return this.findPaginated(where, options);
@@ -112,11 +119,21 @@ export class UsersService extends BaseService<
   }
 
   async findAllWithoutPasswords(
-    options?: PaginationOptions & { role?: Role; departmentCode?: string },
+    options?: PaginationOptions & {
+      role?: Role;
+      departmentCode?: string;
+      isActive?: boolean;
+    },
+    requestingUser?: { role: string; collegeCode?: College },
   ): Promise<
     Omit<User, 'password'>[] | PaginatedResult<Omit<User, 'password'>>
   > {
-    const result = await this.findAll(options);
+    const collegeScope =
+      requestingUser?.role === Role.COLLEGE_ADMIN && requestingUser.collegeCode
+        ? requestingUser.collegeCode
+        : undefined;
+
+    const result = await this.findAll({ ...options, collegeScope });
     return this.excludePasswords(result);
   }
 
@@ -269,8 +286,8 @@ export class UsersService extends BaseService<
   }
 
   private excludePassword(user: User): Omit<User, 'password'> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = user;
+    void password;
     return rest;
   }
 
