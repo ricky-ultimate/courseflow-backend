@@ -37,8 +37,8 @@ export class ComplaintsController {
   constructor(private readonly complaintsService: ComplaintsService) {}
 
   @Get()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all complaints (Admin only)' })
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
+  @ApiOperation({ summary: 'Get all complaints (Admin / College Admin)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'orderBy', required: false, type: String })
@@ -57,15 +57,15 @@ export class ComplaintsController {
   }
 
   @Get('pending')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get pending complaints (Admin only)' })
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
+  @ApiOperation({ summary: 'Get pending complaints (Admin / College Admin)' })
   findPending(): Promise<Complaint[]> {
     return this.complaintsService.findPending();
   }
 
   @Get('resolved')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get resolved complaints (Admin only)' })
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
+  @ApiOperation({ summary: 'Get resolved complaints (Admin / College Admin)' })
   findResolved(): Promise<Complaint[]> {
     return this.complaintsService.findResolved();
   }
@@ -82,17 +82,17 @@ export class ComplaintsController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
   @ApiParam({ name: 'id', description: 'Complaint ID' })
-  @ApiOperation({ summary: 'Get complaint by ID (Admin only)' })
+  @ApiOperation({ summary: 'Get complaint by ID (Admin / College Admin)' })
   findOne(@Param('id') id: string): Promise<Complaint> {
     return this.complaintsService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
   @ApiParam({ name: 'id', description: 'Complaint ID' })
-  @ApiOperation({ summary: 'Update complaint (Admin only)' })
+  @ApiOperation({ summary: 'Update complaint (Admin / College Admin)' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateComplaintDto,
@@ -102,8 +102,8 @@ export class ComplaintsController {
   }
 
   @Patch(':id/status')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update complaint status (Admin only)' })
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
+  @ApiOperation({ summary: 'Update complaint status (Admin / College Admin)' })
   @ApiParam({ name: 'id', description: 'Complaint ID' })
   @ApiQuery({
     name: 'status',
