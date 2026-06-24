@@ -31,6 +31,18 @@ import {
   Schedule,
 } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
+import { RecommendedSlotResult } from './dto/recommend-university-slots.dto';
+
+const UNIVERSITY_RECOMMENDATION_SLOTS: Array<{
+  startTime: string;
+  endTime: string;
+}> = [
+  { startTime: '09:00', endTime: '11:00' },
+  { startTime: '11:00', endTime: '13:00' },
+  { startTime: '13:00', endTime: '15:00' },
+  { startTime: '15:00', endTime: '17:00' },
+  { startTime: '17:00', endTime: '19:00' },
+];
 
 @Injectable()
 export class SchedulesService extends BaseService<
@@ -1085,5 +1097,107 @@ export class SchedulesService extends BaseService<
   private timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  async recommendUniversitySlots(
+    courseCodes: string[],
+  ): Promise<RecommendedSlotResult[]> {
+    if (courseCodes.length === 0) return [];
+
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) {
+      throw new NotFoundException('No active academic session found');
+    }
+
+    const courses = await this.prisma.course.findMany({
+      where: { code: { in: courseCodes }, isActive: true },
+    });
+
+    const existingFridaySchedules = await this.prisma.schedule.findMany({
+      where: {
+        sessionId: activeSession.id,
+        dayOfWeek: DayOfWeek.FRIDAY,
+        course: { isGeneral: true },
+      },
+      include: { course: { select: { level: true } } },
+    });
+
+    const occupiedByLevel = new Map<
+      Level,
+      Array<{ startTime: string; endTime: string }>
+    >();
+
+    for (const schedule of existingFridaySchedules) {
+      const level = schedule.course.level;
+      const intervals = occupiedByLevel.get(level) ?? [];
+      intervals.push({
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+      });
+      occupiedByLevel.set(level, intervals);
+    }
+
+    const sortedCourses = [...courses].sort((a, b) => {
+      if (a.level !== b.level) return a.level.localeCompare(b.level);
+      return a.code.localeCompare(b.code);
+    });
+
+    const recommendations: RecommendedSlotResult[] = [];
+
+    for (const course of sortedCourses) {
+      const occupied = occupiedByLevel.get(course.level) ?? [];
+      const candidate = UNIVERSITY_RECOMMENDATION_SLOTS.find(
+        (slot) =>
+          !occupied.some((interval) => this.intervalsOverlap(slot, interval)),
+      );
+
+      if (candidate) {
+        occupied.push(candidate);
+        occupiedByLevel.set(course.level, occupied);
+        recommendations.push({
+          courseCode: course.code,
+          dayOfWeek: DayOfWeek.FRIDAY,
+          startTime: candidate.startTime,
+          endTime: candidate.endTime,
+          hasConflict: false,
+        });
+      } else {
+        recommendations.push({
+          courseCode: course.code,
+          dayOfWeek: DayOfWeek.FRIDAY,
+          startTime: '',
+          endTime: '',
+          hasConflict: true,
+        });
+      }
+    }
+
+    const foundCodes = new Set(courses.map((c) => c.code));
+    for (const code of courseCodes) {
+      if (!foundCodes.has(code)) {
+        recommendations.push({
+          courseCode: code,
+          dayOfWeek: '',
+          startTime: '',
+          endTime: '',
+          hasConflict: true,
+        });
+      }
+    }
+
+    return recommendations;
+  }
+
+  private intervalsOverlap(
+    a: { startTime: string; endTime: string },
+    b: { startTime: string; endTime: string },
+  ): boolean {
+    return (
+      this.timeToMinutes(a.startTime) < this.timeToMinutes(b.endTime) &&
+      this.timeToMinutes(b.startTime) < this.timeToMinutes(a.endTime)
+    );
   }
 }
