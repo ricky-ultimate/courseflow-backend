@@ -20,7 +20,10 @@ import {
   ApiGenerateSchedules,
   ApiToggleScheduleFixed,
   ApiGenerateSchedulesBatch,
+  ApiRecommendUniversitySlots,
 } from './decorators/schedule-api.decorator';
+import { RecommendUniversitySlotsDto } from './dto/recommend-university-slots.dto';
+import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -71,6 +74,15 @@ export class SchedulesController extends BaseController<
     @Req() req: AuthenticatedRequest,
   ) {
     return this.schedulesService.generateSchedulesBatch(dto, req.user);
+  }
+
+  @Post('recommend-university-slots')
+  @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
+  @SkipHodGuard()
+  @SkipCollegeGuard()
+  @ApiRecommendUniversitySlots()
+  recommendUniversitySlots(@Body() dto: RecommendUniversitySlotsDto) {
+    return this.schedulesService.recommendUniversitySlots(dto.courseCodes);
   }
 
   @Get()

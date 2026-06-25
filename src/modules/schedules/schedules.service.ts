@@ -29,8 +29,14 @@ import {
   Level,
   Role,
   Schedule,
+  Semester,
 } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
+import { RecommendedSlotResult } from './dto/recommend-university-slots.dto';
+import {
+  DEPARTMENTAL_DAY_SLOTS,
+  WEEKDAYS_ONLY,
+} from './scheduler/scheduler.constants';
 
 @Injectable()
 export class SchedulesService extends BaseService<
@@ -1085,5 +1091,142 @@ export class SchedulesService extends BaseService<
   private timeToMinutes(time: string): number {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
+  }
+
+  async recommendUniversitySlots(
+    courseCodes: string[],
+  ): Promise<RecommendedSlotResult[]> {
+    if (courseCodes.length === 0) return [];
+
+    const activeSession = await this.prisma.academicSession.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeSession) {
+      throw new NotFoundException('No active academic session found');
+    }
+
+    const courses = await this.prisma.course.findMany({
+      where: { code: { in: courseCodes }, isActive: true },
+    });
+
+    const occupancyKey = (level: Level, semester: Semester) =>
+      `${level}|${semester}`;
+
+    const occupiedByLevelSemester = new Map<
+      string,
+      Map<DayOfWeek, Array<{ startTime: string; endTime: string }>>
+    >();
+
+    const levelSemesterPairs = new Set(
+      courses.map((c) => occupancyKey(c.level, c.semester)),
+    );
+
+    for (const pair of levelSemesterPairs) {
+      const [level, semester] = pair.split('|') as [Level, Semester];
+
+      const existingSchedules = await this.prisma.schedule.findMany({
+        where: {
+          sessionId: activeSession.id,
+          semester,
+          dayOfWeek: { in: WEEKDAYS_ONLY },
+          course: { level },
+        },
+        select: { dayOfWeek: true, startTime: true, endTime: true },
+      });
+
+      const byDay = new Map<
+        DayOfWeek,
+        Array<{ startTime: string; endTime: string }>
+      >();
+      for (const day of WEEKDAYS_ONLY) byDay.set(day, []);
+      for (const schedule of existingSchedules) {
+        byDay.get(schedule.dayOfWeek)!.push({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+        });
+      }
+
+      occupiedByLevelSemester.set(pair, byDay);
+    }
+
+    const sortedCourses = [...courses].sort((a, b) => {
+      if (a.level !== b.level) return a.level.localeCompare(b.level);
+      return a.code.localeCompare(b.code);
+    });
+
+    const recommendations: RecommendedSlotResult[] = [];
+
+    for (const course of sortedCourses) {
+      const byDay = occupiedByLevelSemester.get(
+        occupancyKey(course.level, course.semester),
+      )!;
+
+      const candidateSlots = [...DEPARTMENTAL_DAY_SLOTS].sort((a, b) => {
+        const loadDiff =
+          (byDay.get(a.day)?.length ?? 0) - (byDay.get(b.day)?.length ?? 0);
+        if (loadDiff !== 0) return loadDiff;
+        return (
+          this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime)
+        );
+      });
+
+      const candidate = candidateSlots.find((slot) => {
+        const intervals = byDay.get(slot.day) ?? [];
+        return !intervals.some((interval) =>
+          this.intervalsOverlap(
+            { startTime: slot.startTime, endTime: slot.endTime },
+            interval,
+          ),
+        );
+      });
+
+      if (candidate) {
+        byDay.get(candidate.day)!.push({
+          startTime: candidate.startTime,
+          endTime: candidate.endTime,
+        });
+        recommendations.push({
+          courseCode: course.code,
+          dayOfWeek: candidate.day,
+          startTime: candidate.startTime,
+          endTime: candidate.endTime,
+          hasConflict: false,
+        });
+      } else {
+        recommendations.push({
+          courseCode: course.code,
+          dayOfWeek: '',
+          startTime: '',
+          endTime: '',
+          hasConflict: true,
+        });
+      }
+    }
+
+    const foundCodes = new Set(courses.map((c) => c.code));
+    for (const code of courseCodes) {
+      if (!foundCodes.has(code)) {
+        recommendations.push({
+          courseCode: code,
+          dayOfWeek: '',
+          startTime: '',
+          endTime: '',
+          hasConflict: true,
+        });
+      }
+    }
+
+    return recommendations;
+  }
+
+  private intervalsOverlap(
+    a: { startTime: string; endTime: string },
+    b: { startTime: string; endTime: string },
+  ): boolean {
+    return (
+      this.timeToMinutes(a.startTime) < this.timeToMinutes(b.endTime) &&
+      this.timeToMinutes(b.startTime) < this.timeToMinutes(a.endTime)
+    );
   }
 }

@@ -7,6 +7,9 @@ import {
   ESM_COURSE_CODE_PATTERN,
   GST_COURSE_CODE_PATTERN,
   ENT_COURSE_CODE_PATTERN,
+  SDN_COURSE_CODE_PATTERN,
+  GST_ENT_FRIDAY_CODES,
+  SDN_FRIDAY_ELIGIBLE_LEVELS,
   TimeSlot,
 } from './scheduler.constants';
 
@@ -359,17 +362,25 @@ export class SchedulerEngine {
     const levelSlots = FRIDAY_UNIVERSITY_SLOTS[level];
     if (!levelSlots) return null;
 
+    const normalizedCode = courseCode.toUpperCase();
     let timeSlot: TimeSlot | undefined;
 
     if (ESM_COURSE_CODE_PATTERN.test(courseCode)) {
       timeSlot = levelSlots.esm;
-    } else if (GST_COURSE_CODE_PATTERN.test(courseCode)) {
-      timeSlot = levelSlots.gst;
-    } else if (ENT_COURSE_CODE_PATTERN.test(courseCode)) {
-      timeSlot = levelSlots.ent;
+    } else if (
+      (GST_COURSE_CODE_PATTERN.test(courseCode) ||
+        ENT_COURSE_CODE_PATTERN.test(courseCode)) &&
+      GST_ENT_FRIDAY_CODES.has(normalizedCode)
+    ) {
+      timeSlot = levelSlots.gstEnt;
+    } else if (
+      SDN_COURSE_CODE_PATTERN.test(courseCode) &&
+      SDN_FRIDAY_ELIGIBLE_LEVELS.includes(level)
+    ) {
+      timeSlot = levelSlots.sdn;
     }
 
-    if (!timeSlot || !timeSlot.startTime || !timeSlot.endTime) {
+    if (!timeSlot) {
       return null;
     }
 
@@ -518,7 +529,7 @@ export class SchedulerEngine {
 
     if (unscheduledUniversity.length > 0) {
       throw new UnprocessableEntityException(
-        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM, GST, PIF, SDN, and ENT prefixed courses are supported for Friday auto-scheduling.`,
+        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM (all levels), GST/ENT 201/202, 301/302, 401/402, and SDN at the configured eligible levels are auto-scheduled on Friday. PIF and any other general course outside those patterns must be scheduled manually using the university course scheduling tool.`,
       );
     }
 

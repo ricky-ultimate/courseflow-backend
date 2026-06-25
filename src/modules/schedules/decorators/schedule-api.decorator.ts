@@ -251,3 +251,32 @@ export const ApiGenerateSchedulesBatch = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
+export const ApiRecommendUniversitySlots = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Recommend non-clashing weekday slots for university courses',
+      description:
+        'Computes recommended Monday-Thursday day and time slots for the given general/university course codes that are not eligible for automatic Friday scheduling, based on existing schedules at the same level and semester. Courses for which no free slot is available are returned with hasConflict set to true and must be scheduled manually.',
+    }),
+    ApiResponse({
+      status: 201,
+      description: 'Recommended slots computed successfully',
+      schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            courseCode: { type: 'string', example: 'PIF101' },
+            dayOfWeek: { type: 'string', example: 'MONDAY' },
+            startTime: { type: 'string', example: '09:00' },
+            endTime: { type: 'string', example: '11:00' },
+            hasConflict: { type: 'boolean', example: false },
+          },
+        },
+      },
+    }),
+    ApiNotFoundResponse('Active session'),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
