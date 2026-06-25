@@ -29,20 +29,14 @@ import {
   Level,
   Role,
   Schedule,
+  Semester,
 } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 import { RecommendedSlotResult } from './dto/recommend-university-slots.dto';
-
-const UNIVERSITY_RECOMMENDATION_SLOTS: Array<{
-  startTime: string;
-  endTime: string;
-}> = [
-  { startTime: '09:00', endTime: '11:00' },
-  { startTime: '11:00', endTime: '13:00' },
-  { startTime: '13:00', endTime: '15:00' },
-  { startTime: '15:00', endTime: '17:00' },
-  { startTime: '17:00', endTime: '19:00' },
-];
+import {
+  DEPARTMENTAL_DAY_SLOTS,
+  WEEKDAYS_ONLY,
+} from './scheduler/scheduler.constants';
 
 @Injectable()
 export class SchedulesService extends BaseService<
@@ -1116,28 +1110,44 @@ export class SchedulesService extends BaseService<
       where: { code: { in: courseCodes }, isActive: true },
     });
 
-    const existingFridaySchedules = await this.prisma.schedule.findMany({
-      where: {
-        sessionId: activeSession.id,
-        dayOfWeek: DayOfWeek.FRIDAY,
-        course: { isGeneral: true },
-      },
-      include: { course: { select: { level: true } } },
-    });
+    const occupancyKey = (level: Level, semester: Semester) =>
+      `${level}|${semester}`;
 
-    const occupiedByLevel = new Map<
-      Level,
-      Array<{ startTime: string; endTime: string }>
+    const occupiedByLevelSemester = new Map<
+      string,
+      Map<DayOfWeek, Array<{ startTime: string; endTime: string }>>
     >();
 
-    for (const schedule of existingFridaySchedules) {
-      const level = schedule.course.level;
-      const intervals = occupiedByLevel.get(level) ?? [];
-      intervals.push({
-        startTime: schedule.startTime,
-        endTime: schedule.endTime,
+    const levelSemesterPairs = new Set(
+      courses.map((c) => occupancyKey(c.level, c.semester)),
+    );
+
+    for (const pair of levelSemesterPairs) {
+      const [level, semester] = pair.split('|') as [Level, Semester];
+
+      const existingSchedules = await this.prisma.schedule.findMany({
+        where: {
+          sessionId: activeSession.id,
+          semester,
+          dayOfWeek: { in: WEEKDAYS_ONLY },
+          course: { level },
+        },
+        select: { dayOfWeek: true, startTime: true, endTime: true },
       });
-      occupiedByLevel.set(level, intervals);
+
+      const byDay = new Map<
+        DayOfWeek,
+        Array<{ startTime: string; endTime: string }>
+      >();
+      for (const day of WEEKDAYS_ONLY) byDay.set(day, []);
+      for (const schedule of existingSchedules) {
+        byDay.get(schedule.dayOfWeek)!.push({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+        });
+      }
+
+      occupiedByLevelSemester.set(pair, byDay);
     }
 
     const sortedCourses = [...courses].sort((a, b) => {
@@ -1148,18 +1158,37 @@ export class SchedulesService extends BaseService<
     const recommendations: RecommendedSlotResult[] = [];
 
     for (const course of sortedCourses) {
-      const occupied = occupiedByLevel.get(course.level) ?? [];
-      const candidate = UNIVERSITY_RECOMMENDATION_SLOTS.find(
-        (slot) =>
-          !occupied.some((interval) => this.intervalsOverlap(slot, interval)),
-      );
+      const byDay = occupiedByLevelSemester.get(
+        occupancyKey(course.level, course.semester),
+      )!;
+
+      const candidateSlots = [...DEPARTMENTAL_DAY_SLOTS].sort((a, b) => {
+        const loadDiff =
+          (byDay.get(a.day)?.length ?? 0) - (byDay.get(b.day)?.length ?? 0);
+        if (loadDiff !== 0) return loadDiff;
+        return (
+          this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime)
+        );
+      });
+
+      const candidate = candidateSlots.find((slot) => {
+        const intervals = byDay.get(slot.day) ?? [];
+        return !intervals.some((interval) =>
+          this.intervalsOverlap(
+            { startTime: slot.startTime, endTime: slot.endTime },
+            interval,
+          ),
+        );
+      });
 
       if (candidate) {
-        occupied.push(candidate);
-        occupiedByLevel.set(course.level, occupied);
+        byDay.get(candidate.day)!.push({
+          startTime: candidate.startTime,
+          endTime: candidate.endTime,
+        });
         recommendations.push({
           courseCode: course.code,
-          dayOfWeek: DayOfWeek.FRIDAY,
+          dayOfWeek: candidate.day,
           startTime: candidate.startTime,
           endTime: candidate.endTime,
           hasConflict: false,
@@ -1167,7 +1196,7 @@ export class SchedulesService extends BaseService<
       } else {
         recommendations.push({
           courseCode: course.code,
-          dayOfWeek: DayOfWeek.FRIDAY,
+          dayOfWeek: '',
           startTime: '',
           endTime: '',
           hasConflict: true,

@@ -60,7 +60,7 @@ export const DEPARTMENTAL_DAY_SLOTS: DaySlot[] = WEEKDAYS_ONLY.flatMap((day) =>
   (SLOTS_BY_DAY[day] ?? []).map((slot) => ({ day, ...slot })),
 );
 
-export const FRIDAY_UNIVERSITY_SLOTS: Record
+export const FRIDAY_UNIVERSITY_SLOTS: Record<
   string,
   {
     esm?: TimeSlot;
