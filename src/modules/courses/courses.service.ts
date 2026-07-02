@@ -15,7 +15,7 @@ import {
   BulkOperationResult,
   CsvValidationError,
 } from '../../common/dto/csv-bulk.dto';
-import { College, Course, Level, Role } from '../../generated/prisma';
+import { College, Course, Level, Role, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 export interface CourseWithAliasWarnings extends Course {
@@ -213,6 +213,7 @@ export class CoursesService extends BaseService<
       'code',
       'name',
       'level',
+      'semester',
       'credits',
       'departmentCode',
       'lecturerEmail',
@@ -293,6 +294,7 @@ export class CoursesService extends BaseService<
       code: string;
       name: string;
       level: Level;
+      semester: Semester;
       credits: number;
       departmentCode: string;
       lecturerId: string;
@@ -314,6 +316,7 @@ export class CoursesService extends BaseService<
           code: row.code,
           name: row.name,
           level: row.level,
+          semester: row.semester,
           credits: row.credits,
           departmentCode: row.departmentCode,
           lecturerId,
@@ -366,6 +369,7 @@ export class CoursesService extends BaseService<
       'code',
       'name',
       'level',
+      'semester',
       'credits',
       'departmentCode',
       'lecturerEmail',
@@ -375,6 +379,7 @@ export class CoursesService extends BaseService<
       code: 'CSC101',
       name: 'Introduction to Programming',
       level: 'LEVEL_100',
+      semester: 'FIRST',
       credits: '3',
       departmentCode: 'CSC',
       lecturerEmail: 'lecturer@university.edu',
