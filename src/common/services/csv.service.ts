@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import csv from 'csv-parser';
+import * as csvParser from 'csv-parser';
 import { Readable } from 'stream';
 import { CsvValidationError, BulkOperationResult } from '../dto/csv-bulk.dto';
 
@@ -20,7 +20,7 @@ export class CsvService {
       const stream = Readable.from(buffer.toString());
 
       stream
-        .pipe(csv())
+        .pipe(csvParser())
         .on('headers', (headers: string[]) => {
           const missingHeaders = requiredHeaders.filter(
             (h) => !headers.includes(h),
