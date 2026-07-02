@@ -9,7 +9,7 @@ import {
   Matches,
   IsOptional,
 } from 'class-validator';
-import { Level, DayOfWeek } from '../../generated/prisma';
+import { Level, Semester, DayOfWeek } from '../../generated/prisma';
 
 export interface CsvValidationError {
   row: number;
@@ -35,12 +35,12 @@ export class DepartmentCsvRowDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[A-Z]{2,4}$/, { message: 'Code must be 2-4 uppercase letters' })
-  code: string;
+  code!: string;
 
   @ApiProperty({ example: 'Computer Science' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 }
 
 export class CourseCsvRowDto {
@@ -50,33 +50,37 @@ export class CourseCsvRowDto {
   @Matches(/^[A-Z]{2,4}\d{3}$/, {
     message: 'Code must follow format: 2-4 letters followed by 3 digits',
   })
-  code: string;
+  code!: string;
 
   @ApiProperty({ example: 'Introduction to Programming' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiProperty({ enum: Level })
   @IsEnum(Level)
-  level: Level;
+  level!: Level;
+
+  @ApiProperty({ enum: Semester })
+  @IsEnum(Semester)
+  semester!: Semester;
 
   @ApiProperty({ example: 3 })
   @IsInt()
   @Min(1)
   @Max(6)
-  credits: number;
+  credits!: number;
 
   @ApiProperty({ example: 'CSC' })
   @IsString()
   @IsNotEmpty()
   @Matches(/^[A-Z]{2,4}$/)
-  departmentCode: string;
+  departmentCode!: string;
 
   @ApiProperty({ example: 'lecturer@university.edu' })
   @IsString()
   @IsNotEmpty()
-  lecturerEmail: string;
+  lecturerEmail!: string;
 
   @ApiProperty({
     required: false,
@@ -96,23 +100,23 @@ export class ScheduleCsvRowDto {
   @Matches(/^[A-Z]{2,4}\d{3}$/, {
     message: 'Course code must follow format: 2-4 letters followed by 3 digits',
   })
-  courseCode: string;
+  courseCode!: string;
 
   @ApiProperty({ enum: DayOfWeek })
   @IsEnum(DayOfWeek)
-  dayOfWeek: DayOfWeek;
+  dayOfWeek!: DayOfWeek;
 
   @ApiProperty({ example: '09:00' })
   @IsString()
   @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: 'Start time must be in HH:MM format',
   })
-  startTime: string;
+  startTime!: string;
 
   @ApiProperty({ example: '11:00' })
   @IsString()
   @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
     message: 'End time must be in HH:MM format',
   })
-  endTime: string;
+  endTime!: string;
 }
