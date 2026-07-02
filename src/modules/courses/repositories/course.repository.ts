@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Course, Level } from '../../../generated/prisma';
+import { Course, Level, Semester } from '../../../generated/prisma';
 
 @Injectable()
 export class CourseRepository {
@@ -107,6 +107,7 @@ export class CourseRepository {
       code: string;
       name: string;
       level: Level;
+      semester: Semester;
       credits: number;
       departmentCode: string;
       lecturerId: string;
