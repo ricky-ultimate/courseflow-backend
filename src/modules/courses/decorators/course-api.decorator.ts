@@ -199,7 +199,7 @@ export const ApiBulkCreateCourses = () =>
       summary: 'Bulk create courses from CSV',
       description:
         'Upload a CSV file to create multiple courses at once. ' +
-        'Required columns: code, name, level, credits, departmentCode, lecturerEmail. ' +
+        'Required columns: code, name, level, semester, credits, departmentCode, lecturerEmail. ' +
         'Optional column: aliasOfCodes (comma-separated course codes to link as aliases). ' +
         'Non-existent alias targets are skipped and returned in aliasWarnings.',
     }),
@@ -267,7 +267,7 @@ export const ApiDownloadCourseTemplate = () =>
     ApiOperation({
       summary: 'Download CSV template for bulk course creation',
       description:
-        'Returns a CSV template with all required and optional columns including aliasOfCodes.',
+        'Returns a CSV template with all required and optional columns, including semester and aliasOfCodes.',
     }),
     ApiCsvTemplateResponse(),
     ApiStandardResponses(),
