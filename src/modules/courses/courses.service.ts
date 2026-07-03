@@ -407,7 +407,7 @@ export class CoursesService extends BaseService<
 
       if (outcome.status === 'rejected') {
         fileTotalRows.set(file.originalName, 0);
-        const reason = outcome.reason;
+        const reason: unknown = outcome.reason;
         fileErrors.get(file.originalName)!.push({
           row: 0,
           field: 'file',
