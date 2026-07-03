@@ -77,6 +77,7 @@ export const ApiCreateCourse = () =>
       summary: 'Create a new course',
       description:
         'Create a new course with optional alias linking at creation time. ' +
+        'Assigning a lecturer is optional; a course can be created without one and a lecturer can be assigned or changed later via update. ' +
         'Alias codes that do not resolve to existing courses are skipped and reported in aliasWarnings.',
     }),
     ApiResponse({
@@ -199,8 +200,9 @@ export const ApiBulkCreateCourses = () =>
       summary: 'Bulk create courses from CSV',
       description:
         'Upload a CSV file to create multiple courses at once. ' +
-        'Required columns: code, name, level, semester, credits, departmentCode, lecturerEmail. ' +
-        'Optional column: aliasOfCodes (comma-separated course codes to link as aliases). ' +
+        'Required columns: code, name, level, semester, credits, departmentCode. ' +
+        'Optional columns: lecturerEmail (leave blank to create courses without an assigned lecturer; when provided it must match an active LECTURER or HOD), ' +
+        'aliasOfCodes (comma-separated course codes to link as aliases). ' +
         'Non-existent alias targets are skipped and returned in aliasWarnings.',
     }),
     ApiConsumes('multipart/form-data'),
@@ -289,14 +291,16 @@ export const ApiGetUniversityCoursesWithoutSchedules = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+
 export const ApiBulkCreateCoursesMultiple = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Bulk create courses from multiple CSV files',
       description:
         'Upload one or more CSV files to create multiple courses at once. Each file may target a different department or college. ' +
-        'Required columns: code, name, level, semester, credits, departmentCode, lecturerEmail. ' +
-        'Optional column: aliasOfCodes (comma-separated course codes to link as aliases). ' +
+        'Required columns: code, name, level, semester, credits, departmentCode. ' +
+        'Optional columns: lecturerEmail (leave blank to create courses without an assigned lecturer; when provided it must match an active LECTURER or HOD), ' +
+        'aliasOfCodes (comma-separated course codes to link as aliases). ' +
         'Course codes that appear in more than one file are rejected on the second and subsequent occurrences and reported per file. ' +
         'Returns a consolidated report with a per-file breakdown of created courses and validation errors.',
     }),
