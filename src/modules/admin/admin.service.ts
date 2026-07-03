@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { DEPARTMENTS_SEED } from './seed-data/departments.seed';
 import { UNIVERSITY_COURSES_SEED } from './seed-data/university-courses.seed';
-import { DEPARTMENTAL_COURSES_SEED } from './seed-data/departmental-courses.seed';
 import { College, Level, Semester } from '../../generated/prisma';
 
 interface SeedCourse {
@@ -14,7 +13,6 @@ interface SeedCourse {
   departmentCode: string;
   isGeneral: boolean;
   isLocked: boolean;
-  aliasOf?: string[];
 }
 
 interface SeedDepartment {
@@ -206,26 +204,11 @@ export class AdminService {
     let created = 0;
     let skipped = 0;
 
-    let allCourses: SeedCourse[];
-
     if (collegeScope) {
-      const collegeDepts = await this.prisma.department.findMany({
-        where: { college: collegeScope },
-        select: { code: true },
-      });
-      const collegeDeptCodes = new Set(collegeDepts.map((d) => d.code));
-
-      allCourses = (DEPARTMENTAL_COURSES_SEED as SeedCourse[]).filter((c) =>
-        collegeDeptCodes.has(c.departmentCode),
-      );
-    } else {
-      allCourses = [
-        ...UNIVERSITY_COURSES_SEED,
-        ...DEPARTMENTAL_COURSES_SEED,
-      ] as SeedCourse[];
+      return { created, skipped };
     }
 
-    for (const course of allCourses) {
+    for (const course of UNIVERSITY_COURSES_SEED as SeedCourse[]) {
       const existing = await this.prisma.course.findUnique({
         where: { code: course.code },
       });
@@ -242,33 +225,7 @@ export class AdminService {
         continue;
       }
 
-      const { aliasOf, ...courseData } = course;
-      await this.prisma.course.create({ data: courseData });
-
-      if (aliasOf?.length) {
-        for (const targetCode of aliasOf) {
-          const target = await this.prisma.course.findUnique({
-            where: { code: targetCode },
-          });
-          if (!target) continue;
-
-          const aliasExists = await this.prisma.courseAlias.findFirst({
-            where: {
-              OR: [
-                { primaryCode: course.code, aliasCode: targetCode },
-                { primaryCode: targetCode, aliasCode: course.code },
-              ],
-            },
-          });
-
-          if (!aliasExists) {
-            await this.prisma.courseAlias.create({
-              data: { primaryCode: course.code, aliasCode: targetCode },
-            });
-          }
-        }
-      }
-
+      await this.prisma.course.create({ data: course });
       created++;
     }
 

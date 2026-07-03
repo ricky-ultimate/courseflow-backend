@@ -83,7 +83,9 @@ export class AdminController {
 
   @Post('seed/courses')
   @Roles(Role.ADMIN, Role.COLLEGE_ADMIN)
-  @ApiOperation({ summary: 'Seed courses (Admin / College Admin)' })
+  @ApiOperation({
+    summary: 'Seed university-wide courses (Admin / College Admin)',
+  })
   seedCourses(@Req() req: AuthenticatedRequest) {
     return this.adminService.seedCourses(
       req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
