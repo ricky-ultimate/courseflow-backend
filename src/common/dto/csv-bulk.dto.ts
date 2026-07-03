@@ -95,10 +95,15 @@ export class CourseCsvRowDto {
   @Matches(/^[A-Z]{2,4}$/)
   departmentCode!: string;
 
-  @ApiProperty({ example: 'lecturer@university.edu' })
+  @ApiProperty({
+    required: false,
+    example: 'lecturer@university.edu',
+    description:
+      'Optional. When provided, must match the email of an active user with role LECTURER or HOD.',
+  })
   @IsString()
-  @IsNotEmpty()
-  lecturerEmail!: string;
+  @IsOptional()
+  lecturerEmail?: string;
 
   @ApiProperty({
     required: false,

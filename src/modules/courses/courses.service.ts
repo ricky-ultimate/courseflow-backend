@@ -224,7 +224,6 @@ export class CoursesService extends BaseService<
       'semester',
       'credits',
       'departmentCode',
-      'lecturerEmail',
     ];
 
     const { data, errors } = await this.csvService.parseCsvFile(
@@ -283,16 +282,22 @@ export class CoursesService extends BaseService<
     }
 
     const lecturerEmails = [
-      ...new Set(data.map((r) => r.lecturerEmail.toLowerCase())),
+      ...new Set(
+        data
+          .map((r) => r.lecturerEmail?.trim().toLowerCase())
+          .filter((email): email is string => !!email),
+      ),
     ];
-    const lecturers = await this.prisma.user.findMany({
-      where: {
-        email: { in: lecturerEmails, mode: 'insensitive' },
-        role: { in: [Role.LECTURER, Role.HOD] },
-        isActive: true,
-      },
-      select: { email: true, id: true },
-    });
+    const lecturers = lecturerEmails.length
+      ? await this.prisma.user.findMany({
+          where: {
+            email: { in: lecturerEmails, mode: 'insensitive' },
+            role: { in: [Role.LECTURER, Role.HOD] },
+            isActive: true,
+          },
+          select: { email: true, id: true },
+        })
+      : [];
 
     const emailToIdMap = new Map(
       lecturers.map((l) => [l.email.toLowerCase(), l.id]),
@@ -305,12 +310,26 @@ export class CoursesService extends BaseService<
       semester: Semester;
       credits: number;
       departmentCode: string;
-      lecturerId: string;
+      lecturerId?: string;
     }> = [];
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const lecturerId = emailToIdMap.get(row.lecturerEmail.toLowerCase());
+      const requestedEmail = row.lecturerEmail?.trim();
+
+      if (!requestedEmail) {
+        rowsForRepo.push({
+          code: row.code,
+          name: row.name,
+          level: row.level,
+          semester: row.semester,
+          credits: row.credits,
+          departmentCode: row.departmentCode,
+        });
+        continue;
+      }
+
+      const lecturerId = emailToIdMap.get(requestedEmail.toLowerCase());
 
       if (!lecturerId) {
         allErrors.push({
@@ -383,7 +402,6 @@ export class CoursesService extends BaseService<
       'semester',
       'credits',
       'departmentCode',
-      'lecturerEmail',
     ];
 
     const fileErrors = new Map<string, CsvValidationError[]>();
@@ -485,7 +503,9 @@ export class CoursesService extends BaseService<
 
     const lecturerEmails = [
       ...new Set(
-        dedupedRows.map((row) => row.data.lecturerEmail.toLowerCase()),
+        dedupedRows
+          .map((row) => row.data.lecturerEmail?.trim().toLowerCase())
+          .filter((email): email is string => !!email),
       ),
     ];
     const lecturers = lecturerEmails.length
@@ -509,12 +529,27 @@ export class CoursesService extends BaseService<
       semester: Semester;
       credits: number;
       departmentCode: string;
-      lecturerId: string;
+      lecturerId?: string;
     }> = [];
     const rowByCode = new Map<string, TrackedCourseRow>();
 
     for (const row of dedupedRows) {
-      const lecturerId = emailToIdMap.get(row.data.lecturerEmail.toLowerCase());
+      const requestedEmail = row.data.lecturerEmail?.trim();
+
+      if (!requestedEmail) {
+        rowsForRepo.push({
+          code: row.data.code,
+          name: row.data.name,
+          level: row.data.level,
+          semester: row.data.semester,
+          credits: row.data.credits,
+          departmentCode: row.data.departmentCode,
+        });
+        rowByCode.set(row.data.code, row);
+        continue;
+      }
+
+      const lecturerId = emailToIdMap.get(requestedEmail.toLowerCase());
 
       if (!lecturerId) {
         fileErrors.get(row.fileName)!.push({

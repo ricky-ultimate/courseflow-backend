@@ -110,7 +110,7 @@ export class CourseRepository {
       semester: Semester;
       credits: number;
       departmentCode: string;
-      lecturerId: string;
+      lecturerId?: string;
     }>,
   ): Promise<{
     created: Course[];
@@ -134,10 +134,19 @@ export class CourseRepository {
       .findMany({ where: { code: { in: deptCodes } }, select: { code: true } })
       .then((rows) => new Set(rows.map((r) => r.code)));
 
-    const lecturerIds = [...new Set(courses.map((c) => c.lecturerId))];
-    const existingLecturers = await this.prisma.user
-      .findMany({ where: { id: { in: lecturerIds } }, select: { id: true } })
-      .then((rows) => new Set(rows.map((r) => r.id)));
+    const lecturerIds = [
+      ...new Set(
+        courses.map((c) => c.lecturerId).filter((id): id is string => !!id),
+      ),
+    ];
+    const existingLecturers = lecturerIds.length
+      ? await this.prisma.user
+          .findMany({
+            where: { id: { in: lecturerIds } },
+            select: { id: true },
+          })
+          .then((rows) => new Set(rows.map((r) => r.id)))
+      : new Set<string>();
 
     for (let i = 0; i < courses.length; i++) {
       const courseData = courses[i];
@@ -158,7 +167,10 @@ export class CourseRepository {
         continue;
       }
 
-      if (!existingLecturers.has(courseData.lecturerId)) {
+      if (
+        courseData.lecturerId &&
+        !existingLecturers.has(courseData.lecturerId)
+      ) {
         errors.push({
           index: i,
           error: `Lecturer with id '${courseData.lecturerId}' does not exist`,
