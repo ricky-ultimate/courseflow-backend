@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { DayOfWeek, Schedule } from '../../../generated/prisma';
+import { DayOfWeek, Schedule, SessionType } from '../../../generated/prisma';
 
 @Injectable()
 export class ScheduleRepository {
@@ -9,12 +9,14 @@ export class ScheduleRepository {
   async findConflict(
     courseCode: string,
     sessionId: string,
+    sessionType: SessionType,
     excludeId?: string,
   ): Promise<Schedule | null> {
     return this.prisma.schedule.findFirst({
       where: {
         courseCode,
         sessionId,
+        sessionType,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
