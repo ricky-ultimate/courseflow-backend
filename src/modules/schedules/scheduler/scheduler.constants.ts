@@ -1,4 +1,5 @@
-import { DayOfWeek, Semester } from '../../../generated/prisma';
+import { DayOfWeek, Semester, SessionType } from '../../../generated/prisma';
+export { SessionType };
 
 export interface TimeSlot {
   startTime: string;
@@ -59,11 +60,6 @@ export const SLOTS_BY_DAY: Partial<Record<DayOfWeek, TimeSlot[]>> = {
 export const DEPARTMENTAL_DAY_SLOTS: DaySlot[] = WEEKDAYS_ONLY.flatMap((day) =>
   (SLOTS_BY_DAY[day] ?? []).map((slot) => ({ day, ...slot })),
 );
-
-export enum SessionType {
-  THEORY = 'THEORY',
-  PRACTICAL = 'PRACTICAL',
-}
 
 export interface FixedFridayCourseSlot {
   courseCode: string;
