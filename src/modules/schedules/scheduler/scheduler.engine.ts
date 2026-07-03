@@ -3,14 +3,13 @@ import { DayOfWeek, Level, Semester } from '../../../generated/prisma';
 import {
   DEPARTMENTAL_DAY_SLOTS,
   DaySlot,
-  FRIDAY_UNIVERSITY_SLOTS,
   ESM_COURSE_CODE_PATTERN,
   GST_COURSE_CODE_PATTERN,
   ENT_COURSE_CODE_PATTERN,
   SDN_COURSE_CODE_PATTERN,
-  GST_ENT_FRIDAY_CODES,
-  SDN_FRIDAY_ELIGIBLE_LEVELS,
-  TimeSlot,
+  PIF_COURSE_CODE_PATTERN,
+  SessionType,
+  findFixedFridayCourseSlot,
 } from './scheduler.constants';
 
 export interface CourseInput {
@@ -40,6 +39,7 @@ export interface ScheduleAssignment {
   startTime: string;
   endTime: string;
   semester: Semester;
+  sessionType?: SessionType;
 }
 
 interface TimeInterval {
@@ -355,40 +355,56 @@ export class SchedulerEngine {
     }
   }
 
-  private getFridaySlotForUniversityCourse(
+  private getFixedFridaySlot(
     courseCode: string,
-    level: Level,
-  ): DaySlot | null {
-    const levelSlots = FRIDAY_UNIVERSITY_SLOTS[level];
-    if (!levelSlots) return null;
+    semester: Semester,
+  ): (DaySlot & { sessionType?: SessionType }) | null {
+    const fixedSlot = findFixedFridayCourseSlot(courseCode, semester);
 
-    const normalizedCode = courseCode.toUpperCase();
-    let timeSlot: TimeSlot | undefined;
-
-    if (ESM_COURSE_CODE_PATTERN.test(courseCode)) {
-      timeSlot = levelSlots.esm;
-    } else if (
-      (GST_COURSE_CODE_PATTERN.test(courseCode) ||
-        ENT_COURSE_CODE_PATTERN.test(courseCode)) &&
-      GST_ENT_FRIDAY_CODES.has(normalizedCode)
-    ) {
-      timeSlot = levelSlots.gstEnt;
-    } else if (
-      SDN_COURSE_CODE_PATTERN.test(courseCode) &&
-      SDN_FRIDAY_ELIGIBLE_LEVELS.includes(level)
-    ) {
-      timeSlot = levelSlots.sdn;
-    }
-
-    if (!timeSlot) {
+    if (!fixedSlot) {
       return null;
     }
 
     return {
       day: DayOfWeek.FRIDAY,
-      startTime: timeSlot.startTime,
-      endTime: timeSlot.endTime,
+      startTime: fixedSlot.startTime,
+      endTime: fixedSlot.endTime,
+      sessionType: fixedSlot.sessionType,
     };
+  }
+
+  private isManuallyScheduledOnly(courseCode: string): boolean {
+    return (
+      PIF_COURSE_CODE_PATTERN.test(courseCode) ||
+      SDN_COURSE_CODE_PATTERN.test(courseCode)
+    );
+  }
+
+  hasConflictWithFixedFridaySlot(
+    courseCode: string,
+    semester: Semester,
+    dayOfWeek: DayOfWeek,
+    startTime: string,
+    endTime: string,
+  ): boolean {
+    const fixedSlot = this.getFixedFridaySlot(courseCode, semester);
+
+    if (!fixedSlot) {
+      return false;
+    }
+
+    if (fixedSlot.sessionType === SessionType.PRACTICAL) {
+      return dayOfWeek === DayOfWeek.FRIDAY;
+    }
+
+    if (dayOfWeek !== fixedSlot.day) {
+      return false;
+    }
+
+    return this.intervalsOverlap(
+      { startTime, endTime },
+      { startTime: fixedSlot.startTime, endTime: fixedSlot.endTime },
+    );
   }
 
   private solve(
@@ -493,7 +509,9 @@ export class SchedulerEngine {
         c.isGeneral === true ||
         ESM_COURSE_CODE_PATTERN.test(c.courseCode) ||
         GST_COURSE_CODE_PATTERN.test(c.courseCode) ||
-        ENT_COURSE_CODE_PATTERN.test(c.courseCode),
+        ENT_COURSE_CODE_PATTERN.test(c.courseCode) ||
+        SDN_COURSE_CODE_PATTERN.test(c.courseCode) ||
+        PIF_COURSE_CODE_PATTERN.test(c.courseCode),
     );
 
     const departmentalCourses = courses.filter(
@@ -501,35 +519,42 @@ export class SchedulerEngine {
         !c.isGeneral &&
         !ESM_COURSE_CODE_PATTERN.test(c.courseCode) &&
         !GST_COURSE_CODE_PATTERN.test(c.courseCode) &&
-        !ENT_COURSE_CODE_PATTERN.test(c.courseCode),
+        !ENT_COURSE_CODE_PATTERN.test(c.courseCode) &&
+        !SDN_COURSE_CODE_PATTERN.test(c.courseCode) &&
+        !PIF_COURSE_CODE_PATTERN.test(c.courseCode),
     );
 
     const assignments = new Map<string, ScheduleAssignment>();
     const unscheduledUniversity: string[] = [];
 
     for (const course of universityCourses) {
-      const fridaySlot = this.getFridaySlotForUniversityCourse(
+      const fixedSlot = this.getFixedFridaySlot(
         course.courseCode,
-        course.level,
+        course.semester,
       );
 
-      if (!fridaySlot) {
-        unscheduledUniversity.push(course.courseCode);
+      if (fixedSlot) {
+        assignments.set(course.courseCode, {
+          courseCode: course.courseCode,
+          dayOfWeek: fixedSlot.day,
+          startTime: fixedSlot.startTime,
+          endTime: fixedSlot.endTime,
+          semester: course.semester,
+          sessionType: fixedSlot.sessionType,
+        });
         continue;
       }
 
-      assignments.set(course.courseCode, {
-        courseCode: course.courseCode,
-        dayOfWeek: fridaySlot.day,
-        startTime: fridaySlot.startTime,
-        endTime: fridaySlot.endTime,
-        semester: course.semester,
-      });
+      if (this.isManuallyScheduledOnly(course.courseCode)) {
+        continue;
+      }
+
+      unscheduledUniversity.push(course.courseCode);
     }
 
     if (unscheduledUniversity.length > 0) {
       throw new UnprocessableEntityException(
-        `Scheduler could not determine Friday slots for university courses: ${unscheduledUniversity.join(', ')}. Only ESM (all levels), GST/ENT 201/202, 301/302, 401/402, and SDN at the configured eligible levels are auto-scheduled on Friday. PIF and any other general course outside those patterns must be scheduled manually using the university course scheduling tool.`,
+        `Scheduler could not determine fixed Friday slots for: ${unscheduledUniversity.join(', ')}. Verify these course codes are included in FRIDAY_FIXED_COURSE_SLOTS for the applicable semester, or reclassify them so they are scheduled manually.`,
       );
     }
 
