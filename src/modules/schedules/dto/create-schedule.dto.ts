@@ -7,7 +7,7 @@ import {
   IsBoolean,
   Matches,
 } from 'class-validator';
-import { DayOfWeek } from '../../../generated/prisma';
+import { DayOfWeek, SessionType } from '../../../generated/prisma';
 import {
   IsTimeFormat,
   IsEndTimeAfterStartTime,
@@ -20,20 +20,31 @@ export class CreateScheduleDto {
   @Matches(/^[A-Z]{2,4}\d{3}$/, {
     message: 'Course code must follow format: 2-4 letters followed by 3 digits',
   })
-  courseCode: string;
+  courseCode!: string;
 
   @ApiProperty({ enum: DayOfWeek, example: DayOfWeek.MONDAY })
   @IsEnum(DayOfWeek, { message: 'Invalid day of week' })
-  dayOfWeek: DayOfWeek;
+  dayOfWeek!: DayOfWeek;
 
   @ApiProperty({ example: '09:00' })
   @IsTimeFormat({ message: 'Start time must be in HH:MM format' })
-  startTime: string;
+  startTime!: string;
 
   @ApiProperty({ example: '11:00' })
   @IsTimeFormat({ message: 'End time must be in HH:MM format' })
   @IsEndTimeAfterStartTime('startTime')
-  endTime: string;
+  endTime!: string;
+
+  @ApiProperty({
+    enum: SessionType,
+    required: false,
+    default: SessionType.THEORY,
+    description:
+      'Distinguishes theory and practical sessions for courses that run both, such as GST401, GST402, GST501, GST502. Defaults to THEORY when omitted.',
+  })
+  @IsEnum(SessionType, { message: 'Invalid session type' })
+  @IsOptional()
+  sessionType?: SessionType;
 
   @ApiProperty({
     required: false,

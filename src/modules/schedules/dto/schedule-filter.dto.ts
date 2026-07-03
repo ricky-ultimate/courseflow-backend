@@ -1,6 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsEnum } from 'class-validator';
-import { DayOfWeek, Level, Semester } from '../../../generated/prisma';
+import {
+  DayOfWeek,
+  Level,
+  Semester,
+  SessionType,
+} from '../../../generated/prisma';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class ScheduleFilterDto extends PaginationDto {
@@ -40,6 +45,11 @@ export class ScheduleFilterDto extends PaginationDto {
   @IsOptional()
   @IsEnum(DayOfWeek)
   dayOfWeek?: DayOfWeek;
+
+  @ApiPropertyOptional({ enum: SessionType })
+  @IsOptional()
+  @IsEnum(SessionType)
+  sessionType?: SessionType;
 
   @ApiPropertyOptional({ description: 'Start time filter (HH:MM)' })
   @IsOptional()

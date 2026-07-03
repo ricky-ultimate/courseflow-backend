@@ -1,4 +1,5 @@
-import { DayOfWeek, Level } from '../../../generated/prisma';
+import { DayOfWeek, Semester, SessionType } from '../../../generated/prisma';
+export { SessionType };
 
 export interface TimeSlot {
   startTime: string;
@@ -60,55 +61,72 @@ export const DEPARTMENTAL_DAY_SLOTS: DaySlot[] = WEEKDAYS_ONLY.flatMap((day) =>
   (SLOTS_BY_DAY[day] ?? []).map((slot) => ({ day, ...slot })),
 );
 
-export const FRIDAY_UNIVERSITY_SLOTS: Record<
-  string,
-  {
-    esm?: TimeSlot;
-    gstEnt?: TimeSlot;
-    sdn?: TimeSlot;
-  }
+export interface FixedFridayCourseSlot {
+  courseCode: string;
+  startTime: string;
+  endTime: string;
+  sessionType?: SessionType;
+}
+
+export const FRIDAY_FIXED_COURSE_SLOTS: Record<
+  Semester,
+  FixedFridayCourseSlot[]
 > = {
-  LEVEL_100: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-  },
-  LEVEL_200: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gstEnt: { startTime: '11:00', endTime: '13:00' },
-  },
-  LEVEL_300: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gstEnt: { startTime: '11:00', endTime: '13:00' },
-  },
-  LEVEL_400: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    gstEnt: { startTime: '11:00', endTime: '13:00' },
-    sdn: { startTime: '13:00', endTime: '15:00' },
-  },
-  LEVEL_500: {
-    esm: { startTime: '09:00', endTime: '11:00' },
-    sdn: { startTime: '11:00', endTime: '13:00' },
-  },
+  [Semester.FIRST]: [
+    { courseCode: 'ESM101', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM401', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM501', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ENT211', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ENT311', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM301', startTime: '13:00', endTime: '15:00' },
+    { courseCode: 'ESM201', startTime: '13:00', endTime: '15:00' },
+    {
+      courseCode: 'GST401',
+      startTime: '13:00',
+      endTime: '15:00',
+      sessionType: SessionType.PRACTICAL,
+    },
+    {
+      courseCode: 'GST501',
+      startTime: '13:00',
+      endTime: '15:00',
+      sessionType: SessionType.PRACTICAL,
+    },
+    { courseCode: 'SDN101', startTime: '13:00', endTime: '15:00' },
+  ],
+  [Semester.SECOND]: [
+    { courseCode: 'ESM102', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM402', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM502', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ENT212', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ENT312', startTime: '09:00', endTime: '12:00' },
+    { courseCode: 'ESM302', startTime: '13:00', endTime: '15:00' },
+    { courseCode: 'ESM202', startTime: '13:00', endTime: '15:00' },
+    {
+      courseCode: 'GST402',
+      startTime: '13:00',
+      endTime: '15:00',
+      sessionType: SessionType.PRACTICAL,
+    },
+    {
+      courseCode: 'GST502',
+      startTime: '13:00',
+      endTime: '15:00',
+      sessionType: SessionType.PRACTICAL,
+    },
+    { courseCode: 'SDN102', startTime: '13:00', endTime: '15:00' },
+  ],
 };
 
-export const GST_ENT_FRIDAY_CODES: Set<string> = new Set([
-  'GST201',
-  'GST202',
-  'GST301',
-  'GST302',
-  'GST401',
-  'GST402',
-  'ENT201',
-  'ENT202',
-  'ENT301',
-  'ENT302',
-  'ENT401',
-  'ENT402',
-]);
-
-export const SDN_FRIDAY_ELIGIBLE_LEVELS: Level[] = [
-  Level.LEVEL_400,
-  Level.LEVEL_500,
-];
+export function findFixedFridayCourseSlot(
+  courseCode: string,
+  semester: Semester,
+): FixedFridayCourseSlot | undefined {
+  const normalizedCode = courseCode.toUpperCase();
+  return FRIDAY_FIXED_COURSE_SLOTS[semester].find(
+    (slot) => slot.courseCode === normalizedCode,
+  );
+}
 
 export const ESM_COURSE_CODE_PATTERN = /^ESM/i;
 export const GST_COURSE_CODE_PATTERN = /^GST/i;
