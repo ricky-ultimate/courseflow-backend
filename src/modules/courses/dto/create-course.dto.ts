@@ -18,13 +18,13 @@ export class CreateCourseDto {
   @ApiProperty({ example: 'CSC101' })
   @IsString()
   @IsNotEmpty()
-  code: string;
+  code!: string;
 
   @ApiProperty({ example: 'Introduction to Computer Science' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
-  name: string;
+  name!: string;
 
   @ApiProperty({ required: false })
   @IsString()
@@ -34,7 +34,7 @@ export class CreateCourseDto {
 
   @ApiProperty({ enum: Level })
   @IsEnum(Level)
-  level: Level;
+  level!: Level;
 
   @ApiProperty({ enum: Semester, default: Semester.FIRST })
   @IsEnum(Semester)
@@ -44,16 +44,18 @@ export class CreateCourseDto {
   @IsInt()
   @Min(1)
   @Max(6)
-  credits: number;
+  credits!: number;
 
   @ApiProperty({ example: 'CSC' })
   @IsString()
   @IsNotEmpty()
-  departmentCode: string;
+  departmentCode!: string;
 
   @ApiProperty({
+    required: false,
     example: 'clxyz123abc456def789',
-    description: 'ID of the lecturer (User with role LECTURER or HOD)',
+    description:
+      'Optional ID of the lecturer (User with role LECTURER or HOD). A course can be created without a lecturer and one can be assigned later.',
   })
   @IsString()
   @IsOptional()
