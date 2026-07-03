@@ -8,12 +8,13 @@ import {
   Query,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   Res,
   BadRequestException,
   Req,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { Response as ExpressResponse } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
@@ -26,6 +27,7 @@ import {
   ApiGetUniversityCoursesWithoutSchedules,
   ApiGetCourseStatistics,
   ApiBulkCreateCourses,
+  ApiBulkCreateCoursesMultiple,
   ApiDownloadCourseTemplate,
 } from './decorators/course-api.decorator';
 import { CoursesService } from './courses.service';
@@ -109,6 +111,52 @@ export class CoursesController extends BaseController<
 
     return this.coursesService.bulkCreateFromCsv(
       file.buffer,
+      req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
+    );
+  }
+
+  @Post('bulk/upload-multi')
+  @UseInterceptors(FilesInterceptor('files', 20))
+  @ApiBulkCreateCoursesMultiple()
+  async bulkCreateFromMultipleCsv(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
+
+    const invalidFiles = files.filter(
+      (file) =>
+        file.mimetype !== 'text/csv' && !file.originalname.endsWith('.csv'),
+    );
+
+    if (invalidFiles.length > 0) {
+      throw new BadRequestException(
+        `The following files must be CSV: ${invalidFiles
+          .map((file) => file.originalname)
+          .join(', ')}`,
+      );
+    }
+
+    const fileNames = files.map((file) => file.originalname);
+    const duplicateNames = [
+      ...new Set(
+        fileNames.filter((name, index) => fileNames.indexOf(name) !== index),
+      ),
+    ];
+
+    if (duplicateNames.length > 0) {
+      throw new BadRequestException(
+        `Duplicate file names detected: ${duplicateNames.join(', ')}. Rename files before uploading.`,
+      );
+    }
+
+    return this.coursesService.bulkCreateFromMultipleCsv(
+      files.map((file) => ({
+        originalName: file.originalname,
+        buffer: file.buffer,
+      })),
       req.user.role === Role.COLLEGE_ADMIN ? req.user.collegeCode : undefined,
     );
   }

@@ -14,12 +14,20 @@ import {
   CourseCsvRowDto,
   BulkOperationResult,
   CsvValidationError,
+  FileBulkResult,
+  MultiFileBulkOperationResult,
 } from '../../common/dto/csv-bulk.dto';
 import { College, Course, Level, Role, Semester } from '../../generated/prisma';
 import { PaginatedResult } from '../../common/interfaces/base-service.interface';
 
 export interface CourseWithAliasWarnings extends Course {
   aliasWarnings?: string[];
+}
+
+interface TrackedCourseRow {
+  fileName: string;
+  rowNumber: number;
+  data: CourseCsvRowDto;
 }
 
 @Injectable()
@@ -362,6 +370,250 @@ export class CoursesService extends BaseService<
       data.length + errors.length,
       aliasWarnings,
     );
+  }
+
+  async bulkCreateFromMultipleCsv(
+    files: Array<{ originalName: string; buffer: Buffer }>,
+    collegeScope?: College,
+  ): Promise<MultiFileBulkOperationResult<Course>> {
+    const requiredHeaders = [
+      'code',
+      'name',
+      'level',
+      'semester',
+      'credits',
+      'departmentCode',
+      'lecturerEmail',
+    ];
+
+    const fileErrors = new Map<string, CsvValidationError[]>();
+    const fileTotalRows = new Map<string, number>();
+
+    const parseOutcomes = await Promise.allSettled(
+      files.map((file) =>
+        this.csvService.parseCsvFile(
+          file.buffer,
+          CourseCsvRowDto,
+          requiredHeaders,
+        ),
+      ),
+    );
+
+    const trackedRows: TrackedCourseRow[] = [];
+
+    files.forEach((file, index) => {
+      fileErrors.set(file.originalName, []);
+      const outcome = parseOutcomes[index];
+
+      if (outcome.status === 'rejected') {
+        fileTotalRows.set(file.originalName, 0);
+        const reason = outcome.reason;
+        fileErrors.get(file.originalName)!.push({
+          row: 0,
+          field: 'file',
+          value: file.originalName,
+          message:
+            reason instanceof Error
+              ? reason.message
+              : 'Failed to parse CSV file',
+        });
+        return;
+      }
+
+      const { data, errors } = outcome.value;
+      fileErrors.get(file.originalName)!.push(...errors);
+      fileTotalRows.set(file.originalName, data.length + errors.length);
+
+      data.forEach((row, rowIndex) => {
+        trackedRows.push({
+          fileName: file.originalName,
+          rowNumber: rowIndex + 2,
+          data: row,
+        });
+      });
+    });
+
+    let scopedRows = trackedRows;
+
+    if (collegeScope) {
+      const deptCodes = [
+        ...new Set(trackedRows.map((row) => row.data.departmentCode)),
+      ];
+      const depts = deptCodes.length
+        ? await this.prisma.department.findMany({
+            where: { code: { in: deptCodes } },
+            select: { code: true, college: true },
+          })
+        : [];
+      const deptCollegeMap = new Map(depts.map((d) => [d.code, d.college]));
+
+      scopedRows = trackedRows.filter((row) => {
+        const deptCollege = deptCollegeMap.get(row.data.departmentCode);
+        if (deptCollege && deptCollege !== collegeScope) {
+          fileErrors.get(row.fileName)!.push({
+            row: row.rowNumber,
+            field: 'departmentCode',
+            value: row.data.departmentCode,
+            message: `Department '${row.data.departmentCode}' does not belong to your college (${collegeScope})`,
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    const codeOccurrences = new Map<string, TrackedCourseRow[]>();
+    for (const row of scopedRows) {
+      const occurrences = codeOccurrences.get(row.data.code) ?? [];
+      occurrences.push(row);
+      codeOccurrences.set(row.data.code, occurrences);
+    }
+
+    const dedupedRows: TrackedCourseRow[] = [];
+    for (const occurrences of codeOccurrences.values()) {
+      const [first, ...duplicates] = occurrences;
+      dedupedRows.push(first);
+      for (const duplicate of duplicates) {
+        fileErrors.get(duplicate.fileName)!.push({
+          row: duplicate.rowNumber,
+          field: 'code',
+          value: duplicate.data.code,
+          message: `Course code '${duplicate.data.code}' also appears in '${first.fileName}' (row ${first.rowNumber}). Duplicate skipped.`,
+        });
+      }
+    }
+
+    const lecturerEmails = [
+      ...new Set(
+        dedupedRows.map((row) => row.data.lecturerEmail.toLowerCase()),
+      ),
+    ];
+    const lecturers = lecturerEmails.length
+      ? await this.prisma.user.findMany({
+          where: {
+            email: { in: lecturerEmails, mode: 'insensitive' },
+            role: { in: [Role.LECTURER, Role.HOD] },
+            isActive: true,
+          },
+          select: { email: true, id: true },
+        })
+      : [];
+    const emailToIdMap = new Map(
+      lecturers.map((lecturer) => [lecturer.email.toLowerCase(), lecturer.id]),
+    );
+
+    const rowsForRepo: Array<{
+      code: string;
+      name: string;
+      level: Level;
+      semester: Semester;
+      credits: number;
+      departmentCode: string;
+      lecturerId: string;
+    }> = [];
+    const rowByCode = new Map<string, TrackedCourseRow>();
+
+    for (const row of dedupedRows) {
+      const lecturerId = emailToIdMap.get(row.data.lecturerEmail.toLowerCase());
+
+      if (!lecturerId) {
+        fileErrors.get(row.fileName)!.push({
+          row: row.rowNumber,
+          field: 'lecturerEmail',
+          value: row.data.lecturerEmail,
+          message: `Lecturer with email '${row.data.lecturerEmail}' not found or is not a lecturer.`,
+        });
+        continue;
+      }
+
+      rowsForRepo.push({
+        code: row.data.code,
+        name: row.data.name,
+        level: row.data.level,
+        semester: row.data.semester,
+        credits: row.data.credits,
+        departmentCode: row.data.departmentCode,
+        lecturerId,
+      });
+      rowByCode.set(row.data.code, row);
+    }
+
+    const { created, errors: repositoryErrors } = rowsForRepo.length
+      ? await this.courseRepository.bulkCreateWithValidation(rowsForRepo)
+      : { created: [], errors: [] };
+
+    const createdByFile = new Map<string, Course[]>();
+    for (const file of files) createdByFile.set(file.originalName, []);
+
+    for (const course of created) {
+      const meta = rowByCode.get(course.code);
+      if (meta) createdByFile.get(meta.fileName)!.push(course);
+    }
+
+    for (const repoError of repositoryErrors) {
+      const failedRow = rowsForRepo[repoError.index];
+      const meta = rowByCode.get(failedRow.code);
+      const fileName = meta?.fileName ?? files[0].originalName;
+      fileErrors.get(fileName)!.push({
+        row: meta?.rowNumber ?? 0,
+        field: 'general',
+        value: failedRow.code,
+        message: repoError.error,
+      });
+    }
+
+    const aliasWarningsByFile = new Map<string, string[]>();
+    for (const file of files) aliasWarningsByFile.set(file.originalName, []);
+
+    for (const [fileName, courses] of createdByFile) {
+      for (const course of courses) {
+        const sourceRow = rowByCode.get(course.code);
+        const aliasCodes = sourceRow?.data.aliasOfCodes?.trim()
+          ? sourceRow.data.aliasOfCodes
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [];
+        if (aliasCodes.length) {
+          const warnings = await this.linkAliases(course.code, aliasCodes);
+          aliasWarningsByFile.get(fileName)!.push(...warnings);
+        }
+      }
+    }
+
+    const fileResults: FileBulkResult<Course>[] = files.map((file) => {
+      const fileName = file.originalName;
+      return {
+        fileName,
+        result: this.csvService.createBulkResult(
+          createdByFile.get(fileName) ?? [],
+          fileErrors.get(fileName) ?? [],
+          fileTotalRows.get(fileName) ?? 0,
+          aliasWarningsByFile.get(fileName),
+        ),
+      };
+    });
+
+    const summary = fileResults.reduce(
+      (acc, file) => ({
+        totalFiles: acc.totalFiles,
+        totalRows: acc.totalRows + file.result.summary.totalRows,
+        successCount: acc.successCount + file.result.summary.successCount,
+        errorCount: acc.errorCount + file.result.summary.errorCount,
+      }),
+      {
+        totalFiles: files.length,
+        totalRows: 0,
+        successCount: 0,
+        errorCount: 0,
+      },
+    );
+
+    return {
+      success: summary.errorCount === 0,
+      files: fileResults,
+      summary,
+    };
   }
 
   generateCsvTemplate(): string {

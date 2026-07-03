@@ -289,3 +289,93 @@ export const ApiGetUniversityCoursesWithoutSchedules = () =>
     ApiStandardResponses(),
     ApiAuthRequired(),
   );
+export const ApiBulkCreateCoursesMultiple = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Bulk create courses from multiple CSV files',
+      description:
+        'Upload one or more CSV files to create multiple courses at once. Each file may target a different department or college. ' +
+        'Required columns: code, name, level, semester, credits, departmentCode, lecturerEmail. ' +
+        'Optional column: aliasOfCodes (comma-separated course codes to link as aliases). ' +
+        'Course codes that appear in more than one file are rejected on the second and subsequent occurrences and reported per file. ' +
+        'Returns a consolidated report with a per-file breakdown of created courses and validation errors.',
+    }),
+    ApiConsumes('multipart/form-data'),
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          files: {
+            type: 'array',
+            items: { type: 'string', format: 'binary' },
+            description: 'One or more CSV files with courses data',
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 201,
+      description: 'Multi-file bulk operation completed',
+      schema: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          files: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                fileName: { type: 'string', example: 'csc-courses.csv' },
+                result: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    created: { type: 'array', items: courseSchema },
+                    errors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          row: { type: 'number', example: 2 },
+                          field: { type: 'string', example: 'code' },
+                          value: { type: 'string', example: 'INVALID' },
+                          message: {
+                            type: 'string',
+                            example: 'Code already exists',
+                          },
+                        },
+                      },
+                    },
+                    aliasWarnings: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      nullable: true,
+                    },
+                    summary: {
+                      type: 'object',
+                      properties: {
+                        totalRows: { type: 'number', example: 10 },
+                        successCount: { type: 'number', example: 8 },
+                        errorCount: { type: 'number', example: 2 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          summary: {
+            type: 'object',
+            properties: {
+              totalFiles: { type: 'number', example: 3 },
+              totalRows: { type: 'number', example: 30 },
+              successCount: { type: 'number', example: 26 },
+              errorCount: { type: 'number', example: 4 },
+            },
+          },
+        },
+      },
+    }),
+    ApiStandardResponses(),
+    ApiAuthRequired(),
+  );
