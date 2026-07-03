@@ -9,6 +9,7 @@ import {
   Matches,
   IsOptional,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { Level, Semester, DayOfWeek } from '../../generated/prisma';
 
 export interface CsvValidationError {
@@ -66,6 +67,7 @@ export class CourseCsvRowDto {
   semester!: Semester;
 
   @ApiProperty({ example: 3 })
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(6)
