@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { Level, Semester } from '../../../generated/prisma';
+import {
+  ScheduleAssignment,
+  UnscheduledCourse,
+} from '../scheduler/scheduler.engine';
 
 export class GenerateScheduleDto {
   @ApiProperty({ enum: Semester, example: Semester.FIRST })
@@ -52,9 +56,13 @@ export interface GenerateScheduleResult {
   programme: string | null;
   level: Level | null;
   totalCourses: number;
-  scheduledCourses: number;
+  scheduledCount: number;
+  failedCount: number;
   preservedOverrides: number;
   skippedLockedDepartments: number;
+  scheduledCourses: ScheduleAssignment[];
+  unscheduledCourses: UnscheduledCourse[];
+  success: boolean;
 }
 
 export interface BatchGenerateScheduleResult {
@@ -66,7 +74,11 @@ export interface BatchGenerateScheduleResult {
   processedDepartments: number;
   skippedLockedDepartments: number;
   totalCourses: number;
-  scheduledCourses: number;
+  scheduledCount: number;
+  failedCount: number;
   preservedOverrides: number;
+  scheduledCourses: ScheduleAssignment[];
+  unscheduledCourses: UnscheduledCourse[];
   errors: Array<{ departmentCode: string; message: string }>;
+  success: boolean;
 }
