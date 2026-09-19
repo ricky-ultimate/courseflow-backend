@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DayOfWeek, Level, Semester } from '../../../generated/prisma';
 import {
   DEPARTMENTAL_DAY_SLOTS,
@@ -14,10 +14,12 @@ import {
 
 export interface CourseInput {
   courseCode: string;
+  courseName?: string;
   departmentCode: string;
   level: Level;
   semester: Semester;
   isGeneral?: boolean;
+  lecturerId?: string | null;
   aliasedCourseCodes?: string[];
 }
 
@@ -30,6 +32,7 @@ export interface LockedSlot {
   endTime: string;
   semester: Semester;
   isUniversityCourse?: boolean;
+  lecturerId?: string | null;
   aliasedCourseCodes?: string[];
 }
 
@@ -40,6 +43,20 @@ export interface ScheduleAssignment {
   endTime: string;
   semester: Semester;
   sessionType?: SessionType;
+}
+
+export interface UnscheduledCourse {
+  courseCode: string;
+  courseName: string;
+  departmentCode: string;
+  level: Level;
+  semester: Semester;
+  reason: string;
+}
+
+export interface SchedulingResult {
+  assignments: ScheduleAssignment[];
+  unscheduled: UnscheduledCourse[];
 }
 
 interface TimeInterval {
@@ -63,6 +80,10 @@ export class SchedulerEngine {
     day: DayOfWeek,
   ): BucketKey {
     return `${departmentCode}|${coursePrefix}|${level}|${day}`;
+  }
+
+  private lecturerBucketKey(lecturerId: string, day: DayOfWeek): BucketKey {
+    return `lecturer|${lecturerId}|${day}`;
   }
 
   private timeToMinutes(time: string): number {
@@ -148,6 +169,10 @@ export class SchedulerEngine {
         courseInputMap,
       );
 
+      if (slot.lecturerId) {
+        keys.push(this.lecturerBucketKey(slot.lecturerId, slot.dayOfWeek));
+      }
+
       for (const key of keys) {
         if (!occupied.has(key)) occupied.set(key, []);
         occupied.get(key)!.push(interval);
@@ -179,7 +204,7 @@ export class SchedulerEngine {
     return timeSlotLoad;
   }
 
-  private isSlotAvailable(
+  private bucketsFree(
     course: CourseInput,
     slot: DaySlot,
     occupied: Map<BucketKey, TimeInterval[]>,
@@ -227,6 +252,43 @@ export class SchedulerEngine {
     }
 
     return true;
+  }
+
+  private lecturerFree(
+    course: CourseInput,
+    slot: DaySlot,
+    occupied: Map<BucketKey, TimeInterval[]>,
+  ): boolean {
+    if (!course.lecturerId) return true;
+
+    const candidate: TimeInterval = {
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    };
+
+    const key = this.lecturerBucketKey(course.lecturerId, slot.day);
+    const intervals = occupied.get(key);
+    if (!intervals) return true;
+
+    return !intervals.some((i) => this.intervalsOverlap(candidate, i));
+  }
+
+  private isSlotAvailable(
+    course: CourseInput,
+    slot: DaySlot,
+    occupied: Map<BucketKey, TimeInterval[]>,
+    allDepartmentCodes: string[],
+    allCourseInputMap: Map<string, CourseInput>,
+  ): boolean {
+    return (
+      this.bucketsFree(
+        course,
+        slot,
+        occupied,
+        allDepartmentCodes,
+        allCourseInputMap,
+      ) && this.lecturerFree(course, slot, occupied)
+    );
   }
 
   private availableSlots(
@@ -319,39 +381,13 @@ export class SchedulerEngine {
       allCourseInputMap,
     );
 
+    if (course.lecturerId) {
+      keys.push(this.lecturerBucketKey(course.lecturerId, day));
+    }
+
     for (const key of keys) {
       if (!occupied.has(key)) occupied.set(key, []);
       occupied.get(key)!.push(interval);
-    }
-  }
-
-  private removeFromOccupied(
-    occupied: Map<BucketKey, TimeInterval[]>,
-    course: CourseInput,
-    day: DayOfWeek,
-    interval: TimeInterval,
-    allDepartmentCodes: string[],
-    allCourseInputMap: Map<string, CourseInput>,
-  ): void {
-    const keys = this.getAffectedBuckets(
-      course.courseCode,
-      course.departmentCode,
-      course.level,
-      day,
-      course.isGeneral ?? false,
-      course.aliasedCourseCodes ?? [],
-      allDepartmentCodes,
-      allCourseInputMap,
-    );
-
-    for (const key of keys) {
-      const intervals = occupied.get(key);
-      if (!intervals) continue;
-      const idx = intervals.findIndex(
-        (i) =>
-          i.startTime === interval.startTime && i.endTime === interval.endTime,
-      );
-      if (idx !== -1) intervals.splice(idx, 1);
     }
   }
 
@@ -407,97 +443,57 @@ export class SchedulerEngine {
     );
   }
 
-  private solve(
-    courses: CourseInput[],
-    index: number,
-    assignments: Map<string, ScheduleAssignment>,
+  private buildUnscheduled(
+    course: CourseInput,
+    reason: string,
+  ): UnscheduledCourse {
+    return {
+      courseCode: course.courseCode,
+      courseName: course.courseName ?? course.courseCode,
+      departmentCode: course.departmentCode,
+      level: course.level,
+      semester: course.semester,
+      reason,
+    };
+  }
+
+  private determineFailureReason(
+    course: CourseInput,
     occupied: Map<BucketKey, TimeInterval[]>,
-    dayLoad: Map<DayOfWeek, number>,
-    timeSlotLoad: Map<string, number>,
     allDepartmentCodes: string[],
     allCourseInputMap: Map<string, CourseInput>,
-  ): boolean {
-    if (index === courses.length) return true;
-
-    const course = courses[index];
-    const slots = this.availableSlotsOrdered(
-      course,
-      occupied,
-      dayLoad,
-      timeSlotLoad,
-      DEPARTMENTAL_DAY_SLOTS,
-      allDepartmentCodes,
-      allCourseInputMap,
+  ): string {
+    const bucketFreeSlots = DEPARTMENTAL_DAY_SLOTS.filter((slot) =>
+      this.bucketsFree(
+        course,
+        slot,
+        occupied,
+        allDepartmentCodes,
+        allCourseInputMap,
+      ),
     );
 
-    for (const slot of slots) {
-      const interval: TimeInterval = {
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      };
-
-      assignments.set(course.courseCode, {
-        courseCode: course.courseCode,
-        dayOfWeek: slot.day,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        semester: course.semester,
-      });
-
-      this.addToOccupied(
-        occupied,
-        course,
-        slot.day,
-        interval,
-        allDepartmentCodes,
-        allCourseInputMap,
-      );
-      dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) + 1);
-      timeSlotLoad.set(
-        slot.startTime,
-        (timeSlotLoad.get(slot.startTime) ?? 0) + 1,
-      );
-
-      if (
-        this.solve(
-          courses,
-          index + 1,
-          assignments,
-          occupied,
-          dayLoad,
-          timeSlotLoad,
-          allDepartmentCodes,
-          allCourseInputMap,
-        )
-      ) {
-        return true;
-      }
-
-      assignments.delete(course.courseCode);
-      this.removeFromOccupied(
-        occupied,
-        course,
-        slot.day,
-        interval,
-        allDepartmentCodes,
-        allCourseInputMap,
-      );
-      dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) - 1);
-      timeSlotLoad.set(
-        slot.startTime,
-        (timeSlotLoad.get(slot.startTime) ?? 0) - 1,
-      );
+    if (bucketFreeSlots.length === 0) {
+      return `No available time slot for ${course.level} in the ${course.semester.toLowerCase()} semester`;
     }
 
-    return false;
+    const lecturerFreeAmongBucketFree = bucketFreeSlots.some((slot) =>
+      this.lecturerFree(course, slot, occupied),
+    );
+
+    if (!lecturerFreeAmongBucketFree) {
+      return 'Lecturer unavailable for all remaining slots';
+    }
+
+    return `No available time slot for ${course.level} in the ${course.semester.toLowerCase()} semester`;
   }
 
   generate(
     courses: CourseInput[],
     locked: LockedSlot[],
     allDepartmentCodes: string[],
-  ): ScheduleAssignment[] {
-    if (courses.length === 0) return [];
+  ): SchedulingResult {
+    if (courses.length === 0) return { assignments: [], unscheduled: [] };
 
     const allCourseInputMap = new Map<string, CourseInput>();
     for (const c of courses) {
@@ -525,7 +521,7 @@ export class SchedulerEngine {
     );
 
     const assignments = new Map<string, ScheduleAssignment>();
-    const unscheduledUniversity: string[] = [];
+    const unscheduled: UnscheduledCourse[] = [];
 
     for (const course of universityCourses) {
       const fixedSlot = this.getFixedFridaySlot(
@@ -549,12 +545,11 @@ export class SchedulerEngine {
         continue;
       }
 
-      unscheduledUniversity.push(course.courseCode);
-    }
-
-    if (unscheduledUniversity.length > 0) {
-      throw new UnprocessableEntityException(
-        `Scheduler could not determine fixed Friday slots for: ${unscheduledUniversity.join(', ')}. Verify these course codes are included in FRIDAY_FIXED_COURSE_SLOTS for the applicable semester, or reclassify them so they are scheduled manually.`,
+      unscheduled.push(
+        this.buildUnscheduled(
+          course,
+          'No fixed Friday slot configured for this general course; requires manual scheduling',
+        ),
       );
     }
 
@@ -573,6 +568,7 @@ export class SchedulerEngine {
         endTime: a.endTime,
         semester: a.semester,
         isUniversityCourse: true,
+        lecturerId: course.lecturerId,
         aliasedCourseCodes: course.aliasedCourseCodes ?? [],
       };
     });
@@ -580,7 +576,7 @@ export class SchedulerEngine {
     const allLocked = [...locked, ...universityLockedSlots];
 
     if (departmentalCourses.length === 0) {
-      return Array.from(assignments.values());
+      return { assignments: Array.from(assignments.values()), unscheduled };
     }
 
     const occupied = this.buildInitialOccupancy(
@@ -597,27 +593,57 @@ export class SchedulerEngine {
       allCourseInputMap,
     );
 
-    const solved = this.solve(
-      sorted,
-      0,
-      assignments,
-      occupied,
-      dayLoad,
-      timeSlotLoad,
-      allDepartmentCodes,
-      allCourseInputMap,
-    );
+    for (const course of sorted) {
+      const slots = this.availableSlotsOrdered(
+        course,
+        occupied,
+        dayLoad,
+        timeSlotLoad,
+        DEPARTMENTAL_DAY_SLOTS,
+        allDepartmentCodes,
+        allCourseInputMap,
+      );
 
-    if (!solved) {
-      const unscheduled = sorted
-        .filter((c) => !assignments.has(c.courseCode))
-        .map((c) => c.courseCode);
+      if (slots.length === 0) {
+        const reason = this.determineFailureReason(
+          course,
+          occupied,
+          allDepartmentCodes,
+          allCourseInputMap,
+        );
+        unscheduled.push(this.buildUnscheduled(course, reason));
+        continue;
+      }
 
-      throw new UnprocessableEntityException(
-        `Scheduler could not find valid slots for: ${unscheduled.join(', ')}. Try reducing the number of courses per department/level or contact an administrator.`,
+      const slot = slots[0];
+      const interval: TimeInterval = {
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      };
+
+      assignments.set(course.courseCode, {
+        courseCode: course.courseCode,
+        dayOfWeek: slot.day,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        semester: course.semester,
+      });
+
+      this.addToOccupied(
+        occupied,
+        course,
+        slot.day,
+        interval,
+        allDepartmentCodes,
+        allCourseInputMap,
+      );
+      dayLoad.set(slot.day, (dayLoad.get(slot.day) ?? 0) + 1);
+      timeSlotLoad.set(
+        slot.startTime,
+        (timeSlotLoad.get(slot.startTime) ?? 0) + 1,
       );
     }
 
-    return Array.from(assignments.values());
+    return { assignments: Array.from(assignments.values()), unscheduled };
   }
 }
