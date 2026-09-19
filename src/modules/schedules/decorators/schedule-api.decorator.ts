@@ -1,6 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { DayOfWeek, Semester, SessionType } from '../../../generated/prisma';
+import { College, DayOfWeek, Level, Semester } from '../../../generated/prisma';
 import {
   ApiStandardResponses,
   ApiAuthRequired,
@@ -142,38 +142,58 @@ export const ApiGenerateSchedules = () =>
         'Clears existing auto-generated schedules and re-assigns them while preserving manual overrides. ' +
         'Departments with isScheduleLocked set to true are skipped entirely during system-wide generation, ' +
         'but their existing schedules are still respected as occupied slots to prevent conflicts. ' +
-        'Throws 422 if a valid schedule cannot be constructed for all eligible courses.',
+        'Courses that cannot be placed are reported in unscheduledCourses rather than failing the request.',
     }),
     ApiResponse({
       status: 201,
-      description: 'Schedules generated successfully',
+      description:
+        'Schedule generation completed, possibly with partial results',
       schema: {
         type: 'object',
         properties: {
+          success: { type: 'boolean', example: true },
           sessionId: { type: 'string' },
           sessionName: { type: 'string', example: '2024/2025' },
           semester: { type: 'string', enum: Object.values(Semester) },
-          departmentCode: {
-            type: 'string',
-            nullable: true,
-            example: null,
-            description: 'null when generated system-wide',
-          },
+          departmentCode: { type: 'string', nullable: true, example: null },
           totalCourses: { type: 'number', example: 178 },
-          scheduledCourses: { type: 'number', example: 165 },
+          scheduledCount: { type: 'number', example: 170 },
+          failedCount: { type: 'number', example: 8 },
           preservedOverrides: { type: 'number', example: 3 },
-          skippedLockedDepartments: {
-            type: 'number',
-            example: 2,
-            description:
-              'Number of departments skipped because their schedule is locked',
+          skippedLockedDepartments: { type: 'number', example: 2 },
+          scheduledCourses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                courseCode: { type: 'string', example: 'CSC101' },
+                dayOfWeek: { type: 'string', enum: Object.values(DayOfWeek) },
+                startTime: { type: 'string', example: '09:00' },
+                endTime: { type: 'string', example: '11:00' },
+                semester: { type: 'string', enum: Object.values(Semester) },
+              },
+            },
+          },
+          unscheduledCourses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                courseCode: { type: 'string', example: 'CSC402' },
+                courseName: { type: 'string', example: 'Project Management' },
+                departmentCode: { type: 'string', example: 'CSC' },
+                level: { type: 'string', enum: Object.values(Level) },
+                semester: { type: 'string', enum: Object.values(Semester) },
+                reason: {
+                  type: 'string',
+                  example:
+                    'No available time slot for LEVEL_400 in the second semester',
+                },
+              },
+            },
           },
         },
       },
-    }),
-    ApiResponse({
-      status: 422,
-      description: 'Unprocessable — not enough slots to schedule all courses',
     }),
     ApiNotFoundResponse('Active session'),
     ApiStandardResponses(),
@@ -217,19 +237,22 @@ export const ApiToggleScheduleFixed = () =>
 export const ApiGenerateSchedulesBatch = () =>
   applyDecorators(
     ApiOperation({
-      summary: 'Auto-generate schedules (batched by department)',
+      summary: 'Auto-generate schedules (concurrently, batched by department)',
       description:
-        'Generates schedules department-by-department to avoid timeouts on large datasets. ' +
-        'University courses are processed first, then each department independently. ' +
-        'Partial failures are returned in the errors array rather than aborting the whole run. ' +
-        'Recommended for system-wide generation with large course catalogs.',
+        'Bulk-loads courses, overrides, and existing schedules once, then schedules university-wide ' +
+        'courses followed by all eligible departments concurrently through a bounded worker pool. ' +
+        'Department-level failures are isolated in the errors array; courses that cannot be placed are ' +
+        'returned in unscheduledCourses with a specific reason. The run always completes even when some ' +
+        'courses could not be scheduled.',
     }),
     ApiResponse({
       status: 201,
-      description: 'Batch schedule generation completed',
+      description:
+        'Batch schedule generation completed, possibly with partial results',
       schema: {
         type: 'object',
         properties: {
+          success: { type: 'boolean', example: true },
           sessionId: { type: 'string' },
           sessionName: { type: 'string', example: '2024/2025' },
           semester: { type: 'string', enum: Object.values(Semester) },
@@ -237,8 +260,24 @@ export const ApiGenerateSchedulesBatch = () =>
           processedDepartments: { type: 'number', example: 56 },
           skippedLockedDepartments: { type: 'number', example: 2 },
           totalCourses: { type: 'number', example: 718 },
-          scheduledCourses: { type: 'number', example: 712 },
+          scheduledCount: { type: 'number', example: 710 },
+          failedCount: { type: 'number', example: 8 },
           preservedOverrides: { type: 'number', example: 6 },
+          scheduledCourses: { type: 'array', items: { type: 'object' } },
+          unscheduledCourses: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                courseCode: { type: 'string', example: 'CSC402' },
+                courseName: { type: 'string', example: 'Project Management' },
+                departmentCode: { type: 'string', example: 'CSC' },
+                level: { type: 'string', enum: Object.values(Level) },
+                semester: { type: 'string', enum: Object.values(Semester) },
+                reason: { type: 'string' },
+              },
+            },
+          },
           errors: {
             type: 'array',
             items: {
