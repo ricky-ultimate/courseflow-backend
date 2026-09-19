@@ -311,87 +311,267 @@ export class SchedulesService extends BaseService<
     }) as Promise<Schedule[]>;
   }
 
-async generateSchedules(
-  dto: GenerateScheduleDto,
-  requestingUser: { id: string; role: string; collegeCode?: College },
-): Promise<GenerateScheduleResult> {
-  const session = dto.sessionId
-    ? await this.prisma.academicSession.findUnique({
-        where: { id: dto.sessionId },
-      })
-    : await this.prisma.academicSession.findFirst({
-        where: { isActive: true },
+  async generateSchedules(
+    dto: GenerateScheduleDto,
+    requestingUser: { id: string; role: string; collegeCode?: College },
+  ): Promise<GenerateScheduleResult> {
+    const session = dto.sessionId
+      ? await this.prisma.academicSession.findUnique({
+          where: { id: dto.sessionId },
+        })
+      : await this.prisma.academicSession.findFirst({
+          where: { isActive: true },
+        });
+
+    if (!session) {
+      throw new NotFoundException(
+        dto.sessionId
+          ? `Session '${dto.sessionId}' not found`
+          : 'No active academic session found',
+      );
+    }
+
+    let departmentCode: string | null = dto.departmentCode ?? null;
+    const level: Level | null = dto.level ?? null;
+    const programme: string | null = dto.programme ?? null;
+
+    if (requestingUser.role === Role.HOD) {
+      const hodUser = await this.prisma.user.findUnique({
+        where: { id: requestingUser.id },
+        include: { managedDepartment: true },
       });
 
-  if (!session) {
-    throw new NotFoundException(
-      dto.sessionId
-        ? `Session '${dto.sessionId}' not found`
-        : 'No active academic session found',
-    );
-  }
+      if (!hodUser?.managedDepartment) {
+        throw new ForbiddenException('HOD must be assigned to a department');
+      }
 
-  let departmentCode: string | null = dto.departmentCode ?? null;
-  const level: Level | null = dto.level ?? null;
-  const programme: string | null = dto.programme ?? null;
-
-  if (requestingUser.role === Role.HOD) {
-    const hodUser = await this.prisma.user.findUnique({
-      where: { id: requestingUser.id },
-      include: { managedDepartment: true },
-    });
-
-    if (!hodUser?.managedDepartment) {
-      throw new ForbiddenException('HOD must be assigned to a department');
+      departmentCode = hodUser.managedDepartment.code;
     }
 
-    departmentCode = hodUser.managedDepartment.code;
-  }
+    const collegeScope = this.resolveCollegeScope(requestingUser);
 
-  const collegeScope = this.resolveCollegeScope(requestingUser);
+    const lockedDepartmentCodes =
+      await this.resolveLockedDepartmentCodes(departmentCode);
 
-  const lockedDepartmentCodes =
-    await this.resolveLockedDepartmentCodes(departmentCode);
+    const departmentalCourseFilter: Record<string, any> = {
+      isActive: true,
+      semester: dto.semester,
+      isGeneral: false,
+    };
 
-  const departmentalCourseFilter: Record<string, any> = {
-    isActive: true,
-    semester: dto.semester,
-    isGeneral: false,
-  };
-
-  if (departmentCode) {
-    departmentalCourseFilter.departmentCode = departmentCode;
-  } else {
-    if (collegeScope) {
-      departmentalCourseFilter.department = { college: collegeScope };
+    if (departmentCode) {
+      departmentalCourseFilter.departmentCode = departmentCode;
+    } else {
+      if (collegeScope) {
+        departmentalCourseFilter.department = { college: collegeScope };
+      }
+      if (lockedDepartmentCodes.length > 0) {
+        departmentalCourseFilter.departmentCode = {
+          notIn: lockedDepartmentCodes,
+        };
+      }
     }
-    if (lockedDepartmentCodes.length > 0) {
-      departmentalCourseFilter.departmentCode = {
-        notIn: lockedDepartmentCodes,
+
+    if (level) departmentalCourseFilter.level = level;
+    if (programme) departmentalCourseFilter.code = { startsWith: programme };
+
+    const universityCourseFilter: Record<string, any> = {
+      isActive: true,
+      semester: dto.semester,
+      isGeneral: true,
+    };
+    if (level) universityCourseFilter.level = level;
+
+    const [departmentalCourses, universityCourses] = await Promise.all([
+      this.prisma.course.findMany({ where: departmentalCourseFilter }),
+      collegeScope
+        ? Promise.resolve([])
+        : this.prisma.course.findMany({ where: universityCourseFilter }),
+    ]);
+
+    const allCourses: Course[] = [...departmentalCourses, ...universityCourses];
+
+    if (allCourses.length === 0) {
+      return {
+        sessionId: session.id,
+        sessionName: session.name,
+        semester: dto.semester,
+        departmentCode,
+        programme,
+        level,
+        totalCourses: 0,
+        scheduledCount: 0,
+        failedCount: 0,
+        preservedOverrides: 0,
+        skippedLockedDepartments: lockedDepartmentCodes.length,
+        scheduledCourses: [],
+        unscheduledCourses: [],
+        success: true,
       };
     }
-  }
 
-  if (level) departmentalCourseFilter.level = level;
-  if (programme) departmentalCourseFilter.code = { startsWith: programme };
+    const allDepartments = await this.prisma.department.findMany({
+      where: { isActive: true },
+      select: { code: true },
+    });
+    const allDepartmentCodes = allDepartments.map((d) => d.code);
 
-  const universityCourseFilter: Record<string, any> = {
-    isActive: true,
-    semester: dto.semester,
-    isGeneral: true,
-  };
-  if (level) universityCourseFilter.level = level;
+    const aliasMap = await this.buildAliasMap(allCourses.map((c) => c.code));
 
-  const [departmentalCourses, universityCourses] = await Promise.all([
-    this.prisma.course.findMany({ where: departmentalCourseFilter }),
-    collegeScope
-      ? Promise.resolve([])
-      : this.prisma.course.findMany({ where: universityCourseFilter }),
-  ]);
+    const deptManualCourseCond: Record<string, any> = { isGeneral: false };
 
-  const allCourses: Course[] = [...departmentalCourses, ...universityCourses];
+    if (departmentCode) {
+      deptManualCourseCond.departmentCode = departmentCode;
+    } else {
+      if (collegeScope)
+        deptManualCourseCond.department = { college: collegeScope };
+      if (lockedDepartmentCodes.length > 0) {
+        deptManualCourseCond.departmentCode = { notIn: lockedDepartmentCodes };
+      }
+    }
 
-  if (allCourses.length === 0) {
+    if (level) deptManualCourseCond.level = level;
+    if (programme) deptManualCourseCond.code = { startsWith: programme };
+
+    const departmentalManualOverrideFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      isManualOverride: true,
+      course: deptManualCourseCond,
+    };
+
+    const generalScheduledFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      course: { isGeneral: true, ...(level ? { level } : {}) },
+    };
+
+    const [departmentalManualOverrides, alreadyScheduledGeneral] =
+      await Promise.all([
+        this.prisma.schedule.findMany({
+          where: departmentalManualOverrideFilter,
+        }),
+        collegeScope
+          ? Promise.resolve([])
+          : this.prisma.schedule.findMany({ where: generalScheduledFilter }),
+      ]);
+
+    const overriddenCourseCodes = new Set<string>([
+      ...departmentalManualOverrides.map((s) => s.courseCode),
+      ...alreadyScheduledGeneral.map((s) => s.courseCode),
+    ]);
+
+    const coursesToSchedule: CourseInput[] = allCourses
+      .filter((c) => !overriddenCourseCodes.has(c.code))
+      .map((c) => ({
+        courseCode: c.code,
+        courseName: c.name,
+        departmentCode: c.departmentCode,
+        level: c.level,
+        semester: c.semester,
+        isGeneral: c.isGeneral,
+        lecturerId: c.lecturerId,
+        aliasedCourseCodes: aliasMap.get(c.code) ?? [],
+      }));
+
+    const allExistingSchedules = await this.prisma.schedule.findMany({
+      where: { sessionId: session.id, semester: dto.semester },
+      include: { course: true },
+    });
+
+    const locked: LockedSlot[] = allExistingSchedules.map((s) => ({
+      courseCode: s.courseCode,
+      departmentCode: s.course.departmentCode,
+      level: s.course.level,
+      dayOfWeek: s.dayOfWeek,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      semester: s.semester,
+      isUniversityCourse: s.course.isGeneral,
+      lecturerId: s.course.lecturerId,
+      aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
+    }));
+
+    const { assignments, unscheduled } = this.schedulerEngine.generate(
+      coursesToSchedule,
+      locked,
+      allDepartmentCodes,
+    );
+
+    const autoDeleteDeptCourseCond: Record<string, any> = { isGeneral: false };
+
+    if (departmentCode) {
+      autoDeleteDeptCourseCond.departmentCode = departmentCode;
+    } else {
+      if (collegeScope)
+        autoDeleteDeptCourseCond.department = { college: collegeScope };
+      if (lockedDepartmentCodes.length > 0) {
+        autoDeleteDeptCourseCond.departmentCode = {
+          notIn: lockedDepartmentCodes,
+        };
+      }
+    }
+
+    if (level) autoDeleteDeptCourseCond.level = level;
+    if (programme) autoDeleteDeptCourseCond.code = { startsWith: programme };
+
+    const autoDeleteDepartmentalFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      isManualOverride: false,
+      isAutoGenerated: true,
+      isFixed: false,
+      course: autoDeleteDeptCourseCond,
+    };
+
+    const autoDeleteUniversityFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      isManualOverride: false,
+      isAutoGenerated: true,
+      isFixed: false,
+      course: { isGeneral: true, ...(level ? { level } : {}) },
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.schedule.deleteMany({ where: autoDeleteDepartmentalFilter });
+      if (!collegeScope) {
+        await tx.schedule.deleteMany({ where: autoDeleteUniversityFilter });
+      }
+
+      if (assignments.length > 0) {
+        await tx.schedule.createMany({
+          data: assignments.map((a) => ({
+            courseCode: a.courseCode,
+            dayOfWeek: a.dayOfWeek,
+            startTime: a.startTime,
+            endTime: a.endTime,
+            semester: a.semester,
+            sessionId: session.id,
+            sessionType: a.sessionType ?? SessionType.THEORY,
+            isAutoGenerated: true,
+            isManualOverride: false,
+            isFixed: false,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    });
+
+    const preserved: ScheduleAssignment[] = [
+      ...departmentalManualOverrides,
+      ...alreadyScheduledGeneral,
+    ].map((s) => ({
+      courseCode: s.courseCode,
+      dayOfWeek: s.dayOfWeek,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      semester: s.semester,
+      sessionType: s.sessionType,
+    }));
+
+    const scheduledCourses = [...assignments, ...preserved];
+
     return {
       sessionId: session.id,
       sessionName: session.name,
@@ -399,192 +579,16 @@ async generateSchedules(
       departmentCode,
       programme,
       level,
-      totalCourses: 0,
-      scheduledCount: 0,
-      failedCount: 0,
-      preservedOverrides: 0,
+      totalCourses: allCourses.length,
+      scheduledCount: scheduledCourses.length,
+      failedCount: unscheduled.length,
+      preservedOverrides: preserved.length,
       skippedLockedDepartments: lockedDepartmentCodes.length,
-      scheduledCourses: [],
-      unscheduledCourses: [],
+      scheduledCourses,
+      unscheduledCourses: unscheduled,
       success: true,
     };
   }
-
-  const allDepartments = await this.prisma.department.findMany({
-    where: { isActive: true },
-    select: { code: true },
-  });
-  const allDepartmentCodes = allDepartments.map((d) => d.code);
-
-  const aliasMap = await this.buildAliasMap(allCourses.map((c) => c.code));
-
-  const deptManualCourseCond: Record<string, any> = { isGeneral: false };
-
-  if (departmentCode) {
-    deptManualCourseCond.departmentCode = departmentCode;
-  } else {
-    if (collegeScope) deptManualCourseCond.department = { college: collegeScope };
-    if (lockedDepartmentCodes.length > 0) {
-      deptManualCourseCond.departmentCode = { notIn: lockedDepartmentCodes };
-    }
-  }
-
-  if (level) deptManualCourseCond.level = level;
-  if (programme) deptManualCourseCond.code = { startsWith: programme };
-
-  const departmentalManualOverrideFilter: Record<string, any> = {
-    sessionId: session.id,
-    semester: dto.semester,
-    isManualOverride: true,
-    course: deptManualCourseCond,
-  };
-
-  const generalScheduledFilter: Record<string, any> = {
-    sessionId: session.id,
-    semester: dto.semester,
-    course: { isGeneral: true, ...(level ? { level } : {}) },
-  };
-
-  const [departmentalManualOverrides, alreadyScheduledGeneral] =
-    await Promise.all([
-      this.prisma.schedule.findMany({
-        where: departmentalManualOverrideFilter,
-      }),
-      collegeScope
-        ? Promise.resolve([])
-        : this.prisma.schedule.findMany({ where: generalScheduledFilter }),
-    ]);
-
-  const overriddenCourseCodes = new Set<string>([
-    ...departmentalManualOverrides.map((s) => s.courseCode),
-    ...alreadyScheduledGeneral.map((s) => s.courseCode),
-  ]);
-
-  const coursesToSchedule: CourseInput[] = allCourses
-    .filter((c) => !overriddenCourseCodes.has(c.code))
-    .map((c) => ({
-      courseCode: c.code,
-      courseName: c.name,
-      departmentCode: c.departmentCode,
-      level: c.level,
-      semester: c.semester,
-      isGeneral: c.isGeneral,
-      lecturerId: c.lecturerId,
-      aliasedCourseCodes: aliasMap.get(c.code) ?? [],
-    }));
-
-  const allExistingSchedules = await this.prisma.schedule.findMany({
-    where: { sessionId: session.id, semester: dto.semester },
-    include: { course: true },
-  });
-
-  const locked: LockedSlot[] = allExistingSchedules.map((s) => ({
-    courseCode: s.courseCode,
-    departmentCode: s.course.departmentCode,
-    level: s.course.level,
-    dayOfWeek: s.dayOfWeek,
-    startTime: s.startTime,
-    endTime: s.endTime,
-    semester: s.semester,
-    isUniversityCourse: s.course.isGeneral,
-    lecturerId: s.course.lecturerId,
-    aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
-  }));
-
-  const { assignments, unscheduled } = this.schedulerEngine.generate(
-    coursesToSchedule,
-    locked,
-    allDepartmentCodes,
-  );
-
-  const autoDeleteDeptCourseCond: Record<string, any> = { isGeneral: false };
-
-  if (departmentCode) {
-    autoDeleteDeptCourseCond.departmentCode = departmentCode;
-  } else {
-    if (collegeScope) autoDeleteDeptCourseCond.department = { college: collegeScope };
-    if (lockedDepartmentCodes.length > 0) {
-      autoDeleteDeptCourseCond.departmentCode = { notIn: lockedDepartmentCodes };
-    }
-  }
-
-  if (level) autoDeleteDeptCourseCond.level = level;
-  if (programme) autoDeleteDeptCourseCond.code = { startsWith: programme };
-
-  const autoDeleteDepartmentalFilter: Record<string, any> = {
-    sessionId: session.id,
-    semester: dto.semester,
-    isManualOverride: false,
-    isAutoGenerated: true,
-    isFixed: false,
-    course: autoDeleteDeptCourseCond,
-  };
-
-  const autoDeleteUniversityFilter: Record<string, any> = {
-    sessionId: session.id,
-    semester: dto.semester,
-    isManualOverride: false,
-    isAutoGenerated: true,
-    isFixed: false,
-    course: { isGeneral: true, ...(level ? { level } : {}) },
-  };
-
-  await this.prisma.$transaction(async (tx) => {
-    await tx.schedule.deleteMany({ where: autoDeleteDepartmentalFilter });
-    if (!collegeScope) {
-      await tx.schedule.deleteMany({ where: autoDeleteUniversityFilter });
-    }
-
-    if (assignments.length > 0) {
-      await tx.schedule.createMany({
-        data: assignments.map((a) => ({
-          courseCode: a.courseCode,
-          dayOfWeek: a.dayOfWeek,
-          startTime: a.startTime,
-          endTime: a.endTime,
-          semester: a.semester,
-          sessionId: session.id,
-          sessionType: a.sessionType ?? SessionType.THEORY,
-          isAutoGenerated: true,
-          isManualOverride: false,
-          isFixed: false,
-        })),
-        skipDuplicates: true,
-      });
-    }
-  });
-
-  const preserved: ScheduleAssignment[] = [
-    ...departmentalManualOverrides,
-    ...alreadyScheduledGeneral,
-  ].map((s) => ({
-    courseCode: s.courseCode,
-    dayOfWeek: s.dayOfWeek,
-    startTime: s.startTime,
-    endTime: s.endTime,
-    semester: s.semester,
-    sessionType: s.sessionType,
-  }));
-
-  const scheduledCourses = [...assignments, ...preserved];
-
-  return {
-    sessionId: session.id,
-    sessionName: session.name,
-    semester: dto.semester,
-    departmentCode,
-    programme,
-    level,
-    totalCourses: allCourses.length,
-    scheduledCount: scheduledCourses.length,
-    failedCount: unscheduled.length,
-    preservedOverrides: preserved.length,
-    skippedLockedDepartments: lockedDepartmentCodes.length,
-    scheduledCourses,
-    unscheduledCourses: unscheduled,
-    success: true,
-  };
-}
 
   async generateSchedulesBatch(
     dto: GenerateScheduleDto,
@@ -601,9 +605,13 @@ async generateSchedules(
         processedDepartments: 1,
         skippedLockedDepartments: 0,
         totalCourses: result.totalCourses,
-        scheduledCourses: result.scheduledCourses,
+        scheduledCount: result.scheduledCount,
+        failedCount: result.failedCount,
         preservedOverrides: result.preservedOverrides,
+        scheduledCourses: result.scheduledCourses,
+        unscheduledCourses: result.unscheduledCourses,
         errors: [],
+        success: result.success,
       };
     }
 
@@ -627,23 +635,23 @@ async generateSchedules(
     });
     const lockedCodes = new Set(lockedDepts.map((d) => d.code));
 
-    const universityCourseFilter: Record<string, any> = {
-      isActive: true,
-      semester: dto.semester,
-      isGeneral: true,
-    };
-    if (dto.level) universityCourseFilter.level = dto.level;
+    const departmentFilter: Record<string, any> = { isActive: true };
 
-    const universityCourses = collegeScope
-      ? []
-      : await this.prisma.course.findMany({
-          where: universityCourseFilter,
-          include: { department: true },
+    if (dto.departmentCode) {
+      departmentFilter.code = dto.departmentCode;
+    } else {
+      departmentFilter.code = { notIn: Array.from(lockedCodes) };
+      if (collegeScope) departmentFilter.college = collegeScope;
+    }
+
+    const departments = dto.departmentCode
+      ? [{ code: dto.departmentCode }]
+      : await this.prisma.department.findMany({
+          where: departmentFilter,
+          select: { code: true },
+          orderBy: { code: 'asc' },
         });
-
-    const aliasMap = await this.buildAliasMap(
-      universityCourses.map((c) => c.code),
-    );
+    const departmentCodes = departments.map((d) => d.code);
 
     const allDepartments = await this.prisma.department.findMany({
       where: { isActive: true },
@@ -651,16 +659,36 @@ async generateSchedules(
     });
     const allDepartmentCodes = allDepartments.map((d) => d.code);
 
-    const universityCoursesInput: CourseInput[] = universityCourses.map(
-      (c) => ({
-        courseCode: c.code,
-        departmentCode: c.departmentCode,
-        level: c.level,
-        semester: c.semester,
-        isGeneral: true,
-        aliasedCourseCodes: aliasMap.get(c.code) ?? [],
-      }),
-    );
+    const universityCourseFilter: Record<string, any> = {
+      isActive: true,
+      semester: dto.semester,
+      isGeneral: true,
+    };
+    if (dto.level) universityCourseFilter.level = dto.level;
+
+    const universityCourses: Course[] = collegeScope
+      ? []
+      : await this.prisma.course.findMany({ where: universityCourseFilter });
+
+    const departmentalCourseFilter: Record<string, any> = {
+      isActive: true,
+      semester: dto.semester,
+      isGeneral: false,
+      departmentCode: { in: departmentCodes },
+    };
+    if (dto.level) departmentalCourseFilter.level = dto.level;
+    if (dto.programme)
+      departmentalCourseFilter.code = { startsWith: dto.programme };
+
+    const allDepartmentalCourses: Course[] = departmentCodes.length
+      ? await this.prisma.course.findMany({ where: departmentalCourseFilter })
+      : [];
+
+    const allCourseCodes = [
+      ...universityCourses.map((c) => c.code),
+      ...allDepartmentalCourses.map((c) => c.code),
+    ];
+    const aliasMap = await this.buildAliasMap(allCourseCodes);
 
     const existingUniversitySchedules = collegeScope
       ? []
@@ -668,15 +696,31 @@ async generateSchedules(
           where: {
             sessionId: session.id,
             semester: dto.semester,
-            course: { isGeneral: true },
+            course: {
+              isGeneral: true,
+              ...(dto.level ? { level: dto.level } : {}),
+            },
           },
-          include: { course: { include: { department: true } } },
+          include: { course: true },
         });
 
     const overriddenUniversityCodes = new Set(
       existingUniversitySchedules
         .filter((s) => s.isManualOverride)
         .map((s) => s.courseCode),
+    );
+
+    const universityCoursesInput: CourseInput[] = universityCourses.map(
+      (c) => ({
+        courseCode: c.code,
+        courseName: c.name,
+        departmentCode: c.departmentCode,
+        level: c.level,
+        semester: c.semester,
+        isGeneral: true,
+        lecturerId: c.lecturerId,
+        aliasedCourseCodes: aliasMap.get(c.code) ?? [],
+      }),
     );
 
     const universityToSchedule = universityCoursesInput.filter(
@@ -694,55 +738,24 @@ async generateSchedules(
         endTime: s.endTime,
         semester: s.semester,
         isUniversityCourse: true,
+        lecturerId: s.course.lecturerId,
         aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
       }));
 
     let universityAssignments: ScheduleAssignment[] = [];
+    let universityUnscheduled: UnscheduledCourse[] = [];
     const errors: Array<{ departmentCode: string; message: string }> = [];
 
     if (universityToSchedule.length > 0) {
       try {
-        universityAssignments = this.schedulerEngine.generate(
+        const result = this.schedulerEngine.generate(
           universityToSchedule,
           universityLocked,
           allDepartmentCodes,
         );
-
-        await this.prisma.$transaction(async (tx) => {
-          const univDeleteFilter: Record<string, any> = {
-            sessionId: session.id,
-            semester: dto.semester,
-            isManualOverride: false,
-            isFixed: false,
-            course: {
-              isGeneral: true,
-              ...(dto.level ? { level: dto.level } : {}),
-            },
-          };
-          await tx.schedule.deleteMany({ where: univDeleteFilter });
-
-          if (universityAssignments.length > 0) {
-            await tx.schedule.createMany({
-              data: universityAssignments.map((a) => ({
-                courseCode: a.courseCode,
-                dayOfWeek: a.dayOfWeek,
-                startTime: a.startTime,
-                endTime: a.endTime,
-                semester: a.semester,
-                sessionId: session.id,
-                sessionType: a.sessionType ?? SessionType.THEORY,
-                isAutoGenerated: true,
-                isManualOverride: false,
-                isFixed: false,
-              })),
-              skipDuplicates: true,
-            });
-          }
-        });
+        universityAssignments = result.assignments;
+        universityUnscheduled = result.unscheduled;
       } catch (e: unknown) {
-        if (e instanceof UnprocessableEntityException) {
-          throw e;
-        }
         errors.push({
           departmentCode: 'UNIVERSITY',
           message:
@@ -761,11 +774,28 @@ async generateSchedules(
             semester: dto.semester,
             course: { isGeneral: true },
           },
-          include: { course: { include: { department: true } } },
+          include: { course: true },
         });
 
-    const globalUniversityLocked: LockedSlot[] = allUniversitySchedules.map(
-      (s) => ({
+    const universityPreserved: ScheduleAssignment[] =
+      existingUniversitySchedules
+        .filter((s) => s.isManualOverride)
+        .map((s) => ({
+          courseCode: s.courseCode,
+          dayOfWeek: s.dayOfWeek,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          semester: s.semester,
+          sessionType: s.sessionType,
+        }));
+
+    const universityScheduledCourses = [
+      ...universityAssignments,
+      ...universityPreserved,
+    ];
+
+    const globalUniversityLocked: LockedSlot[] = [
+      ...allUniversitySchedules.map((s) => ({
         courseCode: s.courseCode,
         departmentCode: s.course.departmentCode,
         level: s.course.level,
@@ -774,112 +804,136 @@ async generateSchedules(
         endTime: s.endTime,
         semester: s.semester,
         isUniversityCourse: true,
+        lecturerId: s.course.lecturerId,
         aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
-      }),
-    );
+      })),
+      ...universityAssignments
+        .filter(
+          (a) =>
+            !allUniversitySchedules.some((s) => s.courseCode === a.courseCode),
+        )
+        .map((a) => {
+          const course = universityCoursesInput.find(
+            (c) => c.courseCode === a.courseCode,
+          )!;
+          return {
+            courseCode: a.courseCode,
+            departmentCode: course.departmentCode,
+            level: course.level,
+            dayOfWeek: a.dayOfWeek,
+            startTime: a.startTime,
+            endTime: a.endTime,
+            semester: a.semester,
+            isUniversityCourse: true,
+            lecturerId: course.lecturerId,
+            aliasedCourseCodes: course.aliasedCourseCodes ?? [],
+          };
+        }),
+    ];
 
-    const departmentFilter: Record<string, any> = {
-      isActive: true,
-      code: { notIn: Array.from(lockedCodes) },
-    };
-
-    if (dto.departmentCode) {
-      departmentFilter.code = dto.departmentCode;
-    } else if (collegeScope) {
-      departmentFilter.college = collegeScope;
-      if (lockedCodes.size > 0) {
-        departmentFilter.code = { notIn: Array.from(lockedCodes) };
-      }
-    }
-
-    const departments = dto.departmentCode
-      ? [{ code: dto.departmentCode }]
-      : await this.prisma.department.findMany({
-          where: departmentFilter,
-          select: { code: true },
-          orderBy: { code: 'asc' },
-        });
-
-    let totalCourses = 0;
-    let scheduledCourses =
-      universityAssignments.length + overriddenUniversityCodes.size;
-    let preservedOverrides = overriddenUniversityCodes.size;
-    let processedDepartments = 0;
-
-    for (const dept of departments) {
-      try {
-        const deptCourseFilter: Record<string, any> = {
-          isActive: true,
-          semester: dto.semester,
-          isGeneral: false,
-          departmentCode: dept.code,
-        };
-        if (dto.level) deptCourseFilter.level = dto.level;
-        if (dto.programme)
-          deptCourseFilter.code = { startsWith: dto.programme };
-
-        const deptCourses = await this.prisma.course.findMany({
-          where: deptCourseFilter,
-          include: { department: true },
-        });
-
-        if (deptCourses.length === 0) {
-          processedDepartments++;
-          continue;
-        }
-
-        totalCourses += deptCourses.length;
-
-        const deptAliasMap = await this.buildAliasMap(
-          deptCourses.map((c) => c.code),
-        );
-
-        const deptManualCourseFilter: Record<string, any> = {
-          departmentCode: dept.code,
-          isGeneral: false,
-        };
-        if (dto.level) deptManualCourseFilter.level = dto.level;
-        if (dto.programme)
-          deptManualCourseFilter.code = { startsWith: dto.programme };
-
-        const deptManualOverrides = await this.prisma.schedule.findMany({
+    const existingDeptSchedules = departmentCodes.length
+      ? await this.prisma.schedule.findMany({
           where: {
             sessionId: session.id,
             semester: dto.semester,
-            isManualOverride: true,
-            course: deptManualCourseFilter,
+            course: {
+              isGeneral: false,
+              departmentCode: { in: departmentCodes },
+            },
           },
-          include: { course: { include: { department: true } } },
-        });
+          include: { course: true },
+        })
+      : [];
 
-        const overriddenDeptCodes = new Set(
-          deptManualOverrides.map((s) => s.courseCode),
-        );
-        preservedOverrides += overriddenDeptCodes.size;
+    const coursesByDept = new Map<string, Course[]>();
+    for (const course of allDepartmentalCourses) {
+      if (!coursesByDept.has(course.departmentCode))
+        coursesByDept.set(course.departmentCode, []);
+      coursesByDept.get(course.departmentCode)!.push(course);
+    }
 
-        const deptCoursesInput: CourseInput[] = deptCourses
-          .filter((c) => !overriddenDeptCodes.has(c.code))
+    const manualOverridesByDept = new Map<
+      string,
+      typeof existingDeptSchedules
+    >();
+    const existingByDept = new Map<string, typeof existingDeptSchedules>();
+    for (const schedule of existingDeptSchedules) {
+      const dept = schedule.course.departmentCode;
+      if (!existingByDept.has(dept)) existingByDept.set(dept, []);
+      existingByDept.get(dept)!.push(schedule);
+      if (schedule.isManualOverride) {
+        if (!manualOverridesByDept.has(dept))
+          manualOverridesByDept.set(dept, []);
+        manualOverridesByDept.get(dept)!.push(schedule);
+      }
+    }
+
+    interface DepartmentTaskResult {
+      departmentCode: string;
+      totalCourses: number;
+      preservedOverrides: number;
+      unscheduled: UnscheduledCourse[];
+      newAssignments: ScheduleAssignment[];
+      scheduledCourses: ScheduleAssignment[];
+      error?: string;
+    }
+
+    const departmentTask = async (
+      departmentCode: string,
+    ): Promise<DepartmentTaskResult> => {
+      try {
+        const deptCourses = coursesByDept.get(departmentCode) ?? [];
+
+        if (deptCourses.length === 0) {
+          return {
+            departmentCode,
+            totalCourses: 0,
+            preservedOverrides: 0,
+            unscheduled: [],
+            newAssignments: [],
+            scheduledCourses: [],
+          };
+        }
+
+        const overrides = manualOverridesByDept.get(departmentCode) ?? [];
+        const overriddenCodes = new Set(overrides.map((s) => s.courseCode));
+        const preserved: ScheduleAssignment[] = overrides.map((s) => ({
+          courseCode: s.courseCode,
+          dayOfWeek: s.dayOfWeek,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          semester: s.semester,
+          sessionType: s.sessionType,
+        }));
+
+        const coursesToSchedule: CourseInput[] = deptCourses
+          .filter((c) => !overriddenCodes.has(c.code))
           .map((c) => ({
             courseCode: c.code,
+            courseName: c.name,
             departmentCode: c.departmentCode,
             level: c.level,
             semester: c.semester,
             isGeneral: false,
-            aliasedCourseCodes: deptAliasMap.get(c.code) ?? [],
+            lecturerId: c.lecturerId,
+            aliasedCourseCodes: aliasMap.get(c.code) ?? [],
           }));
 
-        const existingDeptSchedules = await this.prisma.schedule.findMany({
-          where: {
-            sessionId: session.id,
-            semester: dto.semester,
-            course: { isGeneral: false, departmentCode: dept.code },
-          },
-          include: { course: { include: { department: true } } },
-        });
+        if (coursesToSchedule.length === 0) {
+          return {
+            departmentCode,
+            totalCourses: deptCourses.length,
+            preservedOverrides: overriddenCodes.size,
+            unscheduled: [],
+            newAssignments: [],
+            scheduledCourses: preserved,
+          };
+        }
 
+        const existingSchedules = existingByDept.get(departmentCode) ?? [];
         const deptLocked: LockedSlot[] = [
           ...globalUniversityLocked,
-          ...existingDeptSchedules.map((s) => ({
+          ...existingSchedules.map((s) => ({
             courseCode: s.courseCode,
             departmentCode: s.course.departmentCode,
             level: s.course.level,
@@ -888,44 +942,100 @@ async generateSchedules(
             endTime: s.endTime,
             semester: s.semester,
             isUniversityCourse: false,
-            aliasedCourseCodes: deptAliasMap.get(s.courseCode) ?? [],
+            lecturerId: s.course.lecturerId,
+            aliasedCourseCodes: aliasMap.get(s.courseCode) ?? [],
           })),
         ];
 
-        if (deptCoursesInput.length === 0) {
-          scheduledCourses += overriddenDeptCodes.size;
-          processedDepartments++;
-          continue;
-        }
-
-        const deptAssignments = this.schedulerEngine.generate(
-          deptCoursesInput,
+        const result = this.schedulerEngine.generate(
+          coursesToSchedule,
           deptLocked,
           allDepartmentCodes,
         );
 
-        await this.prisma.$transaction(async (tx) => {
-          const deleteCourseFilter: Record<string, any> = {
-            departmentCode: dept.code,
-            isGeneral: false,
-          };
-          if (dto.level) deleteCourseFilter.level = dto.level;
-          if (dto.programme)
-            deleteCourseFilter.code = { startsWith: dto.programme };
+        return {
+          departmentCode,
+          totalCourses: deptCourses.length,
+          preservedOverrides: overriddenCodes.size,
+          unscheduled: result.unscheduled,
+          newAssignments: result.assignments,
+          scheduledCourses: [...result.assignments, ...preserved],
+        };
+      } catch (e: unknown) {
+        return {
+          departmentCode,
+          totalCourses: coursesByDept.get(departmentCode)?.length ?? 0,
+          preservedOverrides: 0,
+          unscheduled: [],
+          newAssignments: [],
+          scheduledCourses: [],
+          error: e instanceof Error ? e.message : 'Scheduling failed',
+        };
+      }
+    };
 
-          await tx.schedule.deleteMany({
-            where: {
-              sessionId: session.id,
-              semester: dto.semester,
-              isManualOverride: false,
-              isFixed: false,
-              course: deleteCourseFilter,
-            },
-          });
+    const departmentTaskResults = await runWithConcurrency(
+      departmentCodes,
+      DEPARTMENT_SCHEDULING_CONCURRENCY,
+      departmentTask,
+    );
 
-          if (deptAssignments.length > 0) {
-            await tx.schedule.createMany({
-              data: deptAssignments.map((a) => ({
+    for (const result of departmentTaskResults) {
+      if (result.error) {
+        errors.push({
+          departmentCode: result.departmentCode,
+          message: result.error,
+        });
+      }
+    }
+
+    const deleteOperations = departmentTaskResults
+      .filter(
+        (r) =>
+          !r.error && (coursesByDept.get(r.departmentCode)?.length ?? 0) > 0,
+      )
+      .map((r) => {
+        const deleteCourseFilter: Record<string, any> = {
+          departmentCode: r.departmentCode,
+          isGeneral: false,
+        };
+        if (dto.level) deleteCourseFilter.level = dto.level;
+        if (dto.programme)
+          deleteCourseFilter.code = { startsWith: dto.programme };
+
+        return this.prisma.schedule.deleteMany({
+          where: {
+            sessionId: session.id,
+            semester: dto.semester,
+            isManualOverride: false,
+            isFixed: false,
+            course: deleteCourseFilter,
+          },
+        });
+      });
+
+    const universityDeleteFilter: Record<string, any> = {
+      sessionId: session.id,
+      semester: dto.semester,
+      isManualOverride: false,
+      isFixed: false,
+      course: { isGeneral: true, ...(dto.level ? { level: dto.level } : {}) },
+    };
+
+    const allNewAssignments: ScheduleAssignment[] = [
+      ...universityAssignments,
+      ...departmentTaskResults.flatMap((r) => r.newAssignments),
+    ];
+
+    await this.prisma.$transaction([
+      ...(collegeScope
+        ? []
+        : [this.prisma.schedule.deleteMany({ where: universityDeleteFilter })]),
+      ...deleteOperations,
+      ...(allNewAssignments.length
+        ? [
+            this.prisma.schedule.createMany({
+              data: allNewAssignments.map((a) => ({
                 courseCode: a.courseCode,
                 dayOfWeek: a.dayOfWeek,
                 startTime: a.startTime,
@@ -938,35 +1048,46 @@ async generateSchedules(
                 isFixed: false,
               })),
               skipDuplicates: true,
-            });
-          }
-        });
+            }),
+          ]
+        : []),
+    ]);
 
-        scheduledCourses += deptAssignments.length + overriddenDeptCodes.size;
-        processedDepartments++;
-      } catch (e: unknown) {
-        errors.push({
-          departmentCode: dept.code,
-          message: e instanceof Error ? e.message : 'Scheduling failed',
-        });
-        processedDepartments++;
-      }
-    }
+    const scheduledCourses: ScheduleAssignment[] = [
+      ...universityScheduledCourses,
+      ...departmentTaskResults.flatMap((r) => r.scheduledCourses),
+    ];
 
-    totalCourses += universityCourses.length;
+    const unscheduledCourses: UnscheduledCourse[] = [
+      ...universityUnscheduled,
+      ...departmentTaskResults.flatMap((r) => r.unscheduled),
+    ];
+
+    const totalCourses =
+      universityCourses.length +
+      departmentTaskResults.reduce((sum, r) => sum + r.totalCourses, 0);
+
+    const preservedOverrides =
+      universityPreserved.length +
+      departmentTaskResults.reduce((sum, r) => sum + r.preservedOverrides, 0);
 
     return {
       sessionId: session.id,
       sessionName: session.name,
       semester: dto.semester,
       programme: dto.programme ?? null,
-      totalDepartments: departments.length,
-      processedDepartments,
+      totalDepartments: departmentCodes.length,
+      processedDepartments: departmentTaskResults.filter((r) => !r.error)
+        .length,
       skippedLockedDepartments: lockedCodes.size,
       totalCourses,
-      scheduledCourses,
+      scheduledCount: scheduledCourses.length,
+      failedCount: unscheduledCourses.length,
       preservedOverrides,
+      scheduledCourses,
+      unscheduledCourses,
       errors,
+      success: true,
     };
   }
 
