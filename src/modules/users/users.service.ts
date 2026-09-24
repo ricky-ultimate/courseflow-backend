@@ -10,7 +10,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { LecturerLookupDto } from './dto/lecturer-lookup.dto';
 import { BaseService } from '../../common/services/base.service';
-import { College, User, Role } from '../../generated/prisma';
+import { College, User, Prisma, Role } from '../../generated/prisma';
 import {
   PaginationOptions,
   PaginatedResult,
@@ -18,6 +18,10 @@ import {
 import * as argon2 from 'argon2';
 
 type SafeUser = Omit<User, 'password' | 'resetToken' | 'resetTokenExpiry'>;
+
+const USER_INCLUDE_RELATIONS = {
+  department: { select: { name: true, code: true, college: true } },
+} satisfies Prisma.UserInclude;
 
 @Injectable()
 export class UsersService extends BaseService<
@@ -32,9 +36,7 @@ export class UsersService extends BaseService<
       uniqueFields: ['matricNO', 'email'],
       softDelete: true,
       defaultOrderBy: { createdAt: 'desc' },
-      includeRelations: {
-        department: { select: { name: true, code: true, college: true } },
-      },
+      includeRelations: USER_INCLUDE_RELATIONS,
     });
   }
 
@@ -160,7 +162,7 @@ export class UsersService extends BaseService<
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
       },
-      include: this.config.includeRelations,
+      include: USER_INCLUDE_RELATIONS,
     });
 
     return this.excludePassword(updated);
@@ -201,7 +203,7 @@ export class UsersService extends BaseService<
 
     const users = await this.prisma.user.findMany({
       where,
-      include: this.config.includeRelations,
+      include: USER_INCLUDE_RELATIONS,
       orderBy: { name: 'asc' },
       take: 200,
     });
