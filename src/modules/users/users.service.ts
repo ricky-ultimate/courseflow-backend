@@ -14,6 +14,8 @@ import {
 } from '../../common/interfaces/base-service.interface';
 import * as argon2 from 'argon2';
 
+type SafeUser = Omit<User, 'password' | 'resetToken' | 'resetTokenExpiry'>;
+
 @Injectable()
 export class UsersService extends BaseService<
   User,
@@ -125,9 +127,7 @@ export class UsersService extends BaseService<
       isActive?: boolean;
     },
     requestingUser?: { role: string; collegeCode?: College },
-  ): Promise<
-    Omit<User, 'password'>[] | PaginatedResult<Omit<User, 'password'>>
-  > {
+  ): Promise<SafeUser[] | PaginatedResult<SafeUser>> {
     const collegeScope =
       requestingUser?.role === Role.COLLEGE_ADMIN && requestingUser.collegeCode
         ? requestingUser.collegeCode
@@ -137,7 +137,7 @@ export class UsersService extends BaseService<
     return this.excludePasswords(result);
   }
 
-  async findOneWithoutPassword(id: string): Promise<Omit<User, 'password'>> {
+  async findOneWithoutPassword(id: string): Promise<SafeUser> {
     const user = await super.findOne(id);
     return this.excludePassword(user);
   }
@@ -285,21 +285,21 @@ export class UsersService extends BaseService<
     };
   }
 
-  private excludePassword(user: User): Omit<User, 'password'> {
-    const { password, ...rest } = user;
+  private excludePassword(user: User): SafeUser {
+    const { password, resetToken, resetTokenExpiry, ...rest } = user;
     void password;
+    void resetToken;
+    void resetTokenExpiry;
     return rest;
   }
 
   private excludePasswords(
     users: User[] | PaginatedResult<User>,
-  ): Omit<User, 'password'>[] | PaginatedResult<Omit<User, 'password'>> {
+  ): SafeUser[] | PaginatedResult<SafeUser> {
     if (Array.isArray(users)) return users.map((u) => this.excludePassword(u));
-    if ('data' in users)
-      return {
-        ...users,
-        data: users.data.map((u: User) => this.excludePassword(u)),
-      };
-    return users as Omit<User, 'password'>[];
+    return {
+      ...users,
+      data: users.data.map((u: User) => this.excludePassword(u)),
+    };
   }
 }
