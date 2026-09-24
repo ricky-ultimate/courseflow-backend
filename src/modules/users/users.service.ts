@@ -1,11 +1,14 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
+import { LecturerLookupDto } from './dto/lecturer-lookup.dto';
 import { BaseService } from '../../common/services/base.service';
 import { College, User, Role } from '../../generated/prisma';
 import {
@@ -140,6 +143,71 @@ export class UsersService extends BaseService<
   async findOneWithoutPassword(id: string): Promise<SafeUser> {
     const user = await super.findOne(id);
     return this.excludePassword(user);
+  }
+
+  async updateOwnProfile(
+    userId: string,
+    dto: UpdateOwnProfileDto,
+  ): Promise<SafeUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+      },
+      include: this.config.includeRelations,
+    });
+
+    return this.excludePassword(updated);
+  }
+
+  async findLecturersForAssignment(
+    query: LecturerLookupDto,
+    requestingUser: { id: string; role: Role; collegeCode?: College },
+  ): Promise<SafeUser[]> {
+    const where: Record<string, any> = {
+      isActive: true,
+      role: { in: [Role.LECTURER, Role.HOD] },
+    };
+
+    if (requestingUser.role === Role.HOD) {
+      const hod = await this.prisma.user.findUnique({
+        where: { id: requestingUser.id },
+        include: { managedDepartment: true },
+      });
+
+      if (!hod?.managedDepartment) {
+        throw new ForbiddenException('HOD must be assigned to a department');
+      }
+
+      where.departmentCode = hod.managedDepartment.code;
+    } else if (requestingUser.role === Role.COLLEGE_ADMIN) {
+      where.department = { college: requestingUser.collegeCode };
+    } else if (query.departmentCode) {
+      where.departmentCode = query.departmentCode;
+    }
+
+    if (query.searchTerm) {
+      where.OR = [
+        { name: { contains: query.searchTerm, mode: 'insensitive' } },
+        { email: { contains: query.searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where,
+      include: this.config.includeRelations,
+      orderBy: { name: 'asc' },
+      take: 200,
+    });
+
+    return users.map((user) => this.excludePassword(user));
   }
 
   async getDashboardStats(userId: string) {

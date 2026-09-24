@@ -20,6 +20,8 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
+import { LecturerLookupDto } from './dto/lecturer-lookup.dto';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { CrudRoles } from '../../common/decorators/crud-roles.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -84,6 +86,30 @@ export class UsersController {
   @ApiOperation({ summary: 'Get timetable for authenticated lecturer/HOD' })
   async getMySchedule(@Req() req: AuthenticatedRequest) {
     return this.usersService.getMySchedule(req.user.id);
+  }
+
+  @Patch('me')
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN, Role.HOD, Role.LECTURER, Role.STUDENT)
+  @ApiOperation({ summary: 'Update the authenticated user own profile' })
+  async updateMe(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateOwnProfileDto,
+  ) {
+    return this.usersService.updateOwnProfile(req.user.id, dto);
+  }
+
+  @Get('lecturers')
+  @Roles(Role.ADMIN, Role.COLLEGE_ADMIN, Role.HOD)
+  @ApiOperation({
+    summary: 'List lecturers and HODs available for course assignment',
+    description:
+      'HODs are scoped to their own department, College Admins to their own college. Admins may filter by departmentCode.',
+  })
+  async getLecturers(
+    @Query() query: LecturerLookupDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.usersService.findLecturersForAssignment(query, req.user);
   }
 
   @Get(':id')
