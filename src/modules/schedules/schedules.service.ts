@@ -350,6 +350,23 @@ export class SchedulesService extends BaseService<
 
     const collegeScope = this.resolveCollegeScope(requestingUser);
 
+    if (
+      requestingUser.role === Role.COLLEGE_ADMIN &&
+      departmentCode &&
+      collegeScope
+    ) {
+      const targetDepartment = await this.prisma.department.findUnique({
+        where: { code: departmentCode },
+        select: { college: true },
+      });
+
+      if (!targetDepartment || targetDepartment.college !== collegeScope) {
+        throw new ForbiddenException(
+          'College admins can only generate schedules for departments within their own college',
+        );
+      }
+    }
+
     const lockedDepartmentCodes =
       await this.resolveLockedDepartmentCodes(departmentCode);
 
@@ -616,6 +633,23 @@ export class SchedulesService extends BaseService<
     }
 
     const collegeScope = this.resolveCollegeScope(requestingUser);
+
+    if (
+      requestingUser.role === Role.COLLEGE_ADMIN &&
+      dto.departmentCode &&
+      collegeScope
+    ) {
+      const targetDepartment = await this.prisma.department.findUnique({
+        where: { code: dto.departmentCode },
+        select: { college: true },
+      });
+
+      if (!targetDepartment || targetDepartment.college !== collegeScope) {
+        throw new ForbiddenException(
+          'College admins can only generate schedules for departments within their own college',
+        );
+      }
+    }
 
     const session = dto.sessionId
       ? await this.prisma.academicSession.findUnique({

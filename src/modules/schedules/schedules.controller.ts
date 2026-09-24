@@ -57,6 +57,7 @@ export class SchedulesController extends BaseController<
   @Post('generate')
   @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
+  @SkipCollegeGuard()
   @ApiGenerateSchedules()
   async generate(
     @Body() dto: GenerateScheduleDto,
@@ -68,6 +69,7 @@ export class SchedulesController extends BaseController<
   @Post('generate/batch')
   @Roles(Role.ADMIN, Role.HOD, Role.COLLEGE_ADMIN)
   @SkipHodGuard()
+  @SkipCollegeGuard()
   @ApiGenerateSchedulesBatch()
   async generateBatch(
     @Body() dto: GenerateScheduleDto,
