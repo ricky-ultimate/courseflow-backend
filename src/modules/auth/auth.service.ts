@@ -229,6 +229,8 @@ export class AuthService {
         collegeCode: true,
         departmentCode: true,
         department: { select: { name: true, code: true } },
+        isActive: true,
+        lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
       },
