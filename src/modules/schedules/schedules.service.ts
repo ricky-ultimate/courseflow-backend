@@ -463,14 +463,14 @@ export class SchedulesService extends BaseService<
     };
 
     const [departmentalManualOverrides, alreadyScheduledGeneral] =
-      await Promise.all([
+      (await Promise.all([
         this.prisma.schedule.findMany({
           where: departmentalManualOverrideFilter,
         }),
         collegeScope
           ? Promise.resolve([])
           : this.prisma.schedule.findMany({ where: generalScheduledFilter }),
-      ]);
+      ])) as [Schedule[], Schedule[]];
 
     const overriddenCourseCodes = new Set<string>([
       ...departmentalManualOverrides.map((s) => s.courseCode),
@@ -911,9 +911,9 @@ export class SchedulesService extends BaseService<
       error?: string;
     }
 
-    const departmentTask = async (
+    const computeDepartmentTask = (
       departmentCode: string,
-    ): Promise<DepartmentTaskResult> => {
+    ): DepartmentTaskResult => {
       try {
         const deptCourses = coursesByDept.get(departmentCode) ?? [];
 
@@ -1006,6 +1006,11 @@ export class SchedulesService extends BaseService<
         };
       }
     };
+
+    const departmentTask = (
+      departmentCode: string,
+    ): Promise<DepartmentTaskResult> =>
+      Promise.resolve(computeDepartmentTask(departmentCode));
 
     const departmentTaskResults = await runWithConcurrency(
       departmentCodes,

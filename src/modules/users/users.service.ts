@@ -73,7 +73,6 @@ export class UsersService extends BaseService<
 
   protected async beforeUpdate(
     dto: UpdateUserDto,
-    _identifier: string,
   ): Promise<Record<string, any>> {
     const data: Record<string, any> = { ...dto };
 

@@ -1,6 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { College, DayOfWeek, Level, Semester } from '../../../generated/prisma';
+import {
+  DayOfWeek,
+  Level,
+  Semester,
+  SessionType,
+} from '../../../generated/prisma';
 import {
   ApiStandardResponses,
   ApiAuthRequired,
