@@ -187,21 +187,30 @@ export abstract class BaseService<T, CreateDto, UpdateDto>
     if (!this.config.uniqueFields?.length) return;
 
     for (const field of this.config.uniqueFields) {
-      if (dto[field] !== undefined && dto[field] !== null) {
-        const existing = await this.getModel().findFirst({
-          where: {
-            [field]: dto[field],
-            ...(excludeIdentifier && {
-              [this.config.identifierField]: { not: excludeIdentifier },
-            }),
-          },
-        });
+      if (dto[field] === undefined || dto[field] === null) continue;
 
-        if (existing) {
-          throw new ConflictException(
-            `A record with this ${field} already exists`,
-          );
-        }
+      const identifierField = this.config.identifierField;
+
+      if (
+        excludeIdentifier !== undefined &&
+        field === identifierField &&
+        dto[field] === excludeIdentifier
+      ) {
+        continue;
+      }
+
+      const where: Record<string, unknown> = { [field]: dto[field] };
+
+      if (excludeIdentifier !== undefined && field !== identifierField) {
+        where[identifierField] = { not: excludeIdentifier };
+      }
+
+      const existing = await this.getModel().findFirst({ where });
+
+      if (existing) {
+        throw new ConflictException(
+          `A record with this ${field} already exists`,
+        );
       }
     }
   }
