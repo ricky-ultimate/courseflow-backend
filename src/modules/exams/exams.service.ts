@@ -20,6 +20,8 @@ import {
   GenerateExamTimetableDto,
   GenerateExamTimetableResult,
 } from './dto/generate-exam-timetable.dto';
+import { PaginatedResult } from '../../common/interfaces/base-service.interface';
+import { ExamFilterDto } from './dto/exam-filter.dto';
 
 const ICT_VENUES: VenueType[] = [
   VenueType.UNIVERSITY_ICT_CENTER,
@@ -68,6 +70,38 @@ export class ExamsService extends BaseService<
       },
       defaultOrderBy: { date: 'asc' },
     });
+  }
+
+  async findAll(
+    query: ExamFilterDto = {},
+  ): Promise<ExamSchedule[] | PaginatedResult<ExamSchedule>> {
+    const where: Record<string, any> = {};
+
+    if (query.sessionId) where.sessionId = query.sessionId;
+    if (query.semester) where.semester = query.semester;
+    if (query.courseCode) where.courseCode = query.courseCode;
+    if (query.college) where.targetCollege = query.college;
+
+    if (query.departmentCode || query.level) {
+      const courseCondition: Record<string, any> = {};
+      if (query.departmentCode) {
+        courseCondition.departmentCode = query.departmentCode;
+      }
+      if (query.level) {
+        courseCondition.level = query.level;
+      }
+      where.course = courseCondition;
+    }
+
+    if (query.page !== undefined && query.limit !== undefined) {
+      return this.findPaginated(where, query);
+    }
+
+    return this.getModel().findMany({
+      where,
+      include: this.config.includeRelations,
+      orderBy: this.getOrderBy(query),
+    }) as Promise<ExamSchedule[]>;
   }
 
   async create(dto: CreateExamDto): Promise<ExamSchedule> {

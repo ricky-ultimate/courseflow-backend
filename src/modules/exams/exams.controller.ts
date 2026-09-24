@@ -20,7 +20,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { SkipHodGuard } from '../../common/decorators/skip-hod-guard.decorator';
 import { SkipCollegeGuard } from '../../common/decorators/skip-college-guard.decorator';
 import { ExamSchedule, Role } from '../../generated/prisma';
-import { PaginationOptions } from '../../common/interfaces/base-service.interface';
+import { ExamFilterDto } from './dto/exam-filter.dto';
 import {
   ApiCreateExam,
   ApiGetExams,
@@ -78,7 +78,7 @@ export class ExamsController extends BaseController<
 
   @Get()
   @ApiGetExams()
-  findAll(@Query() query?: PaginationOptions) {
+  findAll(@Query() query?: ExamFilterDto) {
     return this.examsService.findAll(query);
   }
 
