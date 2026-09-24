@@ -542,6 +542,12 @@ export class SchedulerEngine {
       }
 
       if (this.isManuallyScheduledOnly(course.courseCode)) {
+        unscheduled.push(
+          this.buildUnscheduled(
+            course,
+            'This general course must be scheduled manually and is intentionally excluded from auto-generation',
+          ),
+        );
         continue;
       }
 
